@@ -1,0 +1,111 @@
+{
+ "resources": {
+  "results": {
+   "products": [
+    {
+     "available": true,
+     "body": "<p class=\"p1\">Striking in simplicity, the Esme draped dress is designed for an elegantly at-ease look. This timeless piece is cut from a soft, luxurious silk blend with a draped neckline and a specially constructed adjustable interior belt to create variable draping effects. A subtle side slit compl",
+     "compare_at_price_max": "0.00",
+     "compare_at_price_min": "0.00",
+     "handle": "esme-dress",
+     "id": 14859962515830,
+     "image": "https://cdn.shopify.com/s/files/1/0288/9154/5684/files/HEBASHAIKHxNeleBogaertsxJadeMadoe-19.jpg?v=1732999053",
+     "price": "910.00",
+     "price_max": "910.00",
+     "price_min": "910.00",
+     "tags": [],
+     "title": "Esme Dress",
+     "type": "Dresses",
+     "url": "/products/esme-dress?_pos=1&_psq=dress&_psid=79361fafc&_ss=e",
+     "variants": [],
+     "vendor": "Heba Shaikh",
+     "featured_image": {
+      "alt": "Esme Dress",
+      "aspect_ratio": 0.667,
+      "height": 3905,
+      "url": "https://cdn.shopify.com/s/files/1/0288/9154/5684/files/HEBASHAIKHxNeleBogaertsxJadeMadoe-19.jpg?v=1732999053",
+      "width": 2603
+     }
+    },
+    {
+     "available": true,
+     "body": "<p class=\"p1\">Striking in simplicity, the Esme draped dress is designed for an elegantly at-ease look. This timeless piece is cut from a soft, luxurious silk blend with a draped neckline and a specially constructed adjustable interior belt to create variable draping effects. A subtle side slit compl",
+     "compare_at_price_max": "0.00",
+     "compare_at_price_min": "0.00",
+     "handle": "esme-dress-1",
+     "id": 15708168094070,
+     "image": "https://cdn.shopify.com/s/files/1/0288/9154/5684/files/Untitleddesign_8.jpg?v=1777365144",
+     "price": "910.00",
+     "price_max": "910.00",
+     "price_min": "910.00",
+     "tags": [],
+     "title": "Esme Dress",
+     "type": "Dresses",
+     "url": "/products/esme-dress-1?_pos=2&_psq=dress&_psid=79361fafc&_ss=e",
+     "variants": [],
+     "vendor": "Heba Shaikh",
+     "featured_image": {
+      "alt": "Esme Dress",
+      "aspect_ratio": 0.667,
+      "height": 5184,
+      "url": "https://cdn.shopify.com/s/files/1/0288/9154/5684/files/Untitleddesign_8.jpg?v=1777365144",
+      "width": 3456
+     }
+    },
+    {
+     "available": true,
+     "body": "<!-- split -->\n<p>Crafted in crisp organic cotton poplin, this oversized shirt offers a classic menswear-inspired design with versatile appeal. Featuring a gently tailored shape and an elegantly curved hem that is longer at the back. Finished with mother-of-pearl buttons that add a touch of understa",
+     "compare_at_price_max": "350.00",
+     "compare_at_price_min": "350.00",
+     "handle": "eva-shirt",
+     "id": 4651520983124,
+     "image": "https://cdn.shopify.com/s/files/1/0288/9154/5684/files/Untitleddesign_24_d772ee8a-dbea-4035-8cee-051437d8833e.jpg?v=1778578738",
+     "price": "110.00",
+     "price_max": "110.00",
+     "price_min": "110.00",
+     "tags": [
+      "Locally made",
+      "Organic"
+     ],
+     "title": "Eva Shirt",
+     "type": "Shirts & Blouses",
+     "url": "/products/eva-shirt?_pos=3&_psq=dress&_psid=79361fafc&_ss=e",
+     "variants": [],
+     "vendor": "Heba Shaikh",
+     "featured_image": {
+      "alt": "Eva Shirt",
+      "aspect_ratio": 0.667,
+      "height": 5184,
+      "url": "https://cdn.shopify.com/s/files/1/0288/9154/5684/files/Untitleddesign_24_d772ee8a-dbea-4035-8cee-051437d8833e.jpg?v=1778578738",
+      "width": 3456
+     }
+    },
+    {
+     "available": true,
+     "body": "<p class=\"p1\">The Mayon top is a versatile piece crafted from soft cashmere wool. It features an attached extra-long scarf that wraps around the neck for sculptural draping and movement. As an extra layer that elevates your look, it can be worn wrapped around or draped over your coat, dress, or blaz",
+     "compare_at_price_max": "0.00",
+     "compare_at_price_min": "0.00",
+     "handle": "mayon-top",
+     "id": 14859959075190,
+     "image": "https://cdn.shopify.com/s/files/1/0288/9154/5684/files/HEBASHAIKHxNeleBogaertsxJadeMadoe-12.jpg?v=1732998314",
+     "price": "595.00",
+     "price_max": "595.00",
+     "price_min": "595.00",
+     "tags": [],
+     "title": "Mayon Top",
+     "type": "Tops",
+     "url": "/products/mayon-top?_pos=4&_psq=dress&_psid=79361fafc&_ss=e",
+     "variants": [],
+     "vendor": "Heba Shaikh",
+     "featured_image": {
+      "alt": "Mayon Top",
+      "aspect_ratio": 0.667,
+      "height": 6000,
+      "url": "https://cdn.shopify.com/s/files/1/0288/9154/5684/files/HEBASHAIKHxNeleBogaertsxJadeMadoe-12.jpg?v=1732998314",
+      "width": 4000
+     }
+    }
+   ]
+  }
+ }
+}

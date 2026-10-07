@@ -1,0 +1,113 @@
+{
+ "resources": {
+  "results": {
+   "products": [
+    {
+     "available": true,
+     "body": "<p class=\"p1\">Striking in simplicity, the Esme draped dress is designed for an elegantly at-ease look. This timeless piece is cut from a soft, luxurious silk blend with a draped neckline and a specially constructed adjustable interior belt to create variable draping effects. A subtle side slit compl",
+     "compare_at_price_max": "0.00",
+     "compare_at_price_min": "0.00",
+     "handle": "esme-dress",
+     "id": 14859962515830,
+     "image": "https://cdn.shopify.com/s/files/1/0288/9154/5684/files/HEBASHAIKHxNeleBogaertsxJadeMadoe-19.jpg?v=1732999053",
+     "price": "910.00",
+     "price_max": "910.00",
+     "price_min": "910.00",
+     "tags": [],
+     "title": "Esme Dress",
+     "type": "Dresses",
+     "url": "/products/esme-dress?_pos=1&_psq=kaftan&_psid=f30c1b81b&_ss=e",
+     "variants": [],
+     "vendor": "Heba Shaikh",
+     "featured_image": {
+      "alt": "Esme Dress",
+      "aspect_ratio": 0.667,
+      "height": 3905,
+      "url": "https://cdn.shopify.com/s/files/1/0288/9154/5684/files/HEBASHAIKHxNeleBogaertsxJadeMadoe-19.jpg?v=1732999053",
+      "width": 2603
+     }
+    },
+    {
+     "available": true,
+     "body": "<p class=\"p1\">Striking in simplicity, the Esme draped dress is designed for an elegantly at-ease look. This timeless piece is cut from a soft, luxurious silk blend with a draped neckline and a specially constructed adjustable interior belt to create variable draping effects. A subtle side slit compl",
+     "compare_at_price_max": "0.00",
+     "compare_at_price_min": "0.00",
+     "handle": "esme-dress-1",
+     "id": 15708168094070,
+     "image": "https://cdn.shopify.com/s/files/1/0288/9154/5684/files/Untitleddesign_8.jpg?v=1777365144",
+     "price": "910.00",
+     "price_max": "910.00",
+     "price_min": "910.00",
+     "tags": [],
+     "title": "Esme Dress",
+     "type": "Dresses",
+     "url": "/products/esme-dress-1?_pos=2&_psq=kaftan&_psid=f30c1b81b&_ss=e",
+     "variants": [],
+     "vendor": "Heba Shaikh",
+     "featured_image": {
+      "alt": "Esme Dress",
+      "aspect_ratio": 0.667,
+      "height": 5184,
+      "url": "https://cdn.shopify.com/s/files/1/0288/9154/5684/files/Untitleddesign_8.jpg?v=1777365144",
+      "width": 3456
+     }
+    },
+    {
+     "available": true,
+     "body": "<p class=\"p1\">The Mayon top is a versatile piece crafted from soft cashmere wool. It features an attached extra-long scarf that wraps around the neck for sculptural draping and movement. As an extra layer that elevates your look, it can be worn wrapped around or draped over your coat, dress, or blaz",
+     "compare_at_price_max": "0.00",
+     "compare_at_price_min": "0.00",
+     "handle": "mayon-top",
+     "id": 14859959075190,
+     "image": "https://cdn.shopify.com/s/files/1/0288/9154/5684/files/HEBASHAIKHxNeleBogaertsxJadeMadoe-12.jpg?v=1732998314",
+     "price": "595.00",
+     "price_max": "595.00",
+     "price_min": "595.00",
+     "tags": [],
+     "title": "Mayon Top",
+     "type": "Tops",
+     "url": "/products/mayon-top?_pos=3&_psq=kaftan&_psid=f30c1b81b&_ss=e",
+     "variants": [],
+     "vendor": "Heba Shaikh",
+     "featured_image": {
+      "alt": "Mayon Top",
+      "aspect_ratio": 0.667,
+      "height": 6000,
+      "url": "https://cdn.shopify.com/s/files/1/0288/9154/5684/files/HEBASHAIKHxNeleBogaertsxJadeMadoe-12.jpg?v=1732998314",
+      "width": 4000
+     }
+    },
+    {
+     "available": true,
+     "body": "<p>Transition effortlessly from the office to after-work soirees in this ankle-length skirt. The skirt brings a modern twist to a classic silhouette. Expertly crafted from wool twill, the style is defined by its alluring stacked double waistband wrap detail and a back slit for ease of movement. Perf",
+     "compare_at_price_max": "0.00",
+     "compare_at_price_min": "0.00",
+     "handle": "ares-skirt",
+     "id": 6736569270336,
+     "image": "https://cdn.shopify.com/s/files/1/0288/9154/5684/files/Untitleddesign_23.jpg?v=1777985676",
+     "price": "485.00",
+     "price_max": "485.00",
+     "price_min": "485.00",
+     "tags": [
+      "antla_in_funnel",
+      "antla_in_funnel_2304",
+      "Cruelty-free",
+      "No Toxic Chemicals"
+     ],
+     "title": "Ares Skirt",
+     "type": "",
+     "url": "/products/ares-skirt?_pos=4&_psq=kaftan&_psid=f30c1b81b&_ss=e",
+     "variants": [],
+     "vendor": "Heba Shaikh",
+     "featured_image": {
+      "alt": "Ares Skirt",
+      "aspect_ratio": 0.667,
+      "height": 5184,
+      "url": "https://cdn.shopify.com/s/files/1/0288/9154/5684/files/Untitleddesign_23.jpg?v=1777985676",
+      "width": 3456
+     }
+    }
+   ]
+  }
+ }
+}
