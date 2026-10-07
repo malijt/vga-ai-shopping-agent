@@ -560,6 +560,112 @@ class TestStoreConfig:
     ) -> None:
         assert make_store_config(genders=genders).sells_for_gender(requested) is expected
 
+    def test_categories_default_to_unset_meaning_every_category(self) -> None:
+        assert make_store_config().categories is None
+
+    @pytest.mark.parametrize(
+        "categories",
+        [
+            [Category.DRESSES],
+            ["dresses"],
+            ["tops", "bottoms"],
+            list(Category),
+            {"shoes"},
+            frozenset({Category.OUTERWEAR}),
+        ],
+    )
+    def test_categories_accept_a_non_empty_collection_of_known_categories(
+        self, categories: object
+    ) -> None:
+        config = make_store_config(categories=categories)
+
+        assert isinstance(config.categories, frozenset)
+        assert all(isinstance(category, Category) for category in config.categories)
+        assert config.categories
+
+    def test_categories_ignore_order_and_duplicates(self) -> None:
+        a = make_store_config(categories=["tops", "dresses", "tops"])
+        b = make_store_config(categories=["dresses", "tops"])
+
+        assert a.categories == b.categories == frozenset({Category.TOPS, Category.DRESSES})
+        assert a == b
+
+    @pytest.mark.parametrize("categories", [[], (), set(), frozenset()])
+    def test_empty_categories_are_rejected(self, categories: object) -> None:
+        # A store that sells nothing we search for should be ``enabled: false``.
+        with pytest.raises(ValidationError, match="categories"):
+            make_store_config(categories=categories)
+
+    @pytest.mark.parametrize(
+        "categories", [["accessories"], ["dresses", "hats"], "dresses", [None], ["Dress"]]
+    )
+    def test_unknown_or_malformed_categories_are_rejected(self, categories: object) -> None:
+        with pytest.raises(ValidationError, match="categories"):
+            make_store_config(categories=categories)
+
+    def test_categories_round_trip_through_json(self) -> None:
+        config = make_store_config(categories=["dresses", "shoes"])
+
+        assert round_trip(config) == config
+
+    def test_categories_are_written_as_a_list_in_a_fixed_order(self) -> None:
+        # A frozenset has no order of its own, so dumps must not depend on hashing.
+        config = make_store_config(categories={Category.DRESSES, Category.SHOES, Category.TOPS})
+
+        expected = ["tops", "shoes", "dresses"]
+        assert config.model_dump(mode="json")["categories"] == expected
+        assert json.loads(config.model_dump_json())["categories"] == expected
+        assert make_store_config().model_dump(mode="json")["categories"] is None
+
+    def test_categories_round_trip_through_yaml(self) -> None:
+        config = make_store_config(categories=["shoes", "dresses"])
+
+        text = yaml.safe_dump(config.model_dump(mode="json"))
+        loaded = StoreConfig.model_validate(yaml.safe_load(text))
+
+        assert "categories:\n- shoes\n- dresses\n" in text
+        assert loaded == config
+
+    def test_a_store_file_can_write_categories_as_a_yaml_list(self) -> None:
+        data = make_store_config().model_dump(mode="json")
+        data["categories"] = yaml.safe_load("[dresses]")
+
+        assert StoreConfig.model_validate(data).categories == frozenset({Category.DRESSES})
+
+    @pytest.mark.parametrize("requested", list(Category))
+    def test_a_store_without_categories_sells_every_category(self, requested: Category) -> None:
+        assert make_store_config().sells_category(requested) is True
+
+    @pytest.mark.parametrize(
+        ("categories", "requested", "expected"),
+        [
+            # A dresses-only boutique: a shoe search must not be sent to it.
+            ([Category.DRESSES], Category.DRESSES, True),
+            ([Category.DRESSES], Category.SHOES, False),
+            ([Category.DRESSES], Category.TOPS, False),
+            ([Category.DRESSES], Category.BOTTOMS, False),
+            ([Category.DRESSES], Category.OUTERWEAR, False),
+            # Several categories: each listed one is sold, the others are not.
+            ([Category.TOPS, Category.BOTTOMS], Category.TOPS, True),
+            ([Category.TOPS, Category.BOTTOMS], Category.BOTTOMS, True),
+            ([Category.TOPS, Category.BOTTOMS], Category.SHOES, False),
+            # Listing all five is the same as selling every category.
+            (list(Category), Category.SHOES, True),
+        ],
+    )
+    def test_sells_category(
+        self, categories: list[Category], requested: Category, expected: bool
+    ) -> None:
+        assert make_store_config(categories=categories).sells_category(requested) is expected
+
+    def test_categories_and_genders_are_independent(self) -> None:
+        config = make_store_config(categories=["dresses"], genders=["women"])
+
+        assert config.sells_category(Category.DRESSES)
+        assert config.sells_for_gender(Gender.WOMEN)
+        assert not config.sells_category(Category.SHOES)
+        assert not config.sells_for_gender(Gender.MEN)
+
 
 class TestProduct:
     REQUIRED = ["title", "price", "currency", "image_url", "product_url", "store"]
