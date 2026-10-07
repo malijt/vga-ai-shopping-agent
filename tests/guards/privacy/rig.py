@@ -17,6 +17,7 @@ Both the SDK and the stores' HTTP stay real code: the photo travels through the 
 building, JSON encoding and response parsing it would use in production.
 """
 
+import platform
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
@@ -44,6 +45,14 @@ LOG_LEVEL = "DEBUG"
 """The most detailed level: the audit wants every line the app can write."""
 
 ImageFetcher = Callable[[Product], Awaitable[bytes | None]]
+
+
+def look_up_the_platform_once() -> None:
+    """The OpenAI library asks the operating system for its name the first time it makes a request
+    in a process, which on macOS starts a short helper program (``uname``) and opens ``/dev/null``
+    for it. It carries no data. Doing it before a watch opens keeps the audit's "no other program
+    is started" and "no unexpected file is opened" checks exact."""
+    platform.platform()
 
 
 def blazer_reading(input_type: InputType = InputType.PRODUCT_PHOTO) -> UnderstandReading:
@@ -130,6 +139,7 @@ class Rig:
     understander: OpenAIUnderstander
     """The real one, also when the pipeline holds it inside ``SlowModel``."""
     engine: StoreSearchEngine
+    ranker: SiglipImageRanker
     fake_openai: FakeOpenAI
     world: StoreWorld
     clock: FakeClock
@@ -199,7 +209,7 @@ def build_rig(
         cos_hi=settings.siglip_cos_hi,
     )
     pipeline = SearchPipeline(understander, engine, ranker, configs, clock=clock)
-    rig = Rig(pipeline, real, engine, fake, world, clock, settings, model)
+    rig = Rig(pipeline, real, engine, ranker, fake, world, clock, settings, model)
     if leaking is not None:
         leaking.rig = rig
     return rig

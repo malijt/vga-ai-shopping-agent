@@ -10,7 +10,12 @@ from dataclasses import dataclass, field
 
 import pytest
 
-from tests.guards.privacy.photos import PrivatePhoto, disguised_as_a_jpeg, truncated
+from tests.guards.privacy.photos import (
+    DEFAULT_CARRIERS,
+    PrivatePhoto,
+    disguised_as_a_jpeg,
+    truncated,
+)
 from tests.guards.privacy.rig import Leak, blazer_reading, outfit_reading
 from tests.understand.fake_openai import Step, answer, cut_off, http_error, refusal
 from vga.errors import InvalidInputError, LlmError, VgaError
@@ -55,6 +60,8 @@ class Scenario:
     """OpenAI's scripted answers, in order. Built fresh for each run."""
     text: str | None = None
     photo_format: str = "JPEG"
+    photo_carriers: frozenset[str] = DEFAULT_CARRIERS
+    """Where the photo hides its marker (see ``photos.py``)."""
     upload: Callable[[PrivatePhoto], bytes] = _upload
     """The bytes the shopper uploads: the photo as it is, unless the scenario breaks it."""
     expect: type[VgaError] | None = None

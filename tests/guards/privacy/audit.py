@@ -11,7 +11,6 @@ import gc
 import io
 import json
 import os
-import platform
 import traceback
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -25,7 +24,13 @@ from tests.guards.privacy.reachable import (
     photos_held,
     reachable,
 )
-from tests.guards.privacy.rig import BrokenWeights, Rig, build_rig, settings_for
+from tests.guards.privacy.rig import (
+    BrokenWeights,
+    Rig,
+    build_rig,
+    look_up_the_platform_once,
+    settings_for,
+)
 from tests.guards.privacy.scenarios import Case
 from tests.guards.privacy.traces import (
     Trace,
@@ -132,7 +137,7 @@ async def run_case(
 ) -> Audited:
     """Run ``case`` through the real pipeline, watched, and return everything the checks need."""
     scenario = case.scenario
-    photo = make_private_photo(scenario.photo_format)
+    photo = make_private_photo(scenario.photo_format, carriers=scenario.photo_carriers)
     submitted = scenario.upload(photo)
 
     stream = io.StringIO()
@@ -154,10 +159,7 @@ async def run_case(
         leak=scenario.leak,
     )
 
-    # The OpenAI library asks the operating system for its name the first time it is used in a
-    # process, which on macOS starts a short helper program (``uname``). It carries no data. Doing
-    # it now, before the watch opens, keeps the audit's "no other program is started" check exact.
-    platform.platform()
+    look_up_the_platform_once()
 
     request = SearchRequest(text=scenario.text, image=submitted)
     holders_before = {id(holder) for holder in gc.get_referrers(submitted)}
@@ -214,7 +216,7 @@ def _real(path: Path) -> Path:
     return Path(os.path.realpath(path))
 
 
-def _problems_in(content: bytes | str, traces: list[Trace], where: str) -> list[str]:
+def problems_in(content: bytes | str, traces: list[Trace], where: str) -> list[str]:
     """What is wrong with ``content`` (a file, a log line, a request): traces of this photo and
     signs of any image."""
     problems = [f"{where} holds {label}" for label in find(content, traces)]
@@ -236,7 +238,7 @@ def content_problems(path: Path, traces: list[Trace]) -> list[str]:
     """What is wrong with the content of one file: traces of the photo, signs of any image, and
     whether Pillow can open it as a picture (which sees a shrunk or re-encoded copy)."""
     content = path.read_bytes()
-    problems = _problems_in(content, traces, path.name)
+    problems = problems_in(content, traces, path.name)
     if is_an_image(content):
         problems.append(f"{path.name} can be opened as a picture")
     return problems
@@ -265,11 +267,11 @@ def log_problems(audited: Audited) -> list[str]:
     stream and the file."""
     problems: list[str] = []
     for line in audited.watch.raw_logs.lines:
-        problems += _problems_in(line, audited.traces, f"the log call {line[:60]!r}")
+        problems += problems_in(line, audited.traces, f"the log call {line[:60]!r}")
     stream = audited.log_stream.getvalue()
-    problems += _problems_in(stream, audited.traces, "the log stream")
+    problems += problems_in(stream, audited.traces, "the log stream")
     file_text = audited.log_file.read_bytes() if audited.log_file.exists() else b""
-    problems += _problems_in(file_text, audited.traces, "the log file")
+    problems += problems_in(file_text, audited.traces, "the log file")
     for where, text in (("the log stream", stream), ("the log file", file_text.decode())):
         if "REDACTED" in text:
             problems.append(f"{where} has a redaction marker: the code tried to log image data")
@@ -279,7 +281,8 @@ def log_problems(audited: Audited) -> list[str]:
 def memory_problems(audited: Audited) -> list[str]:
     """What is reachable after the request, from everything the pipeline owns and keeps."""
     rig = audited.rig
-    roots = [rig.pipeline, rig.understander, rig.engine, *audited.responses, audited.overrides]
+    roots = [rig.pipeline, rig.understander, rig.engine, rig.ranker]
+    roots += [*audited.responses, audited.overrides]
     roots += module_state()
     skip = [rig.fake_openai, rig.world, rig.clock, rig.embedder, audited.log_stream]
     held: list[Held] = photos_held(roots, audited.traces, skip=skip)
@@ -302,7 +305,7 @@ def outbound_problems(audited: Audited) -> list[str]:
             ("headers", json.dumps(dict(request.headers))),
             ("body", request.content),
         ):
-            problems += _problems_in(content, audited.traces, f"{where}, {part}")
+            problems += problems_in(content, audited.traces, f"{where}, {part}")
         if request.method != "GET" or request.content:
             problems.append(f"{where} sent a body or used a method other than GET")
     activity = audited.watch.activity
@@ -318,13 +321,13 @@ def caller_problems(audited: Audited) -> list[str]:
     problems: list[str] = []
     for index, response in enumerate(audited.responses):
         for form, text in (("JSON", response.model_dump_json()), ("repr", repr(response))):
-            problems += _problems_in(text, audited.traces, f"answer {index + 1} as {form}")
+            problems += problems_in(text, audited.traces, f"answer {index + 1} as {form}")
     if audited.overrides is not None:
-        problems += _problems_in(
+        problems += problems_in(
             audited.overrides.model_dump_json(), audited.traces, "the re-run settings"
         )
     if audited.failure is not None:
-        problems += _problems_in(audited.failure.texts, audited.traces, "the error")
+        problems += problems_in(audited.failure.texts, audited.traces, "the error")
     return problems
 
 

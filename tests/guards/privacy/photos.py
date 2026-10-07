@@ -13,6 +13,7 @@ A photo can carry its marker in any of these places (``carriers``):
 ``icc``      an embedded colour profile
 ``xmp``      an XMP packet
 ``comment``  a JPEG comment segment, or a PNG text chunk named ``comment``
+``text``     PNG text chunks with other names (``Description``, ``Author``)
 ``tail``     bytes written after the end of the picture data (JPEG and PNG)
 """
 
@@ -77,13 +78,16 @@ def make_private_photo(
         options["icc_profile"] = ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
     if "xmp" in chosen:
         options["xmp"] = f"<x:xmpmeta>{text}</x:xmpmeta>".encode("ascii")
-    if "comment" in chosen:
-        if fmt == "JPEG":
-            options["comment"] = marker
-        elif fmt == "PNG":
-            info = PngInfo()
+    if fmt == "JPEG" and "comment" in chosen:
+        options["comment"] = marker
+    if fmt == "PNG" and chosen & {"comment", "text"}:
+        info = PngInfo()
+        if "comment" in chosen:
             info.add_text("comment", text)
-            options["pnginfo"] = info
+        if "text" in chosen:
+            info.add_text("Description", text)
+            info.add_itxt("Author", text, zip=True)
+        options["pnginfo"] = info
 
     buffer = io.BytesIO()
     picture.save(buffer, format=fmt, **options)
