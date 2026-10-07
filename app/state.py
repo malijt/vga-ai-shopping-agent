@@ -21,7 +21,6 @@ TEXT_KEY = "query_text"
 PHOTO_KEY = "photo_upload"
 SEARCH_KEY = "search_button"
 MIX_KEY = "mix_preset"
-SIDEBAR_BUDGET_KEY = "budget_amount"
 CHIP_KEY_PREFIX = "chip_"
 
 # Plain state keys.

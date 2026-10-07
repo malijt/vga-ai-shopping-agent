@@ -1,4 +1,5 @@
-"""Sidebar settings (plan 10.1.3): three presets and an optional budget, nothing else."""
+"""Sidebar settings (plan 10.1.3): the three price-range presets, nothing else. The budget lives
+in one place, the "Detected by AI" chip."""
 
 import pytest
 from app.components.sidebar import preset_caption
@@ -6,10 +7,9 @@ from streamlit.testing.v1 import AppTest
 
 from tests.fakes import FakePipeline
 from tests.ui.helpers import search
-from vga.models import Budget, MixPreset, SettingsOverride
+from vga.models import MixPreset, SettingsOverride
 
 MIX_KEY = "mix_preset"
-BUDGET_KEY = "budget_amount"
 
 
 def settings_sent(pipeline: FakePipeline) -> SettingsOverride:
@@ -36,17 +36,22 @@ class TestSidebarControls:
         at.run()
 
         assert not at.sidebar.slider
-        assert len(at.sidebar.number_input) == 1  # the budget only
-        assert at.sidebar.number_input[0].label == "Budget for your next search in AED (optional)"
+        assert not at.sidebar.number_input
 
-    def test_the_budget_is_optional_and_starts_empty(self, at: AppTest) -> None:
+    def test_the_sidebar_has_no_budget_so_there_is_one_budget_box_not_two(
+        self, at: AppTest, pipeline: FakePipeline
+    ) -> None:
         at.run()
+        assert not at.number_input  # nothing to set a budget in before a search
 
-        assert at.sidebar.number_input(key=BUDGET_KEY).value is None
+        search(at)
+
+        assert [box.key for box in at.number_input] == ["chip_budget"]
+        assert not at.sidebar.number_input
 
 
 class TestSettingsOverride:
-    def test_the_default_search_sends_the_even_mix_and_no_budget(
+    def test_the_default_search_sends_the_even_mix_and_nothing_else(
         self, at: AppTest, pipeline: FakePipeline
     ) -> None:
         at.run()
@@ -65,16 +70,6 @@ class TestSettingsOverride:
         search(at)
 
         assert settings_sent(pipeline).tier_mix == preset.mix
-
-    def test_the_budget_lands_in_the_settings_override_in_dirhams(
-        self, at: AppTest, pipeline: FakePipeline
-    ) -> None:
-        at.run()
-        at.sidebar.number_input(key=BUDGET_KEY).set_value(400.0).run()
-
-        search(at)
-
-        assert settings_sent(pipeline).budget == Budget(max_price=400.0, currency="AED")
 
     def test_the_settings_are_kept_after_the_search(
         self, at: AppTest, pipeline: FakePipeline

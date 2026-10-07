@@ -24,7 +24,7 @@ def build_request(inputs: InputState) -> SearchRequest:
 
 
 def build_overrides(pending: state.PendingSearch, settings: SettingsOverride) -> RunOverrides:
-    """The sidebar settings, and for a search again also the chip edits and the earlier detection
+    """The sidebar's price-range mix. For a search again also the chip edits, the earlier detection
     (so the pipeline need not call OpenAI again) and the photo's embedding (A8)."""
     response = state.get_response()
     if pending.chips is None or response is None:
