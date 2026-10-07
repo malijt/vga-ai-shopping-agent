@@ -1,0 +1,29 @@
+User-agent: AhrefsSiteAudit
+Allow: /
+
+User-agent: AhrefsBot
+Allow: /
+
+User-agent: *
+Disallow: /my-account/
+Disallow: /cart$
+Disallow: /checkout
+Disallow: /sales/order/history/
+Disallow: /storecredit/info
+
+
+
+# Sitemap
+
+Sitemap: https://ar-ae.6thstreet.com/sitemap.xml
+Sitemap: https://ar-bh.6thstreet.com/sitemap.xml
+Sitemap: https://ar-kw.6thstreet.com/sitemap.xml
+Sitemap: https://ar-om.6thstreet.com/sitemap.xml
+Sitemap: https://ar-qa.6thstreet.com/sitemap.xml
+Sitemap: https://ar-sa.6thstreet.com/sitemap.xml
+Sitemap: https://en-ae.6thstreet.com/sitemap.xml
+Sitemap: https://en-bh.6thstreet.com/sitemap.xml
+Sitemap: https://en-kw.6thstreet.com/sitemap.xml
+Sitemap: https://en-om.6thstreet.com/sitemap.xml
+Sitemap: https://en-sa.6thstreet.com/sitemap.xml
+Sitemap: https://en-qa.6thstreet.com/sitemap.xml
