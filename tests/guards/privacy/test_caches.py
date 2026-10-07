@@ -9,7 +9,14 @@ import pytest
 
 from tests.guards.privacy.audit import Audited
 from tests.guards.privacy.reachable import photos_held, reachable
-from tests.guards.privacy.scenarios import BOTH, CHIP_EDIT, OUTFIT, PRODUCT_PHOTO, cases
+from tests.guards.privacy.scenarios import (
+    BOTH,
+    CHIP_EDIT,
+    OUTFIT,
+    PHOTO_AND_TEXT,
+    PRODUCT_PHOTO,
+    cases,
+)
 from tests.guards.privacy.traces import is_an_image
 
 
@@ -52,7 +59,15 @@ async def test_a_chip_edit_searches_again_without_the_photo_and_without_asking_o
     assert again.query_embedding == first.query_embedding  # the ranker used the stored numbers
 
 
-@pytest.mark.parametrize("audited", cases([PRODUCT_PHOTO, OUTFIT], [BOTH]), indirect=True)
+@pytest.mark.parametrize("audited", cases([OUTFIT], [BOTH]), indirect=True)
+async def test_an_outfit_photo_fetches_no_thumbnail_at_all(audited: Audited) -> None:
+    # An outfit photo is not compared by image similarity (plan assumption A26), so the photo is
+    # never embedded and no product thumbnail is fetched for it.
+    assert audited.rig.world.thumbnails == []
+    assert all(response.query_embedding is None for response in audited.responses)
+
+
+@pytest.mark.parametrize("audited", cases([PRODUCT_PHOTO, PHOTO_AND_TEXT], [BOTH]), indirect=True)
 async def test_product_thumbnails_are_fetched_and_dropped_not_cached(audited: Audited) -> None:
     rig = audited.rig
     assert rig.world.thumbnails, "no thumbnail was fetched: the test is not testing anything"
