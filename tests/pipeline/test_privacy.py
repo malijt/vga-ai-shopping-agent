@@ -288,14 +288,17 @@ async def test_the_photo_is_dropped_even_when_the_deadline_cuts_the_comparison_s
     assert [query.image for query in queries] == [None]
 
 
-async def test_an_outfit_photo_is_dropped_after_the_last_garment(
+async def test_an_outfit_photo_is_never_handed_on_and_is_in_no_form_in_the_response(
     make_pipeline: PipelineMaker, two_stores: list, settings: Settings, distinctive_photo: bytes
 ) -> None:
+    # An outfit photo is not compared with thumbnails, so it is understood and then left alone:
+    # the image ranker is never given it, and no embedding of it is made or kept.
     ranker = KeepsTheQuery()
     pipeline = make_pipeline(understander=outfit_understander(OUTFIT), image_ranker=ranker)
 
-    await pipeline.run(make_search_request(image=distinctive_photo, text=None), settings)
+    response = await pipeline.run(make_search_request(image=distinctive_photo, text=None), settings)
 
-    assert len(ranker.queries) == 4
-    assert len({id(query) for query in ranker.queries}) == 1  # one shared query for the outfit
-    assert ranker.queries[0].image is None
+    assert ranker.queries == []
+    assert response.query_embedding is None
+    assert bytes_in(response) == []
+    assert_no_trace(response.model_dump_json().encode(), distinctive_photo)

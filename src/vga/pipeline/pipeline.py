@@ -9,7 +9,10 @@ One run, in order (each stage reports its ``Step`` to ``on_step`` and is timed):
               re-run cache
 4. filter     hard filters, text and price scores (``vga.rank.prefilter_and_score``)
 5. rank       the best matches are chosen to be compared with the photo
-6. image_rank the photo is compared with those products; the totals are recomputed
+6. image_rank the photo is compared with those products; the totals are recomputed. Only for a
+              product photo, or a photo with text: an outfit photo is not compared (one search per
+              garment is what it asks for; see ``RunState.compares_images``), and this step is
+              then timed as ``skipped`` without being announced or run
 7. shape      four price ranges per item (``vga.tiers.build_group``)
 8. assemble   the response: stores used and skipped, warnings, usage, timings
 
@@ -26,7 +29,8 @@ missing API key), or a request that ran out of time before it was even understoo
 
 The pipeline holds no per-request state except the re-run cache, so one instance serves any number
 of runs, one after another or at the same time. It never writes the photo anywhere: after the image
-step the photo is dropped and only its embedding (numbers) is kept, in the response.
+step the photo is dropped and only its embedding (numbers) is kept, in the response. An outfit photo
+has no image step at all: it is understood, and then neither embedded nor kept.
 """
 
 import asyncio
@@ -47,6 +51,7 @@ from vga.interfaces import (
 from vga.log import TimedStep, get_logger, request_context, timed
 from vga.models import (
     GenderSource,
+    InputType,
     Product,
     QueryImage,
     RunOverrides,
@@ -272,18 +277,26 @@ class SearchPipeline:
             )
             state.items.append(run)
 
-        embedding = overrides.query_embedding if overrides is not None else None
-        if embedding is None and state.previous is not None and state.previous.query_embedding:
-            embedding = list(state.previous.query_embedding)
-        if state.req.image is not None:
-            state.query = QueryImage(image=state.req.image)
-        elif embedding:
-            state.query = QueryImage(embedding=list(embedding))
+        # An outfit photo asks for one search per garment (PRD R8 wants image similarity for a
+        # product photo). Comparing it would fetch up to 40 thumbnails per garment from one shared
+        # image host, at about five a second, so there is no photo to compare with and no
+        # embedding to keep. This holds for a re-run too.
+        state.compares_images = understood.input_type is not InputType.OUTFIT_PHOTO
+        if state.compares_images:
+            embedding = overrides.query_embedding if overrides is not None else None
+            if embedding is None and state.previous is not None and state.previous.query_embedding:
+                embedding = list(state.previous.query_embedding)
+            if state.req.image is not None:
+                state.query = QueryImage(image=state.req.image)
+            elif embedding:
+                state.query = QueryImage(embedding=list(embedding))
 
         # The earlier search could not compare these products with the photo. If there is nothing
         # to compare with now either, the results are still ranked without it, and still say so.
-        if state.query is None and any(
-            run.cached is not None and not run.cached.image_done for run in state.items
+        if (
+            state.compares_images
+            and state.query is None
+            and any(run.cached is not None and not run.cached.image_done for run in state.items)
         ):
             log.warning("image similarity unavailable; reused results are ranked without it")
             state.warn(messages.IMAGE_SIMILARITY_UNAVAILABLE)
@@ -396,6 +409,9 @@ class SearchPipeline:
         run.ranked = apply_image_scores(run.scored or [], run.image_scores, state.settings)
 
     async def _image_rank(self, state: RunState) -> None:
+        if not state.compares_images:
+            self._skip_image_rank(state)
+            return
         waiting = [run for run in state.items if run.ranked is None]
         query = state.query
         if not waiting or query is None:
@@ -409,6 +425,15 @@ class SearchPipeline:
         finally:
             query.image = None  # the embedding stays; the photo goes
         self._check_image_scores(state, waiting)
+
+    def _skip_image_rank(self, state: RunState) -> None:
+        """Record that the comparison was left out by design: a ``skipped`` timing in its place,
+        like the ``reused`` understand step of a re-run. It is not announced to ``on_step`` (the
+        shopper is not told the products are being compared) and it is not a failure, so there is
+        no warning."""
+        log.info("image comparison skipped: an outfit photo is searched garment by garment")
+        with self._stage(state, Step.IMAGE_RANK.value) as handle:
+            handle.status = "skipped"
 
     async def _score_images(self, state: RunState, run: ItemRun, query: QueryImage) -> None:
         run.image_asked = True

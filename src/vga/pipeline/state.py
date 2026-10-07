@@ -94,6 +94,10 @@ class RunState:
     usage: Usage = field(default_factory=Usage)
     budget: Budget | None = None
     items: list[ItemRun] = field(default_factory=list)
+    compares_images: bool = True
+    """Whether the products are compared with the shopper's photo in this run. False for an outfit
+    photo (also on a re-run): it is searched garment by garment, with no thumbnail fetched, no
+    photo embedded and no image score applied. Not a failure, so it raises no warning."""
     query: QueryImage | None = None
     query_embedding: list[float] | None = None
 
