@@ -126,6 +126,7 @@ def make_response(
     chosen = list(groups) if groups is not None else [make_group()]
     understood = make_understand_result(
         items=[make_item_intent(category=group.category) for group in chosen]
+        or [make_item_intent()]
     )
     per_store: dict[str, int] = {}
     for group in chosen:
