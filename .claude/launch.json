@@ -1,0 +1,22 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "vga-page",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": [
+        "run",
+        "--group",
+        "ml",
+        "streamlit",
+        "run",
+        "app/main.py",
+        "--server.port",
+        "8501",
+        "--server.headless",
+        "true"
+      ],
+      "port": 8501
+    }
+  ]
+}
