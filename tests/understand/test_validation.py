@@ -374,7 +374,7 @@ def test_known_languages_pass(language: str) -> None:
 
 
 # --------------------------------------------------------------------------------------------
-# Input type is decided by what was sent
+# Input type is decided by what was sent and how many garments were found
 # --------------------------------------------------------------------------------------------
 
 
@@ -385,12 +385,15 @@ def test_known_languages_pass(language: str) -> None:
         ("blazer", True, InputType.TEXT, 1, InputType.PHOTO_TEXT),
         (None, True, InputType.PRODUCT_PHOTO, 1, InputType.PRODUCT_PHOTO),
         (None, True, InputType.OUTFIT_PHOTO, 3, InputType.OUTFIT_PHOTO),
+        (None, True, InputType.OUTFIT_PHOTO, 1, InputType.PRODUCT_PHOTO),
+        (None, True, InputType.PRODUCT_PHOTO, 2, InputType.OUTFIT_PHOTO),
         (None, True, InputType.PRODUCT_PHOTO, 3, InputType.OUTFIT_PHOTO),
+        ("blazer", True, InputType.OUTFIT_PHOTO, 2, InputType.PHOTO_TEXT),
         (None, True, InputType.TEXT, 1, InputType.PRODUCT_PHOTO),
         (None, True, "nonsense", 2, InputType.OUTFIT_PHOTO),
     ],
 )
-def test_input_type_follows_what_was_sent_and_only_product_vs_outfit_is_the_models_call(
+def test_input_type_follows_what_was_sent_and_how_many_garments_were_found(
     text: str | None, has_image: bool, claimed: Any, item_count: int, expected: InputType
 ) -> None:
     reading = make_reading(

@@ -13,7 +13,8 @@ what to type instead; a guessed category would send them to wrong results.
 
 import re
 
-from vga.models import InputType, ItemIntent, UnderstandResult, Usage
+from vga.models import ItemIntent, UnderstandResult, Usage
+from vga.understand.input_type import derive_input_type
 from vga.understand.lexicon import garment_category
 from vga.understand.messages import nothing_to_shop_for
 from vga.understand.schema import Verdict
@@ -44,7 +45,7 @@ def fallback_result(text: str, *, has_image: bool, usage: Usage) -> UnderstandRe
     if item is None:
         raise nothing_to_shop_for(Verdict.NOT_A_REQUEST)
     return UnderstandResult(
-        input_type=InputType.PHOTO_TEXT if has_image else InputType.TEXT,
+        input_type=derive_input_type(has_image=has_image, has_text=True, item_count=1),
         items=[item],
         prompt_version=FALLBACK_MARKER,
         model=FALLBACK_MARKER,

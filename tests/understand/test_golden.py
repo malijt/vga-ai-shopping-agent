@@ -61,6 +61,22 @@ async def test_the_parsed_result_satisfies_the_fields_the_fixture_expects(
     assert len(r.fake.requests) == 1
 
 
+@pytest.mark.parametrize("label", list(InputType), ids=lambda label: label.value)
+@pytest.mark.parametrize("case", GOLDEN.values(), ids=lambda c: c.id)
+async def test_every_golden_case_keeps_its_input_type_whatever_label_the_model_gives(
+    rig: RigFactory, case: GoldenCase, label: InputType
+) -> None:
+    # The type is derived from what was sent and how many garments came back (plan A26), so a
+    # model that flips its label between runs cannot change what the rest of the app sees.
+    output = {**case.model_output, "input_type": label.value}
+    r = rig(answer(UnderstandReading.model_validate(output)))
+    image = make_image_bytes() if case.image else None
+
+    result = await r.understander.understand(make_search_request(text=case.text, image=image))
+
+    assert result.input_type.value == case.expect["input_type"]
+
+
 async def test_an_inferred_gender_in_the_outfit_photo_stays_out_of_every_keyword(
     rig: RigFactory,
 ) -> None:
