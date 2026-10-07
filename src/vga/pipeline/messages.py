@@ -119,6 +119,7 @@ _CATEGORY_WORDS: dict[Category, str] = {
     Category.OUTERWEAR: "outerwear",
     Category.BOTTOMS: "bottoms",
     Category.SHOES: "shoes",
+    Category.DRESSES: "dresses and ethnic wear",  # the chip label: "Dresses" alone misses abayas
 }
 
 

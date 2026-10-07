@@ -305,7 +305,9 @@ CATEGORY_WORDS: dict[Category, frozenset[str]] = {
         "trouser", "pant", "jean", "skirt", "skort", "legging", "jegging", "jogger",
         "chino", "culotte", "sweatpant", "capri", "bermuda",
     )
-    | frozenset({"jeans", "shorts", "palazzo", "leggings", "joggers"}),
+    # "khakis" is the plural noun for trousers ("Cargo Khakis"). Only the plural: a single "khaki"
+    # is usually a colour ("Khaki Bomber Jacket" is outerwear), and it is in the colour table.
+    | frozenset({"jeans", "shorts", "palazzo", "leggings", "joggers", "khakis"}),
     Category.SHOES: _with_plurals(
         "shoe", "sneaker", "trainer", "boot", "bootie", "heel", "sandal", "slipper",
         "loafer", "mule", "pump", "slide", "espadrille", "oxford", "brogue", "derby",
@@ -427,6 +429,37 @@ GENDER_WORDS: frozenset[str] = (
     )
 )
 """Words that describe who a product is for. They are not product words, so overlap ignores them."""
+
+
+CHILDREN_WORDS: frozenset[str] = _with_plurals(
+    "boy", "girl", "kid", "baby", "toddler", "infant", "junior"
+)
+"""Title words that mark a children's product ("Boys Crew Neck T-shirt")."""
+
+_BABY_FORMS = frozenset({"baby", "babies"})
+
+
+def is_childrens_title(title: str) -> bool:
+    """Whether the title marks a children's product: boys, girls, kids, baby, toddler, infant or
+    junior (each also in its plural).
+
+    Whole words only, so "boyfriend" and "kidskin" do not count. "Baby" is skipped where it is a
+    shade or a style and not a child: before a colour word ("Baby Blue", "Baby Pink") and in "Baby
+    Doll".
+    """
+    tokens = tokenize(title)
+    for index, token in enumerate(tokens):
+        if token not in CHILDREN_WORDS:
+            continue
+        following = tokens[index + 1 : index + 2]
+        if (
+            token in _BABY_FORMS
+            and following
+            and (following[0] == "doll" or find_colours(following[0]))
+        ):
+            continue
+        return True
+    return False
 
 
 def title_gender(title: str) -> Gender | None:

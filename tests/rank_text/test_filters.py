@@ -252,6 +252,129 @@ def test_nine_dresses_and_one_blazer_leave_only_the_blazer() -> None:
 
 
 # --------------------------------------------------------------------------------------------
+# "Khakis" are trousers (found in the first real end-to-end search)
+# --------------------------------------------------------------------------------------------
+
+REAL_KHAKIS = [
+    "Men Loose Straight Cotton Poplin Khakis",  # Giordano UAE
+    "Men's Relaxed Stretch Twill Cargo Khakis",  # Giordano UAE
+]
+
+
+@pytest.mark.parametrize("title", REAL_KHAKIS)
+@pytest.mark.parametrize("category", [c for c in Category if c is not Category.BOTTOMS])
+def test_khakis_are_dropped_for_every_category_but_bottoms(category: Category, title: str) -> None:
+    result = apply_hard_filters(make_item_intent(category=category), product(title))
+
+    assert not result.keep
+    assert result.reason is DropReason.WRONG_CATEGORY
+
+
+@pytest.mark.parametrize("title", REAL_KHAKIS)
+def test_khakis_are_kept_and_labelled_bottoms_for_a_bottoms_request(title: str) -> None:
+    result = apply_hard_filters(make_item_intent(category=Category.BOTTOMS), product(title))
+
+    assert result.keep
+    assert result.category is Category.BOTTOMS
+
+
+@pytest.mark.parametrize(
+    "title", ["Khaki Bomber Jacket", "Khaki Green Trench Coat", "Khaki Utility Overshirt Jacket"]
+)
+def test_a_singular_khaki_is_a_colour_and_does_not_hide_an_outerwear_product(title: str) -> None:
+    result = apply_hard_filters(BLAZER_REQUEST, product(title))
+
+    assert result.keep
+    assert result.category is Category.OUTERWEAR
+
+
+# --------------------------------------------------------------------------------------------
+# Children's items, when the shopper stated a gender (found in the first real end-to-end search)
+# --------------------------------------------------------------------------------------------
+
+SHIRT_FOR_MEN = make_item_intent(
+    category=Category.TOPS, gender=Gender.MEN, gender_source=GenderSource.EXPLICIT
+)
+
+
+def test_a_boys_t_shirt_is_dropped_for_an_explicit_mens_shirt_request() -> None:
+    """The real case: an Arabic request for a white cotton shirt for men, under 200 AED, returned
+    this Nautica UAE title."""
+    result = apply_hard_filters(SHIRT_FOR_MEN, product("Boys Crew Neck T-shirt - White"))
+
+    assert not result.keep
+    assert result.reason is DropReason.CHILDRENS_ITEM
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Boys Crew Neck T-shirt - White",
+        "Boy's Cotton Shirt",
+        "Girls Cotton Shirt",
+        "Kids Cotton Shirt",
+        "Kid's Cotton Shirt",
+        "Baby Cotton Shirt",
+        "Toddler Cotton Shirt",
+        "Infant Cotton Shirt",
+        "Junior Cotton Shirt",
+        "Cotton Shirt for Kids",
+    ],
+)
+@pytest.mark.parametrize("gender", [Gender.MEN, Gender.WOMEN])
+def test_a_childrens_title_is_dropped_when_the_shoppers_gender_is_explicit(
+    gender: Gender, title: str
+) -> None:
+    request = make_item_intent(
+        category=Category.TOPS, gender=gender, gender_source=GenderSource.EXPLICIT
+    )
+
+    result = apply_hard_filters(request, product(title))
+
+    assert not result.keep
+    assert result.reason is DropReason.CHILDRENS_ITEM
+
+
+@pytest.mark.parametrize(
+    ("gender", "source"),
+    [
+        pytest.param(Gender.MEN, GenderSource.INFERRED, id="inferred men"),
+        pytest.param(Gender.WOMEN, GenderSource.INFERRED, id="inferred women"),
+        pytest.param(None, GenderSource.NONE, id="no gender"),
+        pytest.param(Gender.UNISEX, GenderSource.EXPLICIT, id="unisex"),
+    ],
+)
+def test_a_childrens_title_is_kept_when_the_gender_is_only_inferred_absent_or_unisex(
+    gender: Gender | None, source: GenderSource
+) -> None:
+    # Rule 8: an inferred gender is shown, not applied, so it must not remove anything.
+    request = make_item_intent(category=Category.TOPS, gender=gender, gender_source=source)
+
+    result = apply_hard_filters(request, product("Boys Crew Neck T-shirt - White"))
+
+    assert result.keep
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Baby Blue Oxford Shirt",  # a colour
+        "Baby Pink Cotton Shirt",  # a colour
+        "Baby Yellow Cotton Shirt",  # "baby" before any colour word is a shade, not a child
+        "Baby Doll Cotton Shirt",  # a style
+        "Men's Boyfriend Fit Shirt",  # a different word that contains "boy"
+        "Kidskin Leather Shirt",  # a material that starts with "kid"
+    ],
+)
+def test_words_that_only_look_like_a_childrens_marker_do_not_drop_an_adult_product(
+    title: str,
+) -> None:
+    result = apply_hard_filters(SHIRT_FOR_MEN, product(title))
+
+    assert result.keep
+
+
+# --------------------------------------------------------------------------------------------
 # Stock
 # --------------------------------------------------------------------------------------------
 

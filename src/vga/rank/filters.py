@@ -2,8 +2,11 @@
 
 A product is dropped when
 - the store says it is out of stock (``in_stock is False``; ``None`` means unknown and is kept),
-- its title names a garment outside the four categories (dress, bag, belt, ...),
-- its category is known and differs from the one requested, or
+- its title names a garment outside the five categories (jumpsuit, bag, belt, sheila, ...),
+- its category is known and differs from the one requested (a dress is dropped for a request for
+  shirts, and a shirt for a request for dresses),
+- the request names a gender explicitly (men or women) and its title marks a children's product
+  ("Boys Crew Neck T-shirt", kids, baby, toddler, infant, junior), or
 - the request names a gender explicitly and the product is clearly for the other one.
 
 "Clearly for the other one" is what the store's own data says (``Product.gender``, read from its
@@ -20,7 +23,7 @@ from enum import StrEnum
 
 from vga.models import Category, Gender, GenderSource, ItemIntent, Product
 from vga.rank.category import OUT_OF_SCOPE, resolve_category
-from vga.rank.lexicon import title_gender
+from vga.rank.lexicon import is_childrens_title, title_gender
 
 
 class DropReason(StrEnum):
@@ -30,6 +33,7 @@ class DropReason(StrEnum):
     OUT_OF_SCOPE = "out_of_scope_garment"
     WRONG_CATEGORY = "wrong_category"
     GENDER_MISMATCH = "gender_mismatch"
+    CHILDRENS_ITEM = "childrens_item"
 
 
 @dataclass(frozen=True)
@@ -64,6 +68,8 @@ def apply_hard_filters(item: ItemIntent, product: Product) -> FilterResult:
         return _drop(DropReason.WRONG_CATEGORY)
 
     if item.gender in (Gender.MEN, Gender.WOMEN) and item.gender_source is GenderSource.EXPLICIT:
+        if is_childrens_title(product.title):
+            return _drop(DropReason.CHILDRENS_ITEM)
         stated = _stated_gender(product)
         if stated in (Gender.MEN, Gender.WOMEN) and stated is not item.gender:
             return _drop(DropReason.GENDER_MISMATCH)

@@ -195,6 +195,14 @@ HAND_WRITTEN: list[tuple[str, TitleKind]] = [
     ("Faux Leather Leggings", BOTTOMS),
     ("Boot Cut Jeans", BOTTOMS),
     ("Dress Pants", BOTTOMS),
+    # "khakis" is the plural noun for trousers; "khaki" alone is a colour
+    ("Men Loose Straight Cotton Poplin Khakis", BOTTOMS),
+    ("Men's Relaxed Stretch Twill Cargo Khakis", BOTTOMS),
+    ("Slim Fit Khakis in Stone", BOTTOMS),
+    ("Khaki Chinos", BOTTOMS),
+    ("Khaki Bomber Jacket", OUTERWEAR),
+    ("Khaki Linen Shirt", TOPS),
+    ("Khaki", None),
     # shoes
     ("Leather Chelsea Boots", SHOES),
     ("White Leather Low-Top Sneakers", SHOES),
