@@ -45,6 +45,10 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 - `httpx2`, which the Understand tests import directly, is now a declared test dependency. `app` and `eval` imports sort as first-party.
 
 **Found**
+- **The eight designer brands the user named (plan Module 2.6).** Four can be read by an honest client, all Shopify with robots.txt allowing search: Bazza Alzouman (evening gowns, KWD 206-380), Hamsa (abayas and kaftans, garments KWD 55-365), Manal Smaoui (kaftans, dresses and sets, KWD 5-85) and Heba Shaikh (premium essentials, GBP 35-950, one dress style). **None prices in AED**, and the code is AED-only today: the price parser rejects a three-decimal dinar price and the price ranges keep one currency. Adding any of them needs a currency decision first; none is added yet.
+  - Not readable: N.BEE has no online store of its own (Instagram only); Montaha Couture's site has an invalid security certificate, which the client will not bypass; Yousef Al-Jasmi's site has no robots.txt and redirects to an unrelated domain, which was not followed. Marzook was not tested (handbags and accessories are out of scope).
+  - Hamsa would be a third abaya store, but its listed price is often the cheapest variant (a scarf at KWD 20-35) and not the abaya, so it needs adapter work.
+  - 20 requests in total to 6 sites, none over the limit, no block or challenge.
 - **Prompt `understand-v2` on real calls: 24 of 24 checks passed**, none skipped, including the user's photos for the first time. The gown photo was read as a burgundy floor-length gown, the outfit photo as two garments (a black maxi dress and black heels), and "dark green" was applied to the gown. Typical answer 3.1 s, worst 5.9 s.
 - **First real photo searches (ten stores, image similarity on real data).**
   - Gown photo: 30 results from 7 stores, every price range full. It took 29.5 s from a cold start, of which 10.4 s was loading the image model once and about 11 s fetching and comparing 40 thumbnails. With the model already loaded, as on the running page, that is about 19 s.
