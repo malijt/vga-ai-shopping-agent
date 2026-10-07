@@ -40,6 +40,7 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 - Acceptance harness (Phase 11): runs the 10 frozen queries, checks the BRD pass rule, exports a labelling sheet, and can record a live run and replay it offline.
 
 **Fixed**
+- **The kind of request is decided by the code, not by the model's label.** A photo with one garment is a product photo; with two or more, an outfit photo; with typed text, photo + text. Live eval after the fix: 24 of 24 passed, typical answer 1.9 s, worst 3.0 s.
 - **All ten findings from the guard audits:**
   - robots.txt is read for a redirect target before the redirect is followed, for search pages and thumbnails. A store that redirects every search now costs about twice the wait per keyword; a store that does not is unchanged.
   - A store's page requests share one request-a-second limit across all of its own hosts; the shared image host keeps its own limit.

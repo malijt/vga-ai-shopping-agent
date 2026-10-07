@@ -119,7 +119,7 @@ An outfit photo with 4 garments needs about 4× the search pages: about 6-10 s f
 
 ## Open questions
 
-1. Is input type (product vs outfit photo) detected automatically? Proposed: yes, the LLM decides.
+1. Is input type (product vs outfit photo) detected automatically? **Decided 2026-10-08:** yes, by the code from the number of garments the LLM lists (one garment is a product photo, two or more an outfit photo). The LLM's own label proved unstable on a live run and is not used.
 2. Arabic text only for the LLM step, with English store search. Is that enough?
 3. Show price in each store's currency only? **Decided 2026-10-08:** the store's own price is shown; for a store that does not price in AED, an approximate AED figure from a fixed rate is shown beside it and is used for price ranges and budgets.
 4. Is the even 25/25/25/25 default mix right, and are quartile borders from this search acceptable, or do you want fixed AED bands per category?

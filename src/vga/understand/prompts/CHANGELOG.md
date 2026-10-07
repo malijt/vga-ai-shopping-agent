@@ -38,6 +38,16 @@ The newest entry is first.
   cases held. Median latency 3.1 s over all calls (2.8 s for text requests), worst 5.9 s (the
   gown photo). Input tokens averaged 2,934 per call (v1: 2,453). One run is a small sample, and
   the eval still does not judge keyword quality.
+- **Validation changes later on 2026-10-08, same prompt and model** (no prompt edit, so no new
+  version): a budget needs a number the shopper typed; an edit needs the shopper's typed words;
+  more price words are stripped; the outgoing photo is rebuilt from its pixels alone. Live
+  re-run: **23/24**. The failure was g1: the model labelled the single-gown photo `outfit_photo`
+  where the first run said `product_photo`, so the label is not stable for one garment worn by a
+  person. The code now derives the kind of request from facts (photo or not, typed text or not,
+  number of items) and no longer reads the model's `input_type`. Live re-run after that:
+  **24/24 passed, 0 failed, 0 skipped**, median 1.9 s, worst 3.0 s, 20 calls. The model's
+  `input_type` field is still in the schema and the prompt but nothing reads it; removing it is
+  a prompt change and is left for the next version.
 - **What was checked offline** (`uv run pytest tests/understand`, no network): that the prompt says
   what the changes above say and stays under its size limit; that validation accepts `dresses` and
   still rejects a category outside the five without echoing it; that the fallback reads a
