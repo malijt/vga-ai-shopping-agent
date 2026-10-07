@@ -260,3 +260,67 @@ async def test_an_image_ranker_that_is_quick_is_not_cut_off(
 
     assert not any("longer than" in warning for warning in response.warnings)
     assert all(scored.scores.image == 0.9 for scored in response.products)
+
+
+# --------------------------------------------------------------------------------------------
+# The platform queue and the clock
+# --------------------------------------------------------------------------------------------
+
+THIRTEEN = tuple(f"shop{number:02d}" for number in range(13))
+
+
+async def test_waiting_in_the_platform_queue_is_not_a_store_timeout(
+    make_pipeline: PipelineMaker,
+    world: StoreWorld,
+    settings: Settings,
+    clock: FakeClock,
+    photo: bytes,
+) -> None:
+    # Two garments in thirteen stores: 13 robots.txt and 26 searches share one queue at 2 a second,
+    # so the last search goes out at 19 s. A store's own budget is 12 s of work (robots.txt and one
+    # variant), and every request here is instant: only the waiting is long.
+    for key in THIRTEEN:
+        world.add(store_for(key))
+    pipeline = make_pipeline(understander=outfit_understander(OUTFIT[:2]))
+    started = clock.monotonic()
+
+    response = await pipeline.run(make_search_request(image=photo, text=None), settings)
+
+    assert response.stores_skipped == []
+    assert len(response.stores_used) == len(THIRTEEN)
+    assert all(len(world.queries(key)) == 2 for key in THIRTEEN)
+    assert "longer than 30 seconds" not in " ".join(response.warnings)
+    assert 19.0 <= clock.monotonic() - started < DEADLINE_S
+
+
+async def test_a_queue_longer_than_the_request_deadline_keeps_what_arrived_and_sends_nothing_late(
+    make_pipeline: PipelineMaker,
+    world: StoreWorld,
+    settings: Settings,
+    clock: FakeClock,
+    tmp_path,
+) -> None:
+    # 24 stores sharing a queue of one request a second: robots.txt for all of them takes until
+    # 24 s, and the searches follow at one a second, so only the first few answer within 30 s.
+    slow_queue = make_settings(rps_per_platform=1, log_dir=str(tmp_path / "logs"))
+    keys = [f"shop{number:02d}" for number in range(24)]
+    for key in keys:
+        world.add(store_for(key))
+    pipeline = make_pipeline(engine_settings=slow_queue)
+    started = clock.monotonic()
+
+    response = await pipeline.run(make_search_request(text="black oversized blazer"), settings)
+
+    assert DEADLINE_S <= clock.monotonic() - started <= DEADLINE_S + MARGIN_S
+    assert messages.deadline_warning(DEADLINE_S) in response.warnings
+    answered = [report.store_id for report in response.stores_used]
+    assert 3 <= len(answered) < len(keys)
+    assert answered == keys[: len(answered)]  # the stores first in line, in order
+    assert response.result_count > 0
+    unfinished = {report.store_id for report in response.stores_skipped}
+    assert unfinished == set(keys[len(answered) :])
+    assert all(report.status is StoreStatus.TIMEOUT for report in response.stores_skipped)
+    # Requests still waiting at the deadline were never sent, and none went out after it.
+    assert world.search_requests() == len(answered)
+    last_search = max(max(world.arrival_times(key), default=0.0) for key in keys)
+    assert last_search - started < DEADLINE_S

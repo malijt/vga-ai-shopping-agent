@@ -26,6 +26,7 @@ import bisect
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from vga.fetch.deadline import waiting_in_queue
 from vga.interfaces import Clock
 
 _EPSILON = 1e-9
@@ -114,7 +115,8 @@ class RateLimiter:
         return slot
 
     async def _wait(self, seconds: float) -> None:
-        await self._clock.sleep(seconds)
+        with waiting_in_queue():  # a request waiting for its slot has not started
+            await self._clock.sleep(seconds)
 
     def _give_back(
         self,

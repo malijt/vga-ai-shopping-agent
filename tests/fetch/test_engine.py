@@ -311,19 +311,98 @@ async def test_a_slow_response_is_a_timeout_result_after_one_attempt(
     assert attempts == ["black blazer"]  # no retry, and the second variant is not tried
 
 
-async def test_a_store_timeout_keeps_the_products_found_before_it(
+async def test_a_store_that_works_past_its_budget_keeps_the_products_found_before_it(
     settings: Settings, clock: FakeClock, router: respx.MockRouter
 ) -> None:
-    """A rate limit slower than the store's budget: variant one lands, variant two would not."""
+    """The budget is 6 s for robots.txt and for each of two variants: 18 s of work. Everything the
+    store does takes 5 s, and the second variant is sent to a redirect, which takes a hop more."""
     engine = StoreSearchEngine(settings, clock=clock)
-    store = shopify_store(rps=0.1, timeout_s=6)  # one request every 10 s; budget 6 s x 3 = 18 s
+    elsewhere = f"{SUGGEST}?q=elsewhere"
+
+    async def slow_robots(request: httpx.Request) -> httpx.Response:
+        await clock.sleep(5)
+        return text_response(ALLOW_ALL_ROBOTS)
+
+    async def slow_search(request: httpx.Request) -> httpx.Response:
+        await clock.sleep(5)
+        query = request.url.params["q"]
+        if query == "oversized blazer":
+            return httpx.Response(302, headers={"location": elsewhere})
+        return json_response(suggest_body(shopify_product(1)))
+
+    router.get(OHPOLLY_ROBOTS_URL).mock(side_effect=slow_robots)
+    router.get(url__startswith=SUGGEST).mock(side_effect=slow_search)
+    started = clock.monotonic()
+
+    [result] = await engine.search(item("black blazer", "oversized blazer"), [shopify_store()])
+
+    assert result.status is StoreStatus.OK
+    assert [p.title for p in result.products] == ["Blazer 1"]  # variant one landed at 10 s
+    assert "did not finish all its searches in time" in (result.detail or "")
+    assert clock.monotonic() - started == pytest.approx(18.0, abs=0.01)  # 5 + 5 + 5 + 3 s of work
+
+
+async def test_waiting_for_a_slow_rate_limit_is_not_working_so_it_does_not_use_up_the_budget(
+    settings: Settings, clock: FakeClock, router: respx.MockRouter
+) -> None:
+    """One request every 10 s is slower than the 18 s budget of robots.txt and two variants, but
+    every request is quick: the time spent waiting for its slot is not time the store took."""
+    engine = StoreSearchEngine(settings, clock=clock)
+    store = shopify_store(rps=0.1, timeout_s=6)
     mock_oh_polly(router, suggest_body(shopify_product(1)))
+    started = clock.monotonic()
 
     [result] = await engine.search(item("black blazer", "oversized blazer"), [store])
 
     assert result.status is StoreStatus.OK
-    assert [p.title for p in result.products] == ["Blazer 1"]
-    assert "did not finish all its searches in time" in (result.detail or "")
+    assert result.detail is None  # not a word about running out of time
+    assert clock.monotonic() - started == pytest.approx(20.0, abs=0.01)  # robots, then 10 s, 10 s
+
+
+async def test_the_request_timeout_runs_from_when_the_request_starts_not_from_when_it_queued(
+    router: respx.MockRouter, clock: FakeClock
+) -> None:
+    """Behind the other stores of the platform a search waits tens of seconds for its turn; the 6 s
+    timeout is then for the request itself. An answer that takes 5 s is accepted, 7 s is not."""
+    engine = StoreSearchEngine(
+        make_settings(rps_per_platform=0.1, second_variant_below=0), clock=clock
+    )
+
+    def slow(seconds: float, key: str):
+        async def answer(request: httpx.Request) -> httpx.Response:
+            await clock.sleep(seconds)
+            return json_response(suggest_body(shopify_product(1)))
+
+        router.get(f"https://{key}.example/robots.txt").mock(
+            return_value=text_response(ALLOW_ALL_ROBOTS)
+        )
+        router.get(url__startswith=f"https://{key}.example/search/suggest.json").mock(
+            side_effect=answer
+        )
+
+    stores = [
+        shopify_store(
+            id=key,
+            name=key.title(),
+            search_url_template=f"https://{key}.example/search/suggest.json?q={{query}}",
+            allowed_hosts=[f"{key}.example", "cdn.shopify.com"],
+        )
+        for key in ("first", "quick", "late")
+    ]
+    slow(0.0, "first")
+    slow(5.0, "quick")
+    slow(7.0, "late")
+
+    results = await engine.search(item("black blazer"), stores)
+
+    # The platform allows one request every ten seconds, so "late" is the sixth in line (robots.txt
+    # and a search for each store) and starts at about 50 s.
+    assert [(r.store_id, r.status) for r in results] == [
+        ("first", StoreStatus.OK),
+        ("quick", StoreStatus.OK),
+        ("late", StoreStatus.TIMEOUT),
+    ]
+    assert clock.monotonic() > 50
 
 
 # --------------------------------------------------------------------------------------------

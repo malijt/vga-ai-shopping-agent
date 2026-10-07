@@ -142,13 +142,19 @@ class StoreSearchEngine:
             )
 
         variants = self._variants(item, store)
-        # One budget for robots.txt and one per variant: the requests run one after another.
+        # One budget for robots.txt and one per variant: the requests run one after another. Only
+        # the time spent working counts. A request that is waiting its turn in the rate limiter
+        # (the whole platform shares one queue) has not started, and the stage as a whole is held
+        # to the request deadline by the pipeline, which keeps what had arrived by then.
         timeout_s = (store.timeout_s or self.settings.timeout_s) * (len(variants) + 1)
         done: list[StoreResult] = []
         timed_out = False
         try:
             await run_with_deadline(
-                self.clock, timeout_s, self._search_variants(store, variants, done)
+                self.clock,
+                timeout_s,
+                self._search_variants(store, variants, done),
+                pausable=True,
             )
         except TimeoutError:
             timed_out = True

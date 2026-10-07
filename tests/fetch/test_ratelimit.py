@@ -6,7 +6,7 @@ from itertools import pairwise
 import pytest
 
 from tests.fakes import FakeClock
-from vga.fetch.deadline import run_with_deadline
+from vga.fetch.deadline import run_with_deadline, waiting_in_queue
 from vga.fetch.ratelimit import Cooldowns, RateLimiter, SharedLimit
 
 
@@ -378,4 +378,100 @@ async def test_cancelling_the_caller_cancels_the_work(clock: FakeClock) -> None:
 
     with pytest.raises(asyncio.CancelledError):
         await task
+    assert cancelled
+
+
+# --------------------------------------------------------------------------------------------
+# A deadline that does not run while the work is waiting in a queue
+# --------------------------------------------------------------------------------------------
+
+
+async def test_time_spent_waiting_in_a_queue_does_not_use_up_a_pausable_deadline(
+    clock: FakeClock,
+) -> None:
+    async def work() -> str:
+        with waiting_in_queue():
+            await clock.sleep(20)  # four times the deadline, spent in line
+        await clock.sleep(5)  # the work itself
+        return "done"
+
+    assert await run_with_deadline(clock, 6, work(), pausable=True) == "done"
+
+
+async def test_the_working_time_before_and_after_a_wait_adds_up_against_the_deadline(
+    clock: FakeClock,
+) -> None:
+    started = clock.monotonic()
+
+    async def work() -> None:
+        await clock.sleep(4)
+        with waiting_in_queue():
+            await clock.sleep(30)
+        await clock.sleep(4)  # 4 + 4 s of work against a 6 s deadline
+
+    with pytest.raises(TimeoutError):
+        await run_with_deadline(clock, 6, work(), pausable=True)
+
+    assert clock.monotonic() - started == pytest.approx(4 + 30 + 2)  # two seconds into the last 4
+
+
+async def test_a_deadline_that_is_not_pausable_keeps_running_while_the_work_waits(
+    clock: FakeClock,
+) -> None:
+    async def work() -> None:
+        with waiting_in_queue():
+            await clock.sleep(20)
+
+    with pytest.raises(TimeoutError):
+        await run_with_deadline(clock, 6, work())
+
+
+async def test_a_wait_pauses_every_pausable_deadline_around_it_and_only_those(
+    clock: FakeClock,
+) -> None:
+    started = clock.monotonic()
+
+    async def queue_then_work() -> None:
+        with waiting_in_queue():
+            await clock.sleep(10)
+        await clock.sleep(2)
+
+    inner = run_with_deadline(clock, 3, queue_then_work(), pausable=True)
+    outer = run_with_deadline(clock, 8, inner, pausable=True)
+    plain = run_with_deadline(clock, 11, outer)  # not pausable: it counts the whole 12 s
+
+    with pytest.raises(TimeoutError):
+        await plain
+
+    # Had either pausable deadline run through the wait, it would have fired at 3 s or 8 s.
+    assert clock.monotonic() - started == pytest.approx(11)
+
+
+async def test_waiting_outside_any_pausable_deadline_does_nothing_special(clock: FakeClock) -> None:
+    started = clock.monotonic()
+
+    with waiting_in_queue():
+        await clock.sleep(3)
+
+    assert clock.monotonic() - started == pytest.approx(3)
+
+
+async def test_a_pausable_deadline_still_cancels_work_that_overruns_after_a_wait(
+    clock: FakeClock,
+) -> None:
+    cancelled = False
+
+    async def work() -> None:
+        nonlocal cancelled
+        with waiting_in_queue():
+            await clock.sleep(5)
+        try:
+            await clock.sleep(100)
+        except asyncio.CancelledError:
+            cancelled = True
+            raise
+
+    with pytest.raises(TimeoutError):
+        await run_with_deadline(clock, 6, work(), pausable=True)
+
     assert cancelled

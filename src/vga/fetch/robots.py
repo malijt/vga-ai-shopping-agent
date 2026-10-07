@@ -32,6 +32,7 @@ from protego import Protego
 from vga.fetch.allowlist import check_url
 from vga.fetch.blocking import looks_like_html
 from vga.fetch.client import PoliteClient
+from vga.fetch.deadline import waiting_in_queue
 from vga.fetch.errors import BlockedError, CooldownError, FetchError, RobotsDeniedError
 from vga.log import get_logger
 from vga.models import StoreConfig
@@ -101,9 +102,11 @@ class RobotsChecker:
             pending = self._in_flight.get(host)
             if pending is None:
                 break
-            # Another search is already asking this host for robots.txt: share its answer.
+            # Another search is already asking this host for robots.txt: share its answer. This
+            # one is waiting for that fetch (and its place in the queue), not working.
             try:
-                return await asyncio.shield(pending)
+                with waiting_in_queue():
+                    return await asyncio.shield(pending)
             except asyncio.CancelledError:
                 if not pending.cancelled():
                     raise  # this task was cancelled, not the one doing the fetch
