@@ -4,8 +4,9 @@ One run, in order (each stage reports its ``Step`` to ``on_step`` and is timed):
 
 1. validate   the request, on the server side (``validation.py``)
 2. understand one OpenAI call, or the earlier understanding reused with the chip edits applied
-3. search     every item (garment) is searched in its own task, started in item order, against the
-              stores that sell for its stated gender; or reused from the re-run cache
+3. search     every store that sells for an item's stated gender gets its own search for it, all
+              started together in item order and then store order; or the item is reused from the
+              re-run cache
 4. filter     hard filters, text and price scores (``vga.rank.prefilter_and_score``)
 5. rank       the best matches are chosen to be compared with the photo
 6. image_rank the photo is compared with those products; the totals are recomputed

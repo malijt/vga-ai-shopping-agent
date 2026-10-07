@@ -22,7 +22,9 @@ from vga.models import (
     GenderSource,
     InputType,
     ItemEdit,
+    MixPreset,
     RunOverrides,
+    SettingsOverride,
     StoreStatus,
 )
 from vga.pipeline import messages
@@ -211,3 +213,26 @@ async def test_confirming_a_guessed_gender_in_the_chips_narrows_the_stores_on_th
     assert world.requests_to("womens.example") == womens_before  # not asked again
     assert [r.store_id for r in second.stores_skipped] == ["womens"]
     assert len(understander.calls) == 1
+
+
+async def test_a_mix_change_after_a_gender_search_lists_each_store_once_as_before(
+    make_pipeline: PipelineMaker, world: StoreWorld, three_stores: None, settings: Settings
+) -> None:
+    pipeline = make_pipeline(understander=wanting(Gender.MEN, GenderSource.EXPLICIT))
+    first = await pipeline.run(make_search_request(text="blazer for men"), settings)
+    requests_before = world.all_requests()
+
+    second = await pipeline.run(
+        make_search_request(text="blazer for men", rerun_of=first.request_id),
+        settings,
+        RunOverrides(
+            understood=first.understood,
+            settings=SettingsOverride(tier_mix=MixPreset.VALUE_FIRST.mix),
+        ),
+    )
+
+    assert world.all_requests() == requests_before
+    assert [r.store_id for r in second.stores_used] == [r.store_id for r in first.stores_used]
+    assert [(r.store_id, r.reason) for r in second.stores_skipped] == [
+        (r.store_id, r.reason) for r in first.stores_skipped
+    ]

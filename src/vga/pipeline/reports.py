@@ -53,6 +53,17 @@ class StoreSummary:
 
 def outcomes_for_item(run: ItemRun) -> list[StoreOutcome]:
     """One outcome for every active store, for this item."""
+    if run.cached is not None:
+        # Nothing was asked this time: say so, and charge no time. The cached reports already
+        # include the stores left out for their gender.
+        reused: list[StoreOutcome] = []
+        for report in run.cached.reports:
+            searched = report.store_id in run.cached.searched_ids
+            if searched:
+                report = report.model_copy(update={"from_cache": True, "duration_ms": 0.0})
+            reused.append(StoreOutcome(report, searched))
+        return reused
+
     outcomes: list[StoreOutcome] = []
     gender = effective_gender(run.item)
     for store in run.gender_skipped:
@@ -63,16 +74,6 @@ def outcomes_for_item(run: ItemRun) -> list[StoreOutcome]:
         )
         report = StoreReport(store_id=store.id, status=StoreStatus.EMPTY, reason=reason)
         outcomes.append(StoreOutcome(report, searched=False))
-
-    if run.cached is not None:
-        # Nothing was asked this time: say so, and charge no time.
-        for report in run.cached.reports:
-            searched = report.store_id in run.cached.searched_ids
-            if searched:
-                report = report.model_copy(update={"from_cache": True, "duration_ms": 0.0})
-            outcomes.append(StoreOutcome(report, searched))
-        return outcomes
-
     for store in run.stores:
         outcomes.append(StoreOutcome(_report_for(store, run.store_results.get(store.id)), True))
     return outcomes
