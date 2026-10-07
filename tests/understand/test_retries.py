@@ -191,3 +191,14 @@ async def test_a_retry_after_shorter_than_the_backoff_does_not_shorten_it(rig: R
     await r.understander.understand(make_search_request(text=REQUEST_TEXT))
 
     assert r.clock.sleeps == [FIRST_BACKOFF_S]
+
+
+async def test_by_default_this_step_may_spend_at_most_twenty_seconds(rig: RigFactory) -> None:
+    # The request deadline is 30 s; the stores must keep a share of it. A first call that took
+    # 18.5 s leaves too little for a retry (18.5 + 0.75 backoff + 1 s to be worth a call > 20).
+    r = rig(http_error(500), on_request=lambda _request: r.clock.advance(18.5))
+
+    result = await r.understander.understand(make_search_request(text=REQUEST_TEXT))
+
+    assert len(r.fake.requests) == 1
+    assert result.model == FALLBACK_MARKER

@@ -27,6 +27,12 @@ _URL = re.compile(
     re.IGNORECASE,
 )
 
+_MARKUP_TAG = re.compile(r"</?[a-z][^<>]{0,100}>", re.IGNORECASE)
+_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")
+_NUMBER_IN_TEXT = re.compile(
+    r"(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:[.,]\d+)?)(\s?k\b)?", re.IGNORECASE
+)
+
 _USER_TEXT_TAG = re.compile(r"<\s*/?\s*user_text\b[^>]*>?", re.IGNORECASE)
 _SPACES = re.compile(r"\s+")
 
@@ -80,7 +86,7 @@ def clean_phrase(text: str, max_chars: int) -> str:
     No URLs, no control characters, no markup or punctuation that could mean something to a store
     search or a renderer; at most ``max_chars`` long, cut at a word boundary.
     """
-    text = remove_urls(strip_control_characters(text))
+    text = _MARKUP_TAG.sub(" ", remove_urls(strip_control_characters(text)))
     kept = [ch if (unicodedata.category(ch)[0] in "LNM" or ch in " -'’") else " " for ch in text]
     phrase = collapse_spaces("".join(kept)).strip("-'’ ")
     if len(phrase) > max_chars:
@@ -100,3 +106,14 @@ def clean_keyword(text: str, *, allow_gender: bool) -> str:
         text = strip_gender_words(text)
     phrase = trim_connectors(clean_phrase(text, KEYWORD_MAX_CHARS))
     return phrase if meaningful_tokens(phrase) else ""
+
+
+def numbers_in(text: str) -> list[float]:
+    """The numbers written in ``text``: Arabic-Indic digits are read, ``1,200`` is 1200, ``3k`` is
+    3000. Used to check that a budget the model reports is a number the shopper really wrote."""
+    found: list[float] = []
+    for raw, thousands in _NUMBER_IN_TEXT.findall(text.translate(_DIGITS)):
+        grouped = re.fullmatch(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?", raw)
+        value = float(raw.replace(",", "") if grouped else raw.replace(",", "."))
+        found.append(value * 1000 if thousands else value)
+    return found

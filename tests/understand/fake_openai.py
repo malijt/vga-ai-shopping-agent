@@ -172,6 +172,17 @@ def http_error(status: int, headers: Mapping[str, str] | None = None) -> Step:
     )
 
 
+def html_page() -> Step:
+    """A 200 whose body is a web page, as a proxy or a captive portal would serve."""
+    return lambda _recorded, _request: httpx2.Response(
+        200, headers={"content-type": "text/html"}, content=b"<html><body>Sign in</body></html>"
+    )
+
+
+def empty_body() -> Step:
+    return lambda _recorded, _request: httpx2.Response(200, content=b"")
+
+
 def timeout() -> Step:
     def step(_recorded: RecordedRequest, request: httpx2.Request) -> httpx2.Response:
         raise httpx2.ReadTimeout("fake read timeout", request=request)

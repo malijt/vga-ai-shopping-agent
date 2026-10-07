@@ -3,8 +3,8 @@
 The model's answer is untrusted output: it was produced from a stranger's text and photo. Native
 structured outputs make it well-formed JSON, but "well-formed" is not "safe": a model that obeyed
 an injected instruction would still return valid JSON. So every field is checked again here, in
-code, against the same rules the contract uses, and free text is cleaned (no URLs, no control
-characters, no price words, bounded length).
+code, against the same rules the contract uses, and free text is cleaned (no URLs, markup or
+control characters, bounded length; keywords also lose price and gender words).
 
 Two outcomes besides success:
 
@@ -16,7 +16,7 @@ Two outcomes besides success:
 
 import math
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any, cast
 
@@ -37,7 +37,7 @@ from vga.understand.keywords import dedupe_keywords, with_stated_gender
 from vga.understand.lexicon import mentioned_genders
 from vga.understand.prompt import echoes_instructions
 from vga.understand.schema import UnderstandReading, Verdict
-from vga.understand.text import KEYWORD_MAX_CHARS, clean_keyword, clean_phrase
+from vga.understand.text import KEYWORD_MAX_CHARS, clean_keyword, clean_phrase, numbers_in
 
 MAX_COLOUR_CHARS = 60
 MAX_STYLE_CHARS = 120
@@ -45,6 +45,11 @@ MAX_MATERIAL_CHARS = 60
 MAX_EDIT_CHARS = 60
 MAX_EDITS = 10
 """Same limits as ``ItemIntent`` and ``UnderstandResult``."""
+
+UNMATCHED_BUDGET_WARNING = (
+    "We ignored a price limit that did not match the numbers in your request. "
+    "Add it again if you want one."
+)
 
 _LANGUAGES = ("en", "ar", "mixed", "other")
 _CATEGORY_NAMES = ", ".join(category.value for category in Category)
@@ -77,6 +82,8 @@ class ValidatedReading:
     budget: Budget | None
     edits: list[str]
     language: Language
+    warnings: list[str] = field(default_factory=list)
+    """Plain notes for the shopper about something the validator set aside."""
 
 
 def validate_reading(
@@ -107,14 +114,15 @@ def validate_reading(
         for index, raw in enumerate(raw_items[:MAX_ITEMS])
         if (item := _validate_item(index, raw, text, problems)) is not None
     ]
-    budget = _validate_budget(reading.budget, text, problems)
-    edits = _validate_edits(reading.edits, problems)
+    warnings: list[str] = []
+    budget = _validate_budget(reading.budget, text, problems, warnings)
+    edits = _validate_edits(reading.edits, text, problems)
     language = _validate_language(reading.language, text, problems)
     input_type = _reconcile_input_type(reading.input_type, text, has_image, len(items))
 
     if problems:
         raise OutputValidationError(problems)
-    return ValidatedReading(input_type, items, budget, edits, language)
+    return ValidatedReading(input_type, items, budget, edits, language, warnings)
 
 
 # --------------------------------------------------------------------------------------------
@@ -193,7 +201,9 @@ def _keywords(value: Any, where: str, problems: list[str]) -> list[str]:
 # --------------------------------------------------------------------------------------------
 
 
-def _validate_budget(raw: Any, text: str | None, problems: list[str]) -> Budget | None:
+def _validate_budget(
+    raw: Any, text: str | None, problems: list[str], warnings: list[str]
+) -> Budget | None:
     if raw is None or text is None:
         return None  # a photo cannot state a budget; a price printed in it is data, not a limit
     currency = raw.currency.strip().upper() if isinstance(raw.currency, str) else None
@@ -209,16 +219,25 @@ def _validate_budget(raw: Any, text: str | None, problems: list[str]) -> Budget 
         fields: dict[str, Any] = {"max_price": float(max_price)}
         if currency:
             fields["currency"] = currency
-        return Budget.model_validate(fields)
+        budget = Budget.model_validate(fields)
     except ValidationError:
         problems.append("budget: max_price must be above 0 and currency a 3-letter code or null")
         return None
+    written = numbers_in(text)
+    if written and not any(abs(number - budget.max_price) < 0.005 for number in written):
+        # The model reported a price the shopper never wrote (for example one read from a sign in
+        # the photo). A wrong limit hides good results; no limit hides nothing.
+        warnings.append(UNMATCHED_BUDGET_WARNING)
+        return None
+    return budget
 
 
-def _validate_edits(raw: Any, problems: list[str]) -> list[str]:
+def _validate_edits(raw: Any, text: str | None, problems: list[str]) -> list[str]:
     if not isinstance(raw, list) or not all(isinstance(entry, str) for entry in raw):
         problems.append("edits: must be a list of strings")
         return []
+    if text is None:
+        return []  # only the shopper's words can ask for a change; a sign in a photo cannot
     cleaned = dedupe_keywords(
         (clean_phrase(entry, MAX_EDIT_CHARS) for entry in raw), limit=MAX_EDITS
     )

@@ -36,10 +36,15 @@ writes `eval/results/understand-live.md`. Paste its pass/fail counts below.
 
 Kept here so that nobody has to rediscover them (genai best practice 13).
 
-- **Validation cannot judge meaning.** It stops links, control characters, foreign categories,
-  guessed genders, price words, a copied prompt and an invented price. It cannot tell that a model
-  which obeyed an injection and still answered `ok` with a plausible garment gave the wrong
-  garment. Only the live eval shows that, and the prompt rules are the defence.
+- **Validation cannot judge meaning.** It stops links, markup and control characters, foreign
+  categories, guessed genders, price words, a copied prompt, edits that come from a photo, and a
+  budget that is not a number the shopper wrote (a budget written in words, "four hundred", is
+  accepted unchecked). It cannot tell that a model which obeyed an injection and still answered
+  `ok` with a plausible garment gave the wrong garment. Only the live eval shows that, and the
+  prompt rules are the defence.
+- **Price words are a list.** A price word the list misses reaches the store search. The list
+  covers the common English and Arabic words and number phrases ("under 300 AED", "300 or less",
+  "200-300 AED", "<400"); extend `lexicon.py` when a gap shows up. "Air Max 90" is kept on purpose.
 - **A mixed request drops what is out of scope.** "A black jacket and a handbag" searches the
   jacket only, without telling the shopper about the handbag.
 - **The fallback reads a short word list.** When the model path fails, the category of a text

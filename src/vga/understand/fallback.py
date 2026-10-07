@@ -24,7 +24,11 @@ FALLBACK_MARKER = "fallback"
 
 FALLBACK_WARNING = (
     "We could not fully analyse your request, so we searched with your words as typed. "
-    "A price limit or a photo you added was not applied."
+    "A price limit you gave was not applied."
+)
+FALLBACK_WARNING_WITH_PHOTO = (
+    "We could not fully analyse your request, so we searched with your words as typed. "
+    "Your photo and any price limit you gave were not used."
 )
 
 _SENTENCES = re.compile(r"[\n.!?;:؟؛]+")
@@ -45,7 +49,7 @@ def fallback_result(text: str, *, has_image: bool, usage: Usage) -> UnderstandRe
         prompt_version=FALLBACK_MARKER,
         model=FALLBACK_MARKER,
         usage=usage,
-        warnings=[FALLBACK_WARNING],
+        warnings=[FALLBACK_WARNING_WITH_PHOTO if has_image else FALLBACK_WARNING],
     )
 
 

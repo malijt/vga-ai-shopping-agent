@@ -10,9 +10,9 @@ Three jobs, each one a rule the model alone cannot be trusted with:
 - **Garment words**: the fallback (plan 5.3.1) has no model to say what category a request is
   about, so it reads a small garment word list instead.
 
-The lists are deliberately short. They need to catch the common cases and fail safe: a word they
-miss stays in a keyword (harmless), a gender they miss downgrades a claim to "inferred" (shown, not
-applied).
+The lists are deliberately short and will have gaps. A gender word they miss fails safe: the claim
+is downgraded to "inferred" (shown, not applied). A price word they miss is a real leak of Rule 7
+into a store search, so extend the list when the live eval or a shopper shows a gap.
 """
 
 import re
@@ -50,26 +50,39 @@ def _arabic_forms(token: str) -> list[str]:
 
 _AR_PREFIX = r"(?:وال|بال|لل|وب|ول|ال|و|ب|ل|ف)?"
 
-_QUALIFIER = (
-    r"(?:under|below|beneath|less\s+than|lower\s+than|up\s+to|upto|at\s+most|max(?:imum)?|within"
-    r"|around|about|over|above|more\s+than|budget\s+of|between"
-    r"|بأقل\s+من|باقل\s+من|أقل\s+من|اقل\s+من|بحد\s+أقصى|بحد\s+اقصى|حتى|لا\s+يتجاوز"
-    r"|بحدود|حوالي|أكثر\s+من|اكثر\s+من|اقصى|أقصى)"
+_STRONG_QUALIFIER = (
+    r"(?:under|below|beneath|less\s+than|lower\s+than|up\s+to|upto|at\s+most|within|budget\s+of"
+    r"|(?<!air )max(?:imum)?"  # not "Air Max 90": a shoe, not a price
+    r"|بأقل\s+من|باقل\s+من|أقل\s+من|اقل\s+من|بحد\s+أقصى|بحد\s+اقصى|حتى|لا\s+يتجاوز|اقصى|أقصى)"
 )
+"""Words that make a bare number a price ("under 300"). Safe without a currency."""
+
+_WEAK_QUALIFIER = r"(?:around|about|over|above|more\s+than|between|بحدود|حوالي|أكثر\s+من|اكثر\s+من)"
+"""Words that make a number a price only next to a currency ("around 300 AED")."""
+
+_ANY_QUALIFIER = rf"(?:{_STRONG_QUALIFIER}|{_WEAK_QUALIFIER})"
 _CURRENCY = (
     r"(?:aed|dhs?|dirhams?|sar|riyals?|qar|kwd|omr|bhd|usd|eur|gbp|\$|€|£"
     r"|درهم|دراهم|ريال|دينار|ر\.\s?س|د\.\s?إ)"
 )
-_NUMBER = r"\d[\d,.٫٬]{0,14}"  # bounded: a long run of digits cannot make a match slow
+_NUMBER = r"\d[\d,.٫٬]{0,14}k?"  # bounded: a long run of digits cannot make a match slow
+_TRAILING_LIMIT = r"(?:\s+(?:or|and)\s+(?:less|under|below|lower|fewer)|\s+max(?:imum)?|\s+tops?)"
 
 _PRICE_PHRASES = re.compile(
     "|".join(
         [
             # Arabic "at a suitable price" must go before the single words below it.
             rf"(?<!\w){_AR_PREFIX}سعر(?:ه|ها)?\s+(?:ال)?مناسب(?:ه|ة)?(?!\w)",
-            rf"(?<!\w){_QUALIFIER}?\s*{_CURRENCY}\s*{_NUMBER}(?!\w)",
-            rf"(?<!\w){_QUALIFIER}?\s*{_NUMBER}\s*{_CURRENCY}(?!\w)",
-            rf"(?<!\w){_QUALIFIER}\s*{_NUMBER}(?!\w)",
+            # "AED 400", "under $300"
+            rf"(?<!\w){_ANY_QUALIFIER}?\s*{_CURRENCY}\s*{_NUMBER}(?!\w)",
+            # "400 AED", "under 400 AED", "200-300 AED", "300 dirhams or less", "300 AED max"
+            rf"(?<!\w){_ANY_QUALIFIER}?\s*(?:{_NUMBER}\s*(?:-|\u2013|to|and)\s*)?{_NUMBER}\s*"
+            rf"{_CURRENCY}(?:{_TRAILING_LIMIT})?(?!\w)",
+            # "under 300", "max 400", "300 or less"
+            rf"(?<!\w){_STRONG_QUALIFIER}\s*{_NUMBER}(?!\w)",
+            rf"(?<!\w){_NUMBER}\s+(?:or|and)\s+(?:less|under|below|lower|fewer)(?!\w)",
+            # "< 400", "<=400", "\u2264 300" (no word boundary: "jacket<400" is common)
+            rf"[<\u2264]=?\s*(?:{_CURRENCY}\s*)?{_NUMBER}(?:\s*{_CURRENCY})?(?!\w)",
         ]
     ),
     re.IGNORECASE,
@@ -157,6 +170,8 @@ _STOP_WORDS = frozenset(
         "و", "او", "في", "من", "على", "الى", "مع", "ل", "ب", "انا", "اريد", "ابغى", "ابي", "ابحث",
     }
 )  # fmt: skip
+_STOP_WORDS = frozenset(fold_arabic(word) for word in _STOP_WORDS)
+"""Folded like the text they are compared with, so spellings such as "على" and "ابغى" match."""
 
 
 def trim_connectors(text: str) -> str:
@@ -216,17 +231,27 @@ _GARMENT_LOOKUP: dict[str, Category] = {
 }
 
 
-def garment_category(text: str) -> Category | None:
-    """The category of the first garment word in ``text``, or ``None``.
+def _category_of_token(token: str) -> Category | None:
+    variants = [token, token.removesuffix("s"), token.removesuffix("es"), *_arabic_forms(token)]
+    return next((_GARMENT_LOOKUP[v] for v in variants if v in _GARMENT_LOOKUP), None)
 
+
+def garment_category(text: str) -> Category | None:
+    """The category of the garment ``text`` names, or ``None``.
+
+    In an English phrase the garment is the last word ("denim jacket" is a jacket, "oxford shirt"
+    a shirt), so Latin words are read from the right. In Arabic the garment comes first ("جاكيت
+    جلد"), so Arabic words are read from the left. Latin words win when both are present.
     "t-shirt" counts as "tshirt"; plurals are read by dropping a final "s" or "es".
     """
     folded = fold_arabic(text).replace("t-shirt", "tshirt").replace("t shirt", "tshirt")
-    for token in re.findall(r"[^\W_]+", folded):
-        variants = [token, token.removesuffix("s"), token.removesuffix("es"), *_arabic_forms(token)]
-        for variant in variants:
-            if variant in _GARMENT_LOOKUP:
-                return _GARMENT_LOOKUP[variant]
+    tokens = re.findall(r"[^\W_]+", folded)
+    latin = [token for token in tokens if token.isascii()]
+    other = [token for token in tokens if not token.isascii()]
+    for token in [*reversed(latin), *other]:
+        category = _category_of_token(token)
+        if category is not None:
+            return category
     return None
 
 

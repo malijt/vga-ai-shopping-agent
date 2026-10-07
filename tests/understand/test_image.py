@@ -101,12 +101,23 @@ def test_an_animated_image_uses_its_first_frame() -> None:
     first = Image.new("RGB", (30, 30), (0, 0, 255))
     second = Image.new("RGB", (30, 30), (255, 0, 0))
     buffer = io.BytesIO()
-    first.save(buffer, format="GIF", save_all=True, append_images=[second])
+    first.save(buffer, format="WEBP", save_all=True, append_images=[second], lossless=True)
 
     pixel = _open(prepare_image(buffer.getvalue())).getpixel((5, 5))
 
     assert isinstance(pixel, tuple)
     assert pixel[2] > pixel[0]  # blue, not red
+
+
+@pytest.mark.parametrize("fmt", ["GIF", "BMP", "TIFF"])
+def test_a_format_the_app_does_not_accept_is_not_decoded(fmt: str) -> None:
+    buffer = io.BytesIO()
+    Image.new("RGB", (20, 20), (1, 2, 3)).save(buffer, format=fmt)
+
+    with pytest.raises(InvalidInputError) as caught:
+        prepare_image(buffer.getvalue())
+
+    assert caught.value.user_message == UNREADABLE_PHOTO_MESSAGE
 
 
 def test_data_url_decodes_back_to_the_prepared_jpeg() -> None:

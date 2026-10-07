@@ -15,6 +15,7 @@ from vga.models import Category, Gender, GenderSource, InputType
 from vga.understand.prompt import echoes_instructions, system_prompt
 from vga.understand.schema import Verdict
 from vga.understand.validation import (
+    UNMATCHED_BUDGET_WARNING,
     NothingToShopFor,
     OutputValidationError,
     validate_reading,
@@ -147,7 +148,7 @@ def test_free_text_fields_are_cleaned_and_capped() -> None:
     assert out.colour == "dark brown"
     assert out.style is not None
     assert len(out.style) <= 120
-    assert out.material == "b leather b"
+    assert out.material == "leather"
 
 
 def test_a_non_string_attribute_is_a_problem() -> None:
@@ -173,7 +174,7 @@ def test_a_non_string_attribute_is_a_problem() -> None:
             ["red top", "blue top", "green top"],
         ),
         (["black\x00 jacket‮"], ["black jacket"]),
-        (["<script>alert(1)</script> jacket"], ["script alert 1 script jacket"]),
+        (["<script>alert(1)</script> jacket"], ["alert 1 jacket"]),
         (["x" * 200 + " jacket"], ["x" * 80]),
     ],
 )
@@ -439,3 +440,57 @@ def test_a_validation_failure_is_a_typed_vga_error_with_a_plain_message() -> Non
     assert error.problems == ["items[0].category: must be one of tops"]
     assert "items[0]" not in str(error)  # the shopper never sees field names
     assert error.detail == "items[0].category: must be one of tops"
+
+
+# --------------------------------------------------------------------------------------------
+# A budget must be a number the shopper wrote; a photo cannot ask for a change
+# --------------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("text", "price"),
+    [
+        ("black blazer under 400 AED", 400),
+        ("black blazer under 1,200 AED", 1200),
+        ("black blazer under 1.5k", 1500),
+        ("black blazer under 3 k", 3000),
+        (
+            "قميص أبيض بأقل من ٢٠٠ درهم",
+            200,
+        ),
+        ("black blazer max 249.99", 249.99),
+        ("black blazer for under four hundred dirhams", 400),  # written in words: no digit to check
+    ],
+)
+def test_a_budget_that_matches_a_number_in_the_text_is_kept(text: str, price: float) -> None:
+    reading = make_reading(budget=make_reading_budget(max_price=price))
+
+    result = _validate(reading, text=text)
+
+    assert result.budget is not None
+    assert result.budget.max_price == pytest.approx(price)
+    assert result.warnings == []
+
+
+@pytest.mark.parametrize("text", ["black blazer under 400 AED", "size 42 blazer, 2 buttons"])
+def test_a_budget_the_shopper_never_wrote_is_dropped_with_a_plain_note(text: str) -> None:
+    # For example a price read off a sign in the photo, or one the model made up.
+    reading = make_reading(budget=make_reading_budget(max_price=5))
+
+    result = _validate(reading, text=text, has_image=True)
+
+    assert result.budget is None
+    assert result.warnings == [UNMATCHED_BUDGET_WARNING]
+
+
+def test_a_photo_cannot_ask_for_a_change_so_its_edits_are_dropped() -> None:
+    # "cheaper" in edits switches the request to the value-first price mix (assumption A7).
+    result = _validate(make_reading(edits=["cheaper"]), text=None, has_image=True)
+
+    assert result.edits == []
+
+
+def test_edits_are_kept_when_the_shopper_wrote_the_text() -> None:
+    result = _validate(make_reading(edits=["cheaper"]), text="same but cheaper", has_image=True)
+
+    assert result.edits == ["cheaper"]

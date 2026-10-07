@@ -25,6 +25,10 @@ MAX_SOURCE_PIXELS = 50_000_000
 """Refuse to decode anything larger (a decompression bomb, or a photo no phone takes). The
 pipeline entry also checks size and dimensions (plan 13.1.1); this is the second line of defence."""
 
+ALLOWED_FORMATS = ("JPEG", "PNG", "WEBP")
+"""The formats the app accepts. Pillow can open many more (EPS may even start Ghostscript); only
+these are decoded."""
+
 UNREADABLE_PHOTO_MESSAGE = (
     "We couldn't read that photo. Please upload a PNG, JPG or WebP image, "
     "or describe the item in words instead."
@@ -38,7 +42,7 @@ def prepare_image(data: bytes) -> bytes:
     image.
     """
     try:
-        with Image.open(io.BytesIO(data)) as source:
+        with Image.open(io.BytesIO(data), formats=ALLOWED_FORMATS) as source:
             width, height = source.size
             if width * height > MAX_SOURCE_PIXELS:
                 raise InvalidInputError(

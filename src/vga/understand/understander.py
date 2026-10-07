@@ -52,6 +52,10 @@ from vga.understand.validation import (
 
 log = get_logger(__name__)
 
+DEFAULT_DEADLINE_S = 20.0
+"""Most of the request deadline this step may use when the caller sets none: two 15 s timeouts
+must not leave the stores no time at all."""
+
 MAX_ROUNDS = 2
 """The first try and, if its answer is unusable, one corrective retry (plan 5.2.4)."""
 
@@ -85,7 +89,8 @@ class OpenAIUnderstander:
     built from ``OPENAI_API_KEY``. ``clock`` times backoff and the deadline. ``budget`` is the
     daily call counter, shared by the whole process unless a test passes its own. ``deadline_s``
     bounds everything one request may spend here, retries included (default: the request deadline
-    in the settings). ``jitter`` returns a number in [0, 1) for the backoff.
+    in the settings, at most ``DEFAULT_DEADLINE_S``). ``jitter`` returns a number in [0, 1) for the
+    backoff.
     """
 
     def __init__(
@@ -105,7 +110,11 @@ class OpenAIUnderstander:
         self._settings = settings
         self._model = settings.openai_model
         self._clock = clock or SystemClock()
-        self._deadline_s = settings.request_deadline_s if deadline_s is None else deadline_s
+        self._deadline_s = (
+            min(settings.request_deadline_s, DEFAULT_DEADLINE_S)
+            if deadline_s is None
+            else deadline_s
+        )
         self._gateway = OpenAIGateway(
             client or create_openai_client(timeout_s),
             model=self._model,
@@ -162,6 +171,7 @@ class OpenAIUnderstander:
                 prompt_version=PROMPT_VERSION,
                 model=self._model,
                 usage=state.usage(),
+                warnings=checked.warnings,
             )
         return self._fall_back(text, has_image, state, "answer still invalid after one retry")
 

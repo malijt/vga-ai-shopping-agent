@@ -95,6 +95,9 @@ async def test_no_image_data_appears_in_any_log_output(
 
     output = _all_output(caplog)
     assert output  # something was logged
+    # The logger redacts what it is given, so a redaction marker would show that the code tried to
+    # log something it must not. There must be none.
+    assert "REDACTED" not in output
     assert prepared_b64[:60] not in output
     assert base64.b64encode(photo).decode()[:60] not in output
     assert "data:image" not in output
@@ -109,7 +112,9 @@ async def test_the_api_key_never_appears_in_any_log_output(
 
     await r.understander.understand(make_search_request(text="black leather jacket"))
 
-    assert API_KEY not in _all_output(caplog)
+    output = _all_output(caplog)
+    assert API_KEY not in output
+    assert "REDACTED" not in output  # nor did the code hand the key to the logger to be redacted
 
 
 async def test_prompt_text_and_parsed_result_are_not_logged_by_default(

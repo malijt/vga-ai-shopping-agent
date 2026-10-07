@@ -14,6 +14,7 @@ from vga.understand.text import (
     clean_phrase,
     has_letters_or_digits,
     neutralise_user_text,
+    numbers_in,
     remove_urls,
     strip_control_characters,
 )
@@ -102,7 +103,7 @@ def test_a_keyword_that_is_only_a_gender_word_is_not_a_keyword() -> None:
         ("black jacket http://evil.example/offer", "black jacket"),
         ("see www.evil.example now", "see now"),
         ("jacket evil.com/x?y=1 black", "jacket black"),
-        ("<b>black</b> jacket; DROP TABLE", "b black b jacket DROP TABLE"),
+        ("<b>black</b> jacket; DROP TABLE", "black jacket DROP TABLE"),
         ("black\x00 jacket‮", "black jacket"),
         ("t-shirt, men's", "t-shirt men's"),
     ],
@@ -208,3 +209,89 @@ def test_text_made_to_slow_the_patterns_down_is_cleaned_without_trouble(hostile:
         remove_urls(text)
         neutralise_user_text(text)
         mentioned_genders(text)
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("black jacket 300 dirhams or less", "black jacket"),
+        ("jacket 300 AED max", "jacket"),
+        ("jacket 200-300 AED", "jacket"),
+        ("jacket 200 to 300 AED", "jacket"),
+        ("jacket between 200 and 300 AED", "jacket"),
+        ("jacket under 3k", "jacket"),
+        ("jacket 3k AED", "jacket"),
+        ("jacket \u2264 300", "jacket"),
+        ("jacket<400", "jacket"),
+        ("jacket < $400", "jacket"),
+        ("jacket 300 or less", "jacket"),
+        ("max 400 jacket", "jacket"),
+        ("jacket around 300 AED", "jacket"),
+    ],
+)
+def test_price_fragments_are_removed_whole_not_left_half_behind(raw: str, expected: str) -> None:
+    assert clean_keyword(raw, allow_gender=True) == expected
+
+
+@pytest.mark.parametrize(
+    "product",
+    ["Nike Air Max 90 sneakers", "nike air max 270", "501 jeans", "size 42 sneakers", "2 pack tee"],
+)
+def test_product_names_that_look_like_prices_are_left_alone(product: str) -> None:
+    assert clean_keyword(product, allow_gender=True) == product
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("denim jacket", Category.OUTERWEAR),
+        ("cargo jacket", Category.OUTERWEAR),
+        ("boot cut jeans", Category.BOTTOMS),
+        ("oxford shirt", Category.TOPS),
+        ("flat front pants", Category.BOTTOMS),
+        ("top quality leather jacket", Category.OUTERWEAR),
+        ("jersey shorts", Category.BOTTOMS),
+        ("black sneakers", Category.SHOES),
+        (
+            "\u0623\u0628\u063a\u0649 \u0628\u0646\u0637\u0644\u0648\u0646 jeans wide leg",
+            Category.BOTTOMS,
+        ),
+        (
+            "\u062c\u0627\u0643\u064a\u062a \u062c\u0644\u062f \u0623\u0633\u0648\u062f",
+            Category.OUTERWEAR,
+        ),
+    ],
+)
+def test_the_garment_is_the_last_english_word_and_the_first_arabic_word(
+    text: str, expected: Category
+) -> None:
+    assert garment_category(text) is expected
+
+
+def test_arabic_stop_words_spelled_with_alef_maqsura_are_recognised() -> None:
+    # "\u0627\u0628\u063a\u0649" (I want) folds to a spelling the stop word list must also use.
+    assert clean_keyword(
+        "\u0627\u0628\u063a\u0649 \u062c\u0627\u0643\u064a\u062a \u0627\u0633\u0648\u062f",
+        allow_gender=True,
+    ) == ("\u062c\u0627\u0643\u064a\u062a \u0627\u0633\u0648\u062f")
+    assert meaningful_tokens("\u0627\u0628\u063a\u0649") == []
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("under 400 AED", [400.0]),
+        ("1,200 and 3,500.50", [1200.0, 3500.5]),
+        ("2.5k", [2500.0]),
+        ("2 k", [2000.0]),
+        ("1,5", [1.5]),
+        ("\u0662\u0660\u0660 \u062f\u0631\u0647\u0645", [200.0]),
+        ("\u06f1\u06f5\u06f0", [150.0]),
+        ("no digits at all", []),
+        ("501 jeans size 42", [501.0, 42.0]),
+    ],
+)
+def test_numbers_in_a_text_are_read_the_way_a_shopper_writes_them(
+    text: str, expected: list[float]
+) -> None:
+    assert numbers_in(text) == pytest.approx(expected)

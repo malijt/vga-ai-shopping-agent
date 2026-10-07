@@ -20,8 +20,12 @@ def test_the_current_prompt_version_has_an_entry_with_a_date_and_an_eval_result(
     assert "**Reason:**" in entry
 
 
-def test_an_entry_that_did_not_run_the_live_eval_says_so_plainly() -> None:
-    entry = CHANGELOG.read_text(encoding="utf-8")
+def test_the_current_entry_records_a_real_score_or_says_plainly_that_there_is_none() -> None:
+    text = CHANGELOG.read_text(encoding="utf-8")
+    heading = re.search(rf"^## {re.escape(PROMPT_VERSION)}: ", text, re.M)
+    assert heading
+    entry = text[heading.start() :].split("\n## ")[0]
+    score = re.search(r"\*\*Eval score[^\n]*", entry)
 
-    # Honesty guard: either a real score is recorded, or the entry says it is not run.
-    assert "NOT RUN" in entry or re.search(r"\b\d+ ?/ ?\d+\b", entry)
+    assert score, "the entry has no eval score line"
+    assert "NOT RUN" in score.group(0) or re.search(r"\b\d+ ?/ ?\d+\b", score.group(0))

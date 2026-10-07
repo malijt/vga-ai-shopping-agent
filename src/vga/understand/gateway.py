@@ -36,13 +36,19 @@ from vga.log import get_logger
 from vga.models import Usage
 from vga.understand.budget import CallBudget
 from vga.understand.prompt import PROMPT_VERSION
-from vga.understand.schema import UnderstandReading
+from vga.understand.schema import (
+    ReadingBudget,
+    ReadingItem,
+    UnderstandReading,
+)
 from vga.understand.validation import OutputValidationError
 
 log = get_logger(__name__)
 
 OPENAI_TIMEOUT_S = 15.0
-"""Longest wait for one call (plan 5.2.1). A call also never outlives the request deadline."""
+"""Longest wait for one call (plan 5.2.1). httpx applies it to each phase (connect, read, write),
+not to the whole call. A call is not started with less than ``MIN_TIME_FOR_CALL_S`` left before the
+deadline, and its timeout is cut to the time that is left."""
 
 MAX_OUTPUT_TOKENS = 3000
 """Cap on generated tokens. The visible answer is under 500 tokens; the rest is headroom for the
@@ -184,6 +190,8 @@ class OpenAIGateway:
         or the next attempt would not fit before the deadline."""
         if not _is_retryable(exc) or attempt >= MAX_ATTEMPTS:
             return None
+        if state.calls_made >= MAX_CALLS_PER_REQUEST:
+            return None  # the per-request limit would refuse the retry, so do not wait for it
         backoff = min(MAX_BACKOFF_S, BASE_BACKOFF_S * 2.0 ** (attempt - 1))
         delay = backoff * (1 + self._jitter())
         asked_for = _retry_after_s(exc)
@@ -208,6 +216,12 @@ class OpenAIGateway:
         except pydantic.ValidationError as exc:
             self._log_call(state, started, has_image, outcome="malformed", tokens=tokens)
             raise OutputValidationError(_schema_problems(exc)) from exc
+        except Exception as exc:
+            # A 200 whose body is not a Responses API object (an HTML page from a proxy, an empty
+            # body) fails inside the SDK with an error of no useful type. It must not escape as a
+            # stack trace: the model path failed, so the fallback applies.
+            self._log_call(state, started, has_image, outcome="unreadable", tokens=tokens)
+            raise ModelPathFailure(f"unreadable response ({type(exc).__name__})") from exc
         if _was_refused(response):
             self._log_call(state, started, has_image, outcome="refused", tokens=tokens)
             raise ModelPathFailure("the model refused the request")
@@ -321,17 +335,28 @@ _REASONS = {
 }
 
 
+_SCHEMA_FIELDS = frozenset(
+    {*UnderstandReading.model_fields, *ReadingItem.model_fields, *ReadingBudget.model_fields}
+)
+
+
 def _schema_problems(exc: pydantic.ValidationError) -> list[str]:
     """Value-free description of a schema failure: where it is and what is wrong, never the value.
 
     The allowed values of an enum come from the schema we sent, not from the model or the shopper,
-    so they are safe to name.
+    so they are safe to name. A path is named only when every part of it is a field of that schema:
+    an extra key the model invented could be text of its choosing.
     """
     problems: list[str] = []
     for error in exc.errors(include_input=False)[:5]:
-        where = "".join(
-            f"[{part}]" if isinstance(part, int) else f".{part}" if index else str(part)
-            for index, part in enumerate(error["loc"])
+        known = all(isinstance(part, int) or part in _SCHEMA_FIELDS for part in error["loc"])
+        where = (
+            "".join(
+                f"[{part}]" if isinstance(part, int) else f".{part}" if index else str(part)
+                for index, part in enumerate(error["loc"])
+            )
+            if known
+            else ""
         )
         expected = (error.get("ctx") or {}).get("expected")
         reason = (

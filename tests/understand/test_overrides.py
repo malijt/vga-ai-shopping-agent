@@ -47,7 +47,7 @@ def test_the_colour_chip_is_cleaned_like_any_other_text() -> None:
         result, _edits(items=[{"index": 0, "colour": "<b>navy</b> http://evil.example"}])
     ).items
 
-    assert item.colour == "b navy b"
+    assert item.colour == "navy"
 
 
 def test_a_category_edit_replaces_the_category_and_drops_the_stale_style() -> None:

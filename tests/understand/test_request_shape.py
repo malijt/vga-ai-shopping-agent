@@ -3,6 +3,7 @@
 import base64
 import io
 import os
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -99,7 +100,7 @@ async def test_the_photo_is_never_written_to_disk(
     rig: RigFactory, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("TMPDIR", str(tmp_path))
+    monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))  # Python caches the temp dir
     r = rig(answer(make_reading()))
 
     await r.understander.understand(make_search_request(image=make_image_bytes(), text=None))
