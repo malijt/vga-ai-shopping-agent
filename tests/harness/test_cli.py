@@ -210,7 +210,9 @@ class TestWorkIsNotLost:
         assert (run_dir / LABELS_FILE).is_file()
         text = (run_dir / REPORT_FILE).read_text(encoding="utf-8")
         assert "| not checked |" in text  # its links had not run yet; the report says so
-        assert [run.query.id for run in load_run(run_dir).runs] == ["q01_product_gown"]
+        saved = load_run(run_dir).runs
+        assert [run.query.id for run in saved if run.response is not None] == ["q01_product_gown"]
+        assert len(saved) == 10  # the other nine are saved as "not sent yet", to be finished later
 
     def test_a_querys_links_are_checked_before_the_next_query_is_searched(self, cli: Cli) -> None:
         events: list[str] = []
@@ -571,6 +573,7 @@ class TestRecordThenReplayThroughTheCommandLine:
         manifest = cli.root / "rec" / "manifest.json"
         data = json.loads(manifest.read_text(encoding="utf-8"))
         del data["queries"]["q03_product_skinny_jeans"]
+        del data["planned"]  # as in a recording made before the plan was kept, or edited by hand
         manifest.write_text(json.dumps(data), encoding="utf-8")
 
         code = cli.run("--replay", str(cli.root / "rec"), wiring=wiring_over(LiveParts()))

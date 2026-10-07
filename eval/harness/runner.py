@@ -23,7 +23,8 @@ from dataclasses import dataclass, replace
 from typing import Literal, Protocol
 
 from eval.harness.confirm import GenderAnswer, read_question, rerun_overrides, rerun_request
-from eval.harness.notrun import NotRun, stores_unavailable
+from eval.harness.errors import QueryNotReachedError
+from eval.harness.notrun import NotRun, not_sent, stores_unavailable
 from eval.harness.queries import AcceptanceQuery
 from vga.errors import VgaError
 from vga.interfaces import Clock, Pipeline
@@ -63,6 +64,9 @@ class Pacing:
     outside every query's time: a query is timed around its own ``Pipeline.run`` only."""
     say: Callable[[str], None] | None = None
     """Told, as it happens, what the runner is about to wait for."""
+    stop_when_throttled: bool = False
+    """Stop at the first query whose stores were all blocked or in cooldown, and send none of the
+    others: asking stores that have just said "too many requests" only asks them again."""
 
 
 @dataclass(frozen=True)
@@ -284,6 +288,9 @@ async def run_queries(
         try:
             if scope is not None:
                 scope.begin_query(query.id)
+        except QueryNotReachedError as exc:
+            # The live run that was recorded stopped before this query.
+            run = unsent(query, exc.user_message)
         except VgaError as exc:
             # A replay cannot serve this query (not recorded, or recorded incompletely). That is
             # this query's failure, reported as such; the other queries still run.
@@ -297,4 +304,46 @@ async def run_queries(
             progress(run)
         if after_query is not None:
             await after_query(runs)
+        if _stops_the_run(run, pacing):
+            runs.extend(unsent(later, _stopped_after(run)) for later in queries[position + 1 :])
+            break
     return runs
+
+
+def unsent(query: AcceptanceQuery, reason: str) -> QueryRun:
+    """A query that was never sent: nothing was asked, so nothing failed."""
+    return QueryRun(query, None, None, 0.0, 0.0, not_run=not_sent(reason))
+
+
+NOT_REACHED = (
+    "Not sent yet: the run had not reached this query when these results were saved (it was "
+    "interrupted, or is still going)."
+)
+
+
+def in_query_order(
+    queries: Sequence[AcceptanceQuery], earlier: Sequence[QueryRun], new: Sequence[QueryRun]
+) -> list[QueryRun]:
+    """One run for every query, in the order of the query file: ``new`` where the query was run
+    this time, else ``earlier`` (the same run folder's earlier session), else a query that was not
+    reached yet. What is saved after every query is this view, so a run that is interrupted, or
+    stopped, can always be finished later."""
+    known = {run.query.id: run for run in earlier}
+    known.update({run.query.id: run for run in new})
+    return [known.get(query.id) or unsent(query, NOT_REACHED) for query in queries]
+
+
+def _stops_the_run(run: QueryRun, pacing: Pacing | None) -> bool:
+    return (
+        pacing is not None
+        and pacing.stop_when_throttled
+        and run.not_run is not None
+        and run.not_run.kind == "stores_unavailable"
+    )
+
+
+def _stopped_after(run: QueryRun) -> str:
+    return (
+        f"Not sent: the run stopped after {run.query.id} because the stores were blocked or in "
+        "cooldown. Repeat it later."
+    )

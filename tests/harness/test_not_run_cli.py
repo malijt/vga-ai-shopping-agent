@@ -26,6 +26,7 @@ def record(cli: Cli, *extra: str, throttled: int = 3) -> int:
         "0",
         "--links",
         "none",
+        "--keep-going",  # a throttled query stops a run by default; these tests want to see all
         *extra,
         wiring=stepped_wiring(
             LiveParts(),

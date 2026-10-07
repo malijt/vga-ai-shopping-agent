@@ -54,6 +54,7 @@ from tests.fakes import FakePipeline
 
 from eval.harness.confirm import describe_stated
 from eval.harness.errors import RunFileError, WiringError
+from eval.harness.followup import incomplete_lines
 from eval.harness.labels import LabelSet, export_label_sheet, import_label_sheet
 from eval.harness.links import (
     LinkCheck,
@@ -74,7 +75,14 @@ from eval.harness.queries import (
 )
 from eval.harness.recording import RecordingSession, ReplaySession
 from eval.harness.report import render_report
-from eval.harness.runner import ImageLoader, Pacing, QueryRun, QueryScope, run_queries
+from eval.harness.runner import (
+    ImageLoader,
+    Pacing,
+    QueryRun,
+    QueryScope,
+    in_query_order,
+    run_queries,
+)
 from eval.harness.runstore import (
     LABELS_FILE,
     REPORT_FILE,
@@ -189,6 +197,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="live run (--record) only: send at most one link-check request every this many "
         f"seconds, across all stores together (default: {DEFAULT_LINK_INTERVAL_S:g}; 0 turns it "
         "off), on top of the fetch engine's own per-store limit",
+    )
+    parser.add_argument(
+        "--keep-going",
+        action="store_true",
+        help="live run (--record) only: send the remaining queries even after one found every "
+        "store blocked or in cooldown (by default the run stops there: asking stores that have "
+        "just turned the search away only asks them again)",
     )
     return parser
 
@@ -313,6 +328,7 @@ def _setup_record(
     factory: WiringFactory | None,
     links: LinksMode,
     root: Path,
+    planned: Sequence[str],
 ) -> _Setup:
     wiring = _wiring(args, settings, factory)
     if wiring.build_boundaries is None:
@@ -324,7 +340,7 @@ def _setup_record(
     # Build the live parts before the recording folder exists: a missing key or model is found
     # here, in plain words, and leaves nothing behind.
     boundaries = wiring.build_boundaries()
-    session = RecordingSession(args.record)
+    session = RecordingSession(args.record, planned=planned)
     live = session.wrap(boundaries)
     return _Setup(
         mode="record",
@@ -450,8 +466,8 @@ async def _run_and_check(
 def _with_recorded_duration(run: QueryRun, replay: ReplaySession) -> QueryRun:
     """A replay's own time is meaningless; the 30 s rule uses the recorded live figure. The same
     goes for the search after the gender question was answered: its recorded time replaces it."""
-    if run.failure is not None:
-        return run
+    if run.failure is not None or (run.not_run is not None and run.response is None):
+        return run  # nothing was replayed: a failure, or a query the recording does not reach
     gender = run.gender
     if gender is not None and gender.asked:
         gender = gender.model_copy(update={"duration_ms": replay.live_confirm_ms(run.query.id)})
@@ -677,7 +693,9 @@ def _execute(
     elif mode == "replay":
         setup = _setup_replay(args, settings, wiring_factory)
     else:
-        setup = _setup_record(args, settings, wiring_factory, links, root)
+        setup = _setup_record(
+            args, settings, wiring_factory, links, root, [query.id for query in queries]
+        )
     if clock is not None:
         setup.clock = clock
     if setup.stores:
@@ -725,7 +743,9 @@ def _execute(
         return scored, sheet, rows
 
     def snapshot(runs: Sequence[QueryRun], checks: Mapping[str, list[LinkCheck]]) -> None:
-        persist(list(runs), dict(checks), use_labels=False)
+        # The queries not reached yet are saved as "not sent yet", so a run that is interrupted
+        # reads as incomplete (not as a shorter run) and can be finished with --only.
+        persist(in_query_order(queries, (), runs), dict(checks), use_labels=False)
 
     def warmed_up(warm_up: WarmUp | None) -> None:
         setup.warm_up = warm_up
@@ -734,7 +754,11 @@ def _execute(
 
     pacing: Pacing | None = None
     if mode == "record":
-        pacing = Pacing(pause_s=args.pause, say=lambda text: print(text, file=out_stream))
+        pacing = Pacing(
+            pause_s=args.pause,
+            say=lambda text: print(text, file=out_stream),
+            stop_when_throttled=not args.keep_going,
+        )
         setup.session_notes.append(_pacing_note(args.pause))
         if setup.link_fetch is not None and links is not LinksMode.NONE:
             setup.link_fetch = SpacedLinkFetch(setup.link_fetch, args.link_interval, setup.clock)
@@ -743,6 +767,9 @@ def _execute(
     runs, link_checks = asyncio.run(
         _run_and_check(setup, queries, settings, links, progress, snapshot, warmed_up, pacing)
     )
+    if mode == "record":
+        for line in incomplete_lines(runs, args):
+            print(line, file=out_stream)
     scored, sheet, rows = persist(runs, link_checks, use_labels=True)
 
     answered = sum(1 for run in runs if run.response is not None and run.not_run is None)

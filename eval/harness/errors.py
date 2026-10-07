@@ -33,6 +33,13 @@ class RecordingError(HarnessError):
     default_code = "recording"
 
 
+class QueryNotReachedError(RecordingError):
+    """The recording ends before this query: the live run that made it stopped (or was
+    interrupted) before sending it. The query is *not run*, not broken."""
+
+    default_code = "recording_not_reached"
+
+
 class RecordingMismatchError(RecordingError):
     """The pipeline asked a replayed boundary for something the recording does not hold."""
 

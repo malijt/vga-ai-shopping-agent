@@ -223,11 +223,18 @@ def _not_run_section(scored: ScoredRun) -> list[str]:
             "left, and a new run does not remember it, so wait at least that long.",
             "",
         ]
-    lines += [
-        "This run is incomplete and must be repeated later for the queries above: run the same "
-        f"command again with `--only {','.join(names)}` (the same `--record` folder), then label "
-        "the sheet.",
-    ]
+    if scored.loaded.meta.mode == "replay":
+        lines += [
+            "This replay is incomplete because the recording is: finish the live run for the "
+            f"queries above (`--only {','.join(names)}` on the same `--record` folder), then "
+            "replay again."
+        ]
+    else:
+        lines += [
+            "This run is incomplete and must be repeated later for the queries above: run the "
+            f"same command again with `--only {','.join(names)}` (the same `--record` folder), "
+            "then label the sheet."
+        ]
     return lines
 
 
