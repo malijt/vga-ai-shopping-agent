@@ -11,10 +11,11 @@ import pytest
 
 from tests.factories import make_search_request, make_settings
 from tests.fakes import FakeImageRanker
+from tests.fetch.conftest import shopify_product, suggest_body
 from tests.pipeline.builders import OUTFIT, outfit_understander
 from tests.pipeline.conftest import PipelineMaker
 from tests.pipeline.disk import exists, files_under
-from tests.pipeline.world import StoreWorld
+from tests.pipeline.world import CDN_PREFIX, StoreWorld, store_for
 from vga.models import SearchResponse, Tier
 from vga.pipeline.dump import dump_path
 from vga.settings import Settings
@@ -30,6 +31,7 @@ ALLOWED_KEYS = {
     "title",
     "price",
     "currency",
+    "base_price",
     "scores",
     "flags",
     "shown",
@@ -80,6 +82,7 @@ async def test_each_line_holds_the_url_store_scores_price_range_and_strategy(
         assert line["strategy"] == "shopify"
         assert set(line["scores"]) == {"text", "image", "price", "total"}
         assert line["currency"] == "AED"
+        assert line["base_price"] is None  # a dirham price is its own figure in dirhams
     shown_in = {s.product.product_url: s.tier for s in response.products}
     for line in lines:
         if line["shown"]:
@@ -89,6 +92,105 @@ async def test_each_line_holds_the_url_store_scores_price_range_and_strategy(
             assert line["url"] not in shown_in
             assert line["price_range"] is None
             assert line["price_range_min"] is None
+
+
+DINAR_RATE = 11.92
+"""Dirhams to the dinar, as in ``config/settings.yaml`` (ADR 0006)."""
+
+
+def dinar_blazers(*prices: float) -> str:
+    """A Shopify suggest answer of black blazers priced in dinars, written with three decimals as
+    a Kuwaiti store writes them (``"30.000"``)."""
+    products = [
+        shopify_product(
+            number,
+            title=f"Black Oversized Blazer K{number}",
+            price=f"{price:.3f}",
+            price_min=f"{price:.3f}",
+            price_max=f"{price:.3f}",
+            handle=f"blazer-kuwait-{number}",
+            id=3000 + number,
+            image=f"{CDN_PREFIX}s/files/1/0001/blazer-kuwait-{number}.jpg?v=1",
+            url=f"/products/blazer-kuwait-{number}?_pos={number}",
+            type="Coats & Jackets",
+        )
+        for number, price in enumerate(prices, start=1)
+    ]
+    return suggest_body(*products)
+
+
+@pytest.fixture
+def two_currencies(world: StoreWorld) -> list:
+    """A dirham store and a dinar store whose blazers cost 10 to 80 KWD, which is 119 to 954 AED:
+    the same price ranges as the dirham store's, so both are shown together."""
+    stores = [
+        store_for("alpha"),
+        store_for("kuwait", currency="KWD", country="KW"),
+    ]
+    world.add(stores[0])
+    world.add(stores[1], bodies={"blazer": dinar_blazers(10, 15, 20, 25, 30, 40, 60, 80)})
+    return stores
+
+
+def two_currency_settings(tmp_path: Path, **overrides: Any) -> Settings:
+    fields: dict[str, Any] = {
+        "debug_dump": True,
+        "log_dir": str(tmp_path / "logs"),
+        "extra_store_countries": ["KW"],
+        "fx_rates": {"KWD": DINAR_RATE},
+    }
+    return make_settings(**{**fields, **overrides})
+
+
+async def test_a_candidate_in_another_currency_carries_the_figure_the_ranges_used(
+    make_pipeline: PipelineMaker, two_currencies: list, tmp_path: Path
+) -> None:
+    settings = two_currency_settings(tmp_path)
+    pipeline = make_pipeline(engine_settings=settings)
+
+    response = await pipeline.run(make_search_request(text="black oversized blazer"), settings)
+
+    lines = read_lines(settings, response)
+    dinar = [line for line in lines if line["currency"] == "KWD"]
+    assert dinar
+    assert all(set(line) == ALLOWED_KEYS for line in lines)
+    for line in dinar:
+        assert line["base_price"] == pytest.approx(line["price"] * DINAR_RATE, abs=0.01)
+    assert all(line["base_price"] is None for line in lines if line["currency"] == "AED")
+
+
+async def test_a_shown_candidates_figure_is_the_one_the_result_carries(
+    make_pipeline: PipelineMaker, two_currencies: list, tmp_path: Path
+) -> None:
+    settings = two_currency_settings(tmp_path)
+    pipeline = make_pipeline(engine_settings=settings)
+
+    response = await pipeline.run(make_search_request(text="black oversized blazer"), settings)
+
+    carried = {s.product.product_url: s.base_price for s in response.products}
+    shown_dinar = [
+        line
+        for line in read_lines(settings, response)
+        if line["shown"] and line["currency"] == "KWD"
+    ]
+    assert shown_dinar
+    for line in shown_dinar:
+        assert line["base_price"] == carried[line["url"]]
+        # the range's span is in dirhams, so the figure sits inside it
+        assert line["price_range_min"] <= line["base_price"] <= line["price_range_max"]
+
+
+async def test_a_currency_with_no_rate_has_no_figure_and_is_not_shown(
+    make_pipeline: PipelineMaker, two_currencies: list, tmp_path: Path
+) -> None:
+    settings = two_currency_settings(tmp_path, fx_rates={})
+    pipeline = make_pipeline(engine_settings=settings)
+
+    response = await pipeline.run(make_search_request(text="black oversized blazer"), settings)
+
+    dinar = [line for line in read_lines(settings, response) if line["currency"] == "KWD"]
+    assert dinar
+    assert all(line["base_price"] is None and line["shown"] is False for line in dinar)
 
 
 async def test_lines_are_in_ranking_order(
