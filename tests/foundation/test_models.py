@@ -75,6 +75,59 @@ class TestSearchRequest:
         with pytest.raises(ValidationError, match="needs text, a photo, or both"):
             SearchRequest()
 
+    def test_rerun_of_is_unset_by_default(self) -> None:
+        assert SearchRequest(text="x").rerun_of is None
+
+    def test_a_rerun_with_neither_text_nor_image_is_accepted(self) -> None:
+        request = SearchRequest(rerun_of="a1b2c3")
+
+        assert request.rerun_of == "a1b2c3"
+        assert request.text is None
+        assert not request.has_image
+
+    def test_neither_text_nor_image_is_still_rejected_without_rerun_of(self) -> None:
+        with pytest.raises(ValidationError, match="needs text, a photo, or both"):
+            SearchRequest(rerun_of=None)
+
+    @pytest.mark.parametrize("blank", ["", "   ", "\n\t"])
+    def test_a_blank_rerun_of_is_rejected(self, blank: str) -> None:
+        with pytest.raises(ValidationError, match="rerun_of"):
+            SearchRequest(rerun_of=blank)
+
+    @pytest.mark.parametrize("blank", ["", "  "])
+    def test_a_blank_rerun_of_does_not_rescue_a_request_with_text(self, blank: str) -> None:
+        with pytest.raises(ValidationError, match="rerun_of"):
+            SearchRequest(text="red dress", rerun_of=blank)
+
+    @pytest.mark.parametrize("bad", ["has space", "x" * 65, "semi;colon", "new\nline"])
+    def test_an_unsafe_rerun_of_is_rejected(self, bad: str) -> None:
+        with pytest.raises(ValidationError, match="rerun_of"):
+            SearchRequest(rerun_of=bad)
+
+    def test_rerun_of_is_stripped(self) -> None:
+        assert SearchRequest(rerun_of="  a1b2c3 ").rerun_of == "a1b2c3"
+
+    def test_a_rerun_may_still_carry_text_or_an_image(self) -> None:
+        assert SearchRequest(text="darker", rerun_of="a1b2c3").text == "darker"
+        assert SearchRequest(image=PNG_BYTES, rerun_of="a1b2c3").has_image
+
+    def test_the_text_rules_are_unchanged_for_a_rerun(self) -> None:
+        assert SearchRequest(text="   ", rerun_of="a1b2c3").text is None
+        with pytest.raises(ValidationError, match="at most 2000 characters"):
+            SearchRequest(text="a" * (MAX_TEXT_CHARS + 1), rerun_of="a1b2c3")
+
+    def test_a_rerun_round_trips_through_json(self) -> None:
+        request = SearchRequest(rerun_of="a1b2c3", request_id="d4e5f6")
+
+        assert round_trip(request) == request
+        assert round_trip(request).rerun_of == "a1b2c3"
+        assert json.loads(request.model_dump_json())["rerun_of"] == "a1b2c3"
+
+    def test_a_rerun_round_trips_through_json_with_text(self) -> None:
+        request = make_search_request(text="darker", rerun_of="a1b2c3")
+
+        assert round_trip(request) == request
+
     def test_text_of_exactly_the_limit_is_accepted(self) -> None:
         assert len(SearchRequest(text="a" * MAX_TEXT_CHARS).text or "") == MAX_TEXT_CHARS
 

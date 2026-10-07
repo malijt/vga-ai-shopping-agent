@@ -84,6 +84,9 @@ class Settings(VgaModel):
     outfit_results_per_garment: int = Field(default=12, ge=1, le=50)
     request_deadline_s: float = Field(default=30.0, gt=0, le=120)
     """Ceiling for one whole request; at the deadline the pipeline returns what it has."""
+    max_image_bytes: int = Field(default=8_000_000, gt=0)
+    """The largest photo, in bytes, the app accepts. The UI and the pipeline's request validation
+    both read this."""
 
     # --- fetching -------------------------------------------------------------------------
     timeout_s: float = Field(default=6.0, gt=0, le=60)

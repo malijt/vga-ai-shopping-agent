@@ -340,6 +340,25 @@ class TestSiglipScoreRange:
             load_settings(settings_file(siglip_cos_hi="high"), env={})
 
 
+class TestMaxImageBytes:
+    def test_default_is_eight_megabytes(self) -> None:
+        assert Settings().max_image_bytes == 8_000_000
+
+    def test_the_shipped_file_carries_the_same_cap(self) -> None:
+        assert load_settings(DEFAULT_SETTINGS_PATH, env={}).max_image_bytes == 8_000_000
+
+    @pytest.mark.parametrize("value", [1, 5_000_000, 20_000_000])
+    def test_positive_values_are_accepted(self, settings_file, value: int) -> None:
+        assert load_settings(settings_file(max_image_bytes=value), env={}).max_image_bytes == value
+
+    @pytest.mark.parametrize("value", [0, -1, -8_000_000, 1.5, "big"])
+    def test_zero_negative_and_non_integer_values_are_rejected(
+        self, settings_file, value: object
+    ) -> None:
+        with pytest.raises(ConfigError, match="max_image_bytes"):
+            load_settings(settings_file(max_image_bytes=value), env={})
+
+
 class TestMaxResponseBytes:
     def test_default_is_two_megabytes(self) -> None:
         assert Settings().max_response_bytes == 2_000_000
