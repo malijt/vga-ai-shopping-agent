@@ -294,6 +294,7 @@ Effort key: **S** about 30 min, **M** about 1 h, **L** about 2 h.
 
 **Goal:** know which stores can legitimately be read, and how, before any adapter is written.
 **Milestone:** `docs/store-qualification/SUMMARY.md` with a go/no-go per store. Gate: **at least 4 go (target 5), including at least 1 luxury-leaning**; otherwise escalate to the user (risk R1).
+**Gate result (2026-10-07): FAILED.** 34 sites checked, 3 readable (Oh Polly UAE, Club L London UAE, and Luxury For You conditionally). Every large GCC retailer is blocked, disallows search in robots.txt, or serves no data. See [`SUMMARY.md`](../store-qualification/SUMMARY.md). Phases 6 and 12 are on hold until the user chooses a route; the store-independent phases (5, 7, 8, 9, 10, 11) are unaffected.
 **Estimated Effort:** L (research against live sites, 3 agents)
 
 **Rules for every qualification agent:** identifying `User-Agent`; read `robots.txt` first and honour it; 1 request/s; on the first CAPTCHA, login wall, 403/429 or JS challenge, stop and record "drop". Never bypass. Must run from the user's network if this machine cannot reach the site.
@@ -749,7 +750,7 @@ Time-boxed: **45 min per store**; if it cannot meet 12.x.3, leave `enabled: fals
 
 | # | Risk | Impact | Likelihood | Mitigation |
 |---|---|---|---|---|
-| R1 | Only 1 of 7 shortlisted stores is confirmed readable (6thStreet). Ounass and Styli return 403; Namshi and Noon unreachable here, and Noon scrapers rely on impersonation | H | H | Phase 2 first and from the user's network; discover alternatives; drop, never bypass; gate at 4 stores |
+| R1 | **Realised 2026-10-07.** None of the 9 shortlisted stores is readable by an honest client (6thStreet included: it serves an empty JavaScript shell). 3 of 34 sites checked are readable, and 2 of those are women-only single-brand stores | H | Happened | Gate failed and escalated to the user with options A-E in `docs/store-qualification/SUMMARY.md`; drop, never bypass |
 | R2 | PRD arithmetic: cap of 6 per store means 3 stores give at most 18 results, below the 20 required | H | H | At least 4 stores (target 5); stated in the Phase 2 gate |
 | R3 | Thumbnail downloads at 1 rps per store would blow the time budget | M | M | `rps_images_per_host` (default 5), at most 10 thumbnails per store (assumption A5) |
 | R4 | SigLIP on CPU too slow for 30-50 thumbnails in 2-8 s | M | M | Phase 3 measurement; `mps`/`cuda`; cap thumbnails; `off`; deferred GPT ranker only if the spike says so |
