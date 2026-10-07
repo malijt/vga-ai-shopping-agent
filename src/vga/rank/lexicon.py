@@ -51,7 +51,7 @@ def singular(token: str) -> str:
     if len(token) <= 3:
         return token
     if token.endswith("ies"):
-        return token[:-3] + "y"
+        return token[:-1]  # hoodies, booties, beanies: fashion nouns end in -ie, not -y
     if token.endswith(("sses", "xes", "ches", "shes")):
         return token[:-2]
     if token.endswith("s") and not token.endswith(("ss", "us", "is")):

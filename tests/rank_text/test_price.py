@@ -41,7 +41,7 @@ def test_the_decay_follows_the_documented_formula() -> None:
     assert half_over == pytest.approx(math.exp(-PRICE_DECAY * 0.5))
 
 
-def test_a_very_high_price_scores_above_0_but_stays_low() -> None:
+def test_a_very_high_price_scores_close_to_0() -> None:
     score = price_score(40_000.0, "AED", BUDGET, SETTINGS)
 
     assert 0.0 <= score < 0.01

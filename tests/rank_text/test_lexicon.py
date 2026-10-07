@@ -147,6 +147,8 @@ def test_tokenize(text: str, tokens: list[str]) -> None:
         ("tee", "tshirt"),
         ("trousers", "pants"),
         ("jeans", "jean"),
+        ("hoodies", "hoodie"),
+        ("booties", "bootie"),
     ],
 )
 def test_canon_folds_plurals_and_synonyms(a: str, b: str) -> None:
