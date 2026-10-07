@@ -172,3 +172,39 @@ def test_the_fallback_reads_a_category_from_garment_words(
 def test_meaningful_tokens_skip_connectors_numbers_and_gender() -> None:
     assert meaningful_tokens("and the 300 for men") == []
     assert meaningful_tokens("black jacket") == ["black", "jacket"]
+
+
+@pytest.mark.parametrize(
+    "hostile",
+    [
+        "1" * 2000,
+        " " * 1990 + "x",
+        "0," * 1000,
+        "a." * 1000,
+        "1.1" * 600,
+        "under aed 1,1,1,1,1,1 " * 90,
+        "www." * 500,
+        "\u0648" * 2000,
+        "\u0631\u062e\u064a\u0635 " * 400,
+    ],
+    ids=[
+        "digits",
+        "spaces",
+        "commas",
+        "dotted",
+        "decimals",
+        "prices",
+        "www",
+        "arabic_prefix",
+        "arabic",
+    ],
+)
+def test_text_made_to_slow_the_patterns_down_is_cleaned_without_trouble(hostile: str) -> None:
+    # The patterns are bounded so a 2000-character request cannot make them take long; if one were
+    # not, this test would hang rather than fail, which is how it would be noticed.
+    for text in (hostile, hostile[:300]):
+        clean_keyword(text, allow_gender=False)
+        clean_phrase(text, 80)
+        remove_urls(text)
+        neutralise_user_text(text)
+        mentioned_genders(text)

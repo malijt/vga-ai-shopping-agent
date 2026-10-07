@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 from PIL import Image
 
-from tests.factories import make_image_bytes, make_search_request
+from tests.factories import make_image_bytes, make_search_request, make_settings
 from tests.understand.conftest import TEST_MODEL, RigFactory
 from tests.understand.fake_openai import answer
 from tests.understand.readings import make_reading, make_reading_budget, make_reading_item
@@ -198,3 +198,25 @@ async def test_the_request_object_is_left_untouched(rig: RigFactory) -> None:
     await r.understander.understand(request)
 
     assert request == before
+
+
+@pytest.mark.parametrize(
+    ("model", "sends_reasoning"),
+    [
+        ("gpt-5-mini-2025-08-07", True),
+        ("gpt-5.4-mini-2026-03-17", True),
+        ("o4-mini-2025-04-16", True),
+        ("gpt-4.1-mini-2025-04-14", False),
+        ("gpt-4o-mini-2024-07-18", False),
+    ],
+)
+async def test_reasoning_effort_is_sent_only_to_models_that_accept_it(
+    rig: RigFactory, model: str, sends_reasoning: bool
+) -> None:
+    r = rig(answer(make_reading()), settings_override=make_settings(openai_model=model))
+
+    await r.understander.understand(make_search_request(text="black blazer"))
+
+    body = r.fake.requests[0].body
+    assert body["model"] == model
+    assert ("reasoning" in body) is sends_reasoning

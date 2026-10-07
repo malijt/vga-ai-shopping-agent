@@ -1,5 +1,6 @@
 """The corrective retry (plan 5.2.4) and the fallback intent (plan 5.3.1)."""
 
+import asyncio
 import logging
 
 import pytest
@@ -15,7 +16,7 @@ from tests.understand.fake_openai import (
 )
 from tests.understand.readings import make_reading, make_reading_item
 from vga.errors import InvalidInputError, LlmError
-from vga.models import Category, InputType
+from vga.models import Category, InputType, UnderstandResult
 from vga.understand import FALLBACK_MARKER, FALLBACK_WARNING, PROMPT_VERSION
 from vga.understand.messages import PHOTO_ONLY_FAILURE_MESSAGE
 
@@ -242,3 +243,24 @@ async def test_a_photo_only_fallback_failure_is_logged_too(
         rec.getMessage() == "understand fallback" and rec.levelno == logging.WARNING
         for rec in caplog.records
     )
+
+
+async def test_a_fallback_result_survives_a_json_round_trip(rig: RigFactory) -> None:
+    r = rig(http_error(401))
+
+    result = await r.understander.understand(make_search_request(text="black leather jacket"))
+
+    assert UnderstandResult.model_validate_json(result.model_dump_json()) == result
+
+
+async def test_two_requests_at_once_share_nothing_but_the_budget(rig: RigFactory) -> None:
+    r = rig(default=answer(make_reading()))
+
+    first, second = await asyncio.gather(
+        r.understander.understand(make_search_request(text="black blazer")),
+        r.understander.understand(make_search_request(text="white shirt")),
+    )
+
+    assert first.usage.llm_calls == second.usage.llm_calls == 1
+    assert len(r.fake.requests) == 2
+    assert r.budget.used_today == 2

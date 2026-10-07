@@ -22,7 +22,7 @@ KEYWORD_MAX_CHARS = 80
 _URL = re.compile(
     r"(?:\b(?:https?|ftp|file|data|javascript):\S*"
     r"|\bwww\.\S+"
-    r"|\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:com|net|org|io|ae|sa|co|me|shop|store|info|xyz|app|dev"
+    r"|\b[a-z0-9-]{1,63}(?:\.[a-z0-9-]{1,63}){0,4}\.(?:com|net|org|io|ae|sa|co|me|shop|store|info|xyz|app|dev"
     r"|example|ru|cn|tk|link|site|online|ly|to)\b(?:/\S*)?)",
     re.IGNORECASE,
 )

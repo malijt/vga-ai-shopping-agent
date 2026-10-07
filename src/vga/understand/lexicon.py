@@ -60,7 +60,7 @@ _CURRENCY = (
     r"(?:aed|dhs?|dirhams?|sar|riyals?|qar|kwd|omr|bhd|usd|eur|gbp|\$|€|£"
     r"|درهم|دراهم|ريال|دينار|ر\.\s?س|د\.\s?إ)"
 )
-_NUMBER = r"\d[\d,.٫٬]*"
+_NUMBER = r"\d[\d,.٫٬]{0,14}"  # bounded: a long run of digits cannot make a match slow
 
 _PRICE_PHRASES = re.compile(
     "|".join(
@@ -100,6 +100,7 @@ def strip_price_words(text: str) -> str:
     The budget is a filter (the model returns it in its own field), so none of it belongs in a
     store search. Spaces are left for the caller to collapse.
     """
+    text = re.sub(r"\s+", " ", text)  # a long run of spaces would make the phrase patterns slow
     return _PRICE_WORDS.sub(" ", _PRICE_PHRASES.sub(" ", text))
 
 

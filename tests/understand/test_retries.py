@@ -175,3 +175,19 @@ async def test_no_call_is_made_when_the_deadline_has_already_gone(rig: RigFactor
     assert r.fake.requests == []
     assert result.model == FALLBACK_MARKER
     assert result.usage.llm_calls == 0
+
+
+async def test_an_unreadable_retry_after_header_is_ignored(rig: RigFactory) -> None:
+    r = rig(http_error(429, {"retry-after": "soon"}), answer(make_reading()))
+
+    await r.understander.understand(make_search_request(text=REQUEST_TEXT))
+
+    assert r.clock.sleeps == [FIRST_BACKOFF_S]
+
+
+async def test_a_retry_after_shorter_than_the_backoff_does_not_shorten_it(rig: RigFactory) -> None:
+    r = rig(http_error(429, {"retry-after": "0"}), answer(make_reading()))
+
+    await r.understander.understand(make_search_request(text=REQUEST_TEXT))
+
+    assert r.clock.sleeps == [FIRST_BACKOFF_S]

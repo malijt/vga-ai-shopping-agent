@@ -90,7 +90,7 @@ For each item:
 
 ## Search keywords
 
-`search_keywords`: 2 or 3 English phrases of 2 to 5 words, most specific first, that would find the garment in a store's search box: garment type plus colour, material or cut. Translate Arabic to English. Do not include gender words, price words (cheap, affordable, luxury, under 400, discount, sale), brand names the shopper did not type, punctuation or links.
+`search_keywords`: 2 or 3 English phrases of up to 5 words, most specific first, that would find the garment in a store's search box: garment type plus colour, material or cut. Translate Arabic to English. Do not include gender words, price words (cheap, affordable, luxury, under 400, discount, sale), brand names the shopper did not type, punctuation or links.
 
 <!--
   WHY no price words: BRD Rule 7. A store search for "cheap black jacket" ranks products whose

@@ -22,6 +22,7 @@ from typing import Any, cast
 
 from pydantic import ValidationError
 
+from vga.errors import LlmError
 from vga.models import (
     MAX_ITEMS,
     Budget,
@@ -57,11 +58,13 @@ class NothingToShopFor(Exception):
         self.verdict = verdict
 
 
-class OutputValidationError(Exception):
-    """The model's answer broke a rule. ``problems`` are value-free, one line per field."""
+class OutputValidationError(LlmError):
+    """The model's answer broke a rule (a schema failure is one too). ``problems`` are value-free,
+    one line per field. A typed ``VgaError`` as the plan asks (5.1.2): the shopper only ever sees
+    the plain ``LlmError`` message, and ``detail`` carries the problems for the log."""
 
     def __init__(self, problems: Sequence[str]) -> None:
-        super().__init__("; ".join(problems))
+        super().__init__(detail="; ".join(problems))
         self.problems = list(problems)
 
 

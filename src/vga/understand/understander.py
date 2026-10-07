@@ -37,6 +37,7 @@ from vga.understand.gateway import (
     CallState,
     ModelPathFailure,
     OpenAIGateway,
+    supports_reasoning_effort,
 )
 from vga.understand.image import prepare_image_data_url
 from vga.understand.messages import nothing_to_shop_for, photo_only_failure
@@ -113,7 +114,7 @@ class OpenAIUnderstander:
             clock=self._clock,
             timeout_s=timeout_s,
             max_output_tokens=max_output_tokens,
-            reasoning_effort=REASONING_EFFORT,
+            reasoning_effort=(REASONING_EFFORT if supports_reasoning_effort(self._model) else None),
             jitter=jitter,
             log_prompts=settings.log_prompts,
         )

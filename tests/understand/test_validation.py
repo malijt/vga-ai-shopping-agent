@@ -10,6 +10,7 @@ from tests.understand.readings import (
     make_reading_budget,
     make_reading_item,
 )
+from vga.errors import LlmError, VgaError
 from vga.models import Category, Gender, GenderSource, InputType
 from vga.understand.prompt import echoes_instructions, system_prompt
 from vga.understand.schema import Verdict
@@ -428,3 +429,13 @@ def test_a_run_of_six_prompt_words_is_an_echo_even_with_other_words_around_it() 
 
     assert echoes_instructions(f"black jacket {excerpt} and more")
     assert echoes_instructions(excerpt.upper())
+
+
+def test_a_validation_failure_is_a_typed_vga_error_with_a_plain_message() -> None:
+    error = OutputValidationError(["items[0].category: must be one of tops"])
+
+    assert isinstance(error, LlmError)
+    assert isinstance(error, VgaError)
+    assert error.problems == ["items[0].category: must be one of tops"]
+    assert "items[0]" not in str(error)  # the shopper never sees field names
+    assert error.detail == "items[0].category: must be one of tops"

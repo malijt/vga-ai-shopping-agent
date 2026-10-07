@@ -53,6 +53,14 @@ REASONING_EFFORT: ReasoningEffort = "low"
 """Reading a short request needs little reasoning. ``low`` is accepted by the GPT-5 family and by
 GPT-5.4; ``minimal`` is not accepted by every model, so it is not used."""
 
+_REASONING_MODEL_PREFIXES = ("gpt-5", "o1", "o3", "o4")
+
+
+def supports_reasoning_effort(model: str) -> bool:
+    """Only reasoning models accept ``reasoning.effort``; any other model answers it with a 400."""
+    return model.startswith(_REASONING_MODEL_PREFIXES)
+
+
 MAX_CALLS_PER_REQUEST = 2
 """Hard cap on OpenAI calls for one shopper request, transport retries and the corrective retry
 together (plan 5.2.6)."""
