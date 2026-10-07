@@ -86,6 +86,7 @@ from eval.harness.runstore import (
     save_run,
 )
 from eval.harness.scoring import ScoredRun, score_run
+from eval.harness.spacing import DEFAULT_LINK_INTERVAL_S, SpacedLinkFetch
 from eval.harness.wiring import Wiring, WiringFactory, load_wiring_factory
 from vga.errors import VgaError
 from vga.interfaces import Clock, Pipeline, SystemClock
@@ -179,6 +180,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="live run (--record) only: rest this long between one query and the next, so the "
         f"stores are not asked ten searches in a minute (default: {DEFAULT_PAUSE_S:g}; 0 turns it "
         "off). A mock or replay run never waits.",
+    )
+    parser.add_argument(
+        "--link-interval",
+        type=_seconds,
+        default=DEFAULT_LINK_INTERVAL_S,
+        metavar="SECONDS",
+        help="live run (--record) only: send at most one link-check request every this many "
+        f"seconds, across all stores together (default: {DEFAULT_LINK_INTERVAL_S:g}; 0 turns it "
+        "off), on top of the fetch engine's own per-store limit",
     )
     return parser
 
@@ -520,6 +530,18 @@ def _pacing_note(pause_s: float) -> str:
     )
 
 
+def _link_interval_note(interval_s: float) -> str:
+    if interval_s <= 0:
+        return (
+            "Link checks were not spaced out (`--link-interval 0`); only the fetch engine's own "
+            "limits applied."
+        )
+    return (
+        f"Link checks sent at most one link request every {interval_s:g} s across all stores "
+        "(`--link-interval`), on top of the fetch engine's own per-store limit."
+    )
+
+
 def _back_up(path: Path) -> Path:
     """Move ``path`` aside to the first free ``<name>.bak-N`` and return where it went."""
     number = 1
@@ -704,6 +726,9 @@ def _execute(
     if mode == "record":
         pacing = Pacing(pause_s=args.pause, say=lambda text: print(text, file=out_stream))
         setup.session_notes.append(_pacing_note(args.pause))
+        if setup.link_fetch is not None and links is not LinksMode.NONE:
+            setup.link_fetch = SpacedLinkFetch(setup.link_fetch, args.link_interval, setup.clock)
+            setup.session_notes.append(_link_interval_note(args.link_interval))
 
     runs, link_checks = asyncio.run(
         _run_and_check(setup, queries, settings, links, progress, snapshot, warmed_up, pacing)

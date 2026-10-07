@@ -161,7 +161,9 @@ class TestThePauseIsOutsideEveryQuery:
             return await ok_link_fetch(url)
 
         live.understander = FakeUnderstander(understand)
-        clock = WatchingClock(lambda seconds: events.append("pause"))
+        clock = WatchingClock(
+            lambda seconds: events.append("pause" if seconds == 30.0 else "spacing")
+        )
         put_photos(cli.root)
 
         cli.run(
