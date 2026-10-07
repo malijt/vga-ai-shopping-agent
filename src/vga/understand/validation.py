@@ -23,6 +23,7 @@ from typing import Any, cast
 from pydantic import ValidationError
 
 from vga.errors import LlmError
+from vga.log import get_logger
 from vga.models import (
     MAX_ITEMS,
     Budget,
@@ -33,6 +34,7 @@ from vga.models import (
     ItemIntent,
     Language,
 )
+from vga.understand.input_type import derive_input_type
 from vga.understand.keywords import dedupe_keywords, with_stated_gender
 from vga.understand.lexicon import (
     asks_for_a_higher_price,
@@ -46,6 +48,8 @@ from vga.understand.lexicon import (
 from vga.understand.prompt import echoes_instructions
 from vga.understand.schema import UnderstandReading, Verdict
 from vga.understand.text import KEYWORD_MAX_CHARS, clean_keyword, clean_phrase, numbers_in
+
+log = get_logger(__name__)
 
 MAX_COLOUR_CHARS = 60
 MAX_STYLE_CHARS = 120
@@ -126,10 +130,10 @@ def validate_reading(
     budget = _validate_budget(reading.budget, text, problems, warnings)
     edits = _validate_edits(reading.edits, text, problems)
     language = _validate_language(reading.language, text, problems)
-    input_type = _reconcile_input_type(reading.input_type, text, has_image, len(items))
 
     if problems:
         raise OutputValidationError(problems)
+    input_type = _derive_input_type(reading.input_type, text, has_image, len(items))
     return ValidatedReading(input_type, items, budget, edits, language, warnings)
 
 
@@ -309,16 +313,33 @@ def _validate_language(raw: Any, text: str | None, problems: list[str]) -> Langu
     return cast(Language, raw)
 
 
-def _reconcile_input_type(
+def _derive_input_type(
     claimed: Any, text: str | None, has_image: bool, item_count: int
 ) -> InputType:
-    """What was sent is known to the code, so the model only decides product vs outfit."""
-    if not has_image:
-        return InputType.TEXT
-    if text is not None:
-        return InputType.PHOTO_TEXT
-    outfit = _enum(InputType, claimed) is InputType.OUTFIT_PHOTO or item_count > 1
-    return InputType.OUTFIT_PHOTO if outfit else InputType.PRODUCT_PHOTO
+    """The kind of request, from what was sent and how many garments were found, never from the
+    model's ``claimed`` label (``derive_input_type`` holds the rule and the reason).
+
+    A label that disagrees is not an error: the answer is not rejected and the model is not asked
+    again. It is noted at debug level (the request id is stamped by the logger) so a flipping model
+    can be seen in the logs. Only a known label is logged by value; anything else is the model's
+    free output and is not copied into the log.
+    """
+    derived = derive_input_type(
+        has_image=has_image, has_text=text is not None, item_count=item_count
+    )
+    label = _enum(InputType, claimed)
+    if label is not derived:
+        log.debug(
+            "model input type overridden",
+            extra={
+                "model_input_type": label.value if label is not None else "unrecognised",
+                "input_type": derived.value,
+                "item_count": item_count,
+                "has_image": has_image,
+                "has_text": text is not None,
+            },
+        )
+    return derived
 
 
 # --------------------------------------------------------------------------------------------
