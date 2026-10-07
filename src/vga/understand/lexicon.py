@@ -1,7 +1,7 @@
 # ruff: noqa: RUF001  (Arabic letters look like Latin ones to the linter; they are meant)
 """English and Arabic word lists that the Understand step applies in plain code, after the model.
 
-Three jobs, each one a rule the model alone cannot be trusted with:
+Five jobs, each one a rule the model alone cannot be trusted with:
 
 - **Price words** (BRD Rule 7): "cheap", "budget", "رخيص" ... are filters, never search terms, so
   they are removed from every keyword whatever the model returned (plan 5.3.2).
@@ -9,10 +9,16 @@ Three jobs, each one a rule the model alone cannot be trusted with:
   Rule 8, plan 5.3.4), and a gender it calls *explicit* must really appear in the shopper's text.
 - **Garment words**: the fallback (plan 5.3.1) has no model to say what category a request is
   about, so it reads a small garment word list instead.
+- **Number words**: a budget must be a number the shopper typed, and "under four hundred dirhams"
+  has no digit, so the validator needs to tell a written-out amount from a request with no number.
+- **Edit words**: an edit ("cheaper", "dark green") is kept only when the shopper's own typed words
+  ask for it, so the validator needs to know which words ask for a lower or higher price and how an
+  English colour or fabric is spelled in an Arabic request.
 
 The lists are deliberately short and will have gaps. A gender word they miss fails safe: the claim
-is downgraded to "inferred" (shown, not applied). A price word they miss is a real leak of Rule 7
-into a store search, so extend the list when the live eval or a shopper shows a gap.
+is downgraded to "inferred" (shown, not applied), and a number word or edit word they miss means a
+budget or edit is not kept. A price word they miss is a real leak of Rule 7 into a store search, so
+extend the list when the live eval or a shopper shows a gap.
 """
 
 import re
@@ -68,9 +74,21 @@ _CURRENCY = (
 _NUMBER = r"\d[\d,.٫٬]{0,14}k?"  # bounded: a long run of digits cannot make a match slow
 _TRAILING_LIMIT = r"(?:\s+(?:or|and)\s+(?:less|under|below|lower|fewer)|\s+max(?:imum)?|\s+tops?)"
 
+_PERCENT = r"(?:%|\u066a|percent|per\s?cent|pct)"
+_OFF = r"(?:off|discount|reduction)(?![-\w])"  # not "off-white", "off-shoulder"
+_AR_DISCOUNT = rf"{_AR_PREFIX}(?:خصم|تخفيض|حسم)"
+
 _PRICE_PHRASES = re.compile(
     "|".join(
         [
+            # "70 percent off", "70% off", "up to 70% off", "50 percent discount", "off 50%"
+            rf"(?<!\w){_ANY_QUALIFIER}?\s*{_NUMBER}\s*{_PERCENT}\s*{_OFF}",
+            rf"(?<!\w)off\s+{_NUMBER}\s*{_PERCENT}(?!\w)",
+            # "100 AED off", "AED 100 off" (this must go before the plain currency phrases below)
+            rf"(?<!\w)(?:{_CURRENCY}\s*{_NUMBER}|{_NUMBER}\s*{_CURRENCY})\s+off(?![-\w])",
+            # Arabic: "70٪ خصم", "خصم 70%", "خصم بنسبة 70%"
+            rf"(?<!\w){_NUMBER}\s*{_PERCENT}\s*{_AR_DISCOUNT}(?!\w)",
+            rf"(?<!\w){_AR_DISCOUNT}\s*(?:بنسبه|بنسبة|حتى|حتي|الى|إلى)?\s*{_NUMBER}\s*{_PERCENT}",
             # Arabic "at a suitable price" must go before the single words below it.
             rf"(?<!\w){_AR_PREFIX}سعر(?:ه|ها)?\s+(?:ال)?مناسب(?:ه|ة)?(?!\w)",
             # "AED 400", "under $300"
@@ -88,23 +106,45 @@ _PRICE_PHRASES = re.compile(
     re.IGNORECASE,
 )
 
-_PRICE_WORDS = re.compile(
-    "|".join(
-        [
-            r"(?<!\w)(?:"
-            r"cheap(?:er|est)?|budget|affordable|inexpensive|economical|economy|bargains?"
-            r"|discount(?:ed)?|sale|deals?|clearance|offers?|expensive|pricey|luxury|premium"
-            r"|high[-\s]?end|low[-\s]?(?:price|cost|priced)|(?:best|good|great|lowest)\s+price"
-            r"|value\s+for\s+money|on\s+a\s+budget|price[sd]?"
-            r")(?!\w)",
-            rf"(?<!\w){_AR_PREFIX}(?:"
-            r"رخيص(?:ه|ة|ين)?|ارخص|أرخص|اقتصادي(?:ه|ة)?|ميزانيه|ميزانية|تخفيضات?|خصم|خصومات"
-            r"|عروض|غالي(?:ه|ة)?|فاخر(?:ه|ة)?|سعر|اسعار|أسعار"
-            r")(?!\w)",
-        ]
-    ),
-    re.IGNORECASE,
+_LOWER_PRICE_EN = (
+    r"cheap(?:er|est|ly)?|budgets?|affordable|inexpensive|economical|economy|bargains?"
+    r"|discount(?:s|ed)?|sales?|mark[-\s]?downs?|marked[-\s]?down|deals?|clearance|offers?"
+    r"|half[-\s]?price|price[-\s]?(?:cuts?|drops?|reductions?)"
+    r"|(?:less|not\s+(?:too|so|that|as))\s+(?:expensive|pricey|costly)"
+    r"|low(?:er)?[-\s]?(?:price|cost|priced)|(?:best|good|great|lowest)\s+price"
+    r"|value\s+for\s+money|on\s+a\s+budget"
 )
+_HIGHER_PRICE_EN = r"expensive|pricey|pricier|costly|luxury|premium|high[-\s]?end"
+_NEUTRAL_PRICE_EN = r"pric(?:e[sd]?|ing)"
+
+_LOWER_PRICE_AR = (
+    r"رخيص(?:ه|ة|ين)?|ارخص|أرخص|اوفر|أوفر|اقتصادي(?:ه|ة)?|ميزانيه|ميزانية|تخفيضات?|خصم|خصومات"
+    r"|عروض|تنزيلات?|حسم|حسومات|تصفيه|تصفية|اوكازيون|أوكازيون"
+    r"|(?:اقل|أقل)\s+(?:سعرا|تكلفه|تكلفة)|سعر\s+(?:اقل|أقل)"
+)
+_HIGHER_PRICE_AR = r"غالي(?:ه|ة)?|فاخر(?:ه|ة)?"
+_NEUTRAL_PRICE_AR = r"سعر|اسعار|أسعار"
+
+
+def _price_words(english: str, arabic: str) -> re.Pattern[str]:
+    return re.compile(
+        rf"(?<!\w)(?:{english})(?!\w)|(?<!\w){_AR_PREFIX}(?:{arabic})(?!\w)", re.IGNORECASE
+    )
+
+
+# The three lists are tried in this order at every position, so a phrase such as "less expensive"
+# or "سعر أقل" is taken whole before the single word inside it ("expensive", "سعر").
+_PRICE_WORDS = _price_words(
+    "|".join([_LOWER_PRICE_EN, _HIGHER_PRICE_EN, _NEUTRAL_PRICE_EN]),
+    "|".join([_LOWER_PRICE_AR, _HIGHER_PRICE_AR, _NEUTRAL_PRICE_AR]),
+)
+_LOWER_PRICE_WORDS = _price_words(_LOWER_PRICE_EN, _LOWER_PRICE_AR)
+_HIGHER_PRICE_WORDS = _price_words(_HIGHER_PRICE_EN, _HIGHER_PRICE_AR)
+
+
+def _without_arabic_marks(text: str) -> str:
+    """``text`` without Arabic diacritics and tatweel, so "رَخِيص" and "رخـيص" read as "رخيص"."""
+    return "".join(ch for ch in text if ch not in _ARABIC_MARKS)
 
 
 def strip_price_words(text: str) -> str:
@@ -113,8 +153,60 @@ def strip_price_words(text: str) -> str:
     The budget is a filter (the model returns it in its own field), so none of it belongs in a
     store search. Spaces are left for the caller to collapse.
     """
-    text = re.sub(r"\s+", " ", text)  # a long run of spaces would make the phrase patterns slow
+    text = re.sub(r"\s+", " ", _without_arabic_marks(text))  # a long run of spaces is slow
     return _PRICE_WORDS.sub(" ", _PRICE_PHRASES.sub(" ", text))
+
+
+def asks_for_a_lower_price(text: str) -> bool:
+    """Whether the words of ``text`` ask for a lower price: "cheaper", "less expensive",
+    "أرخص". A price limit ("under 300 AED") is a budget, not a wish, and does not count."""
+    return _LOWER_PRICE_WORDS.search(_without_arabic_marks(text)) is not None
+
+
+def asks_for_a_higher_price(text: str) -> bool:
+    """Whether the words of ``text`` ask for a higher price: "pricier", "premium", "فاخر". "Less
+    expensive" asks for the opposite and is not counted here."""
+    plain = _LOWER_PRICE_WORDS.sub(" ", _without_arabic_marks(text))
+    return _HIGHER_PRICE_WORDS.search(plain) is not None
+
+
+# --------------------------------------------------------------------------------------------
+# Numbers written in words (a budget must be something the shopper wrote)
+# --------------------------------------------------------------------------------------------
+
+_ARABIC_HUNDRED_MULTIPLIER = r"(?:ثلاث|تلات|تلت|اربع|ربع|خمس|ست|سبع|ثمان|ثمن|تمن|تسع)"
+_ARABIC_HUNDRED = r"م(?:ائ|ئ|اي|ي)ه"  # folded: مئة, مائة, مية, ماية
+_ARABIC_TENS = r"(?:عشر|ثلاث|تلات|اربع|خمس|ست|سبع|ثمان|تمان|تسع)(?:ين|ون)"
+
+_NUMBER_WORDS = re.compile(
+    "|".join(
+        [
+            r"(?<!\w)(?:twenty|thirty|forty|fourty|fifty|sixty|seventy|eighty|ninety|hundred|thousand)"
+            r"(?!\w)",
+            # Arabic is looked up folded (hamza, taa marbuta and alef maqsura unified).
+            rf"(?<!\w){_AR_PREFIX}(?:"
+            rf"(?:{_ARABIC_HUNDRED_MULTIPLIER}\s?)?{_ARABIC_HUNDRED}"  # 100, 300 ... 900
+            rf"|م(?:ائ|ئ|ي)ت(?:ين|ان)"  # 200
+            rf"|{_ARABIC_TENS}"  # 20 ... 90
+            r"|الف(?:ين|ان)?|الاف"  # 1000, 2000, thousands
+            r")(?!\w)",
+        ]
+    ),
+    re.IGNORECASE,
+)
+
+
+def names_a_number_in_words(text: str) -> bool:
+    """Whether ``text`` writes an amount of money in words: "four hundred", "fifty", "a thousand",
+    "مئتين", "ألف".
+
+    Only the words that make a price count: the tens (twenty to ninety), hundred and thousand. The
+    small numbers do not, because in a garment request they are counts and cuts, not prices ("three
+    quarter sleeve", "one shoulder", "two piece", "five pocket jeans"). Digits are read by
+    ``text.numbers_in``; this covers the shopper who typed "under four hundred dirhams" instead.
+    The words are only looked for, not added up, so the amount itself is not checked.
+    """
+    return _NUMBER_WORDS.search(fold_arabic(text)) is not None
 
 
 # --------------------------------------------------------------------------------------------
@@ -197,6 +289,88 @@ def meaningful_tokens(text: str) -> list[str]:
             continue
         tokens.append(raw)
     return tokens
+
+
+# --------------------------------------------------------------------------------------------
+# Edit words: the words an edit needs the shopper to have typed
+# --------------------------------------------------------------------------------------------
+
+_EDIT_FILLER = frozenset({"more", "less", "much", "very", "bit", "little", "slightly", "make"})
+"""Words that colour a change without being the change ("a bit darker", "more affordable")."""
+
+_ARABIC_SPELLINGS: dict[str, tuple[str, ...]] = {
+    # Folded spellings (see ``fold_arabic``) that an Arabic request uses for an English edit word:
+    # the colours and shades and the fabrics a shopper changes most. An English edit word with no
+    # entry here cannot be checked against Arabic text, so it is not kept.
+    "black": ("اسود", "سوداء", "سودا"),
+    "white": ("ابيض", "بيضاء", "بيضا"),
+    "red": ("احمر", "حمراء", "حمرا"),
+    "blue": ("ازرق", "زرقاء", "زرقا"),
+    "green": ("اخضر", "خضراء", "خضرا"),
+    "yellow": ("اصفر", "صفراء", "صفرا"),
+    "brown": ("بني",),
+    "grey": ("رمادي", "رماديه"),
+    "gray": ("رمادي", "رماديه"),
+    "pink": ("وردي", "ورديه"),
+    "orange": ("برتقالي", "برتقاليه"),
+    "purple": ("بنفسجي", "بنفسجيه", "ارجواني"),
+    "beige": ("بيج",),
+    "navy": ("كحلي", "كحليه"),
+    "gold": ("ذهبي", "ذهبيه"),
+    "silver": ("فضي", "فضيه"),
+    "burgundy": ("عنابي", "عنابيه"),
+    "olive": ("زيتي", "زيتيه"),
+    "khaki": ("كاكي",),
+    "cream": ("كريمي", "كريم"),
+    "dark": ("غامق", "غامقه", "داكن", "داكنه"),
+    "light": ("فاتح", "فاتحه"),
+    "leather": ("جلد", "جلدي", "جلديه"),
+    "cotton": ("قطن", "قطني", "قطنيه"),
+    "denim": ("جينز", "دنيم"),
+    "wool": ("صوف", "صوفي"),
+    "linen": ("كتان",),
+    "silk": ("حرير",),
+    "satin": ("ساتان",),
+    "velvet": ("مخمل", "قطيفه"),
+}
+
+
+def _word_forms(word: str) -> set[str]:
+    """The word and the forms it may be written in: without a plural "s"/"es", or, in Arabic,
+    without a prefix such as "ال" or "ب"."""
+    forms = {word}
+    if word.isascii():
+        if len(word) > 3:
+            forms |= {word.removesuffix("es"), word.removesuffix("s")}
+    else:
+        forms |= set(_arabic_forms(word))
+    return forms
+
+
+def typed_word_forms(text: str) -> frozenset[str]:
+    """Every form of every word in ``text``, for checking that an edit uses the shopper's words."""
+    forms: set[str] = set()
+    for token in re.findall(r"[^\W_]+", fold_arabic(text)):
+        forms |= _word_forms(token)
+    return frozenset(forms)
+
+
+def edit_words(edit: str) -> list[str]:
+    """The words of an edit that the typed text must contain: not price words (those are checked
+    by direction), gender words, connectors, one-letter leftovers or the filler words."""
+    plain = strip_price_words(edit)
+    return [
+        token for token in meaningful_tokens(plain) if len(token) > 1 and token not in _EDIT_FILLER
+    ]
+
+
+def is_typed(word: str, typed: frozenset[str]) -> bool:
+    """Whether the edit ``word`` is among the ``typed`` word forms, or is an English colour or
+    fabric whose Arabic spelling is."""
+    forms = _word_forms(word)
+    if forms & typed:
+        return True
+    return any(spelling in typed for form in forms for spelling in _ARABIC_SPELLINGS.get(form, ()))
 
 
 # --------------------------------------------------------------------------------------------

@@ -127,7 +127,7 @@ def test_every_problem_is_listed_not_just_the_first() -> None:
         language="klingon",
     )
 
-    problems = _problems(reading)
+    problems = _problems(reading, text="black oversized blazer under 250 AED")
 
     assert len(problems) == 4
     assert any(p.startswith("items[0].category") for p in problems)
@@ -303,14 +303,20 @@ def test_an_unknown_gender_value_is_a_problem() -> None:
 
 
 def test_a_stated_budget_is_kept_with_its_currency_normalised() -> None:
-    result = _validate(make_reading(budget=make_reading_budget(max_price=250, currency=" sar ")))
+    result = _validate(
+        make_reading(budget=make_reading_budget(max_price=250, currency=" sar ")),
+        text="black oversized blazer under 250",
+    )
 
     assert result.budget is not None
     assert (result.budget.max_price, result.budget.currency) == (250.0, "SAR")
 
 
 def test_a_budget_without_a_currency_gets_the_default() -> None:
-    result = _validate(make_reading(budget=make_reading_budget(currency=None)))
+    result = _validate(
+        make_reading(budget=make_reading_budget(currency=None)),
+        text="black oversized blazer under 400",
+    )
 
     assert result.budget is not None
     assert result.budget.currency == "AED"
@@ -326,28 +332,30 @@ def test_a_photo_without_text_cannot_state_a_budget() -> None:
 
 @pytest.mark.parametrize("price", [0, -5, float("nan"), float("inf"), "400", True, None])
 def test_a_bad_budget_amount_is_a_problem(price: Any) -> None:
-    problems = _problems(make_reading(budget=make_reading_budget(max_price=price)))
+    problems = _problems(
+        make_reading(budget=make_reading_budget(max_price=price)),
+        text="black oversized blazer under 400 AED",
+    )
 
     assert len(problems) == 1
     assert problems[0].startswith("budget")
 
 
 def test_a_bad_currency_is_a_problem() -> None:
-    problems = _problems(make_reading(budget=make_reading_budget(currency="DOLLARS")))
+    problems = _problems(
+        make_reading(budget=make_reading_budget(currency="DOLLARS")),
+        text="black oversized blazer under 400 AED",
+    )
 
     assert problems == ["budget: max_price must be above 0 and currency a 3-letter code or null"]
 
 
 def test_edits_are_cleaned_deduplicated_and_capped() -> None:
-    edits = [
-        "dark brown",
-        "Dark Brown",
-        "cheaper http://evil.example",
-        "",
-        *[f"e{i}" for i in range(20)],
-    ]
+    names = [f"colour{i}" for i in range(20)]
+    edits = ["dark brown", "Dark Brown", "cheaper http://evil.example", "", *names]
+    text = "same but dark brown and cheaper " + " ".join(names)
 
-    result = _validate(make_reading(edits=edits), text="same but dark brown", has_image=True)
+    result = _validate(make_reading(edits=edits), text=text, has_image=True)
 
     assert result.edits[:2] == ["dark brown", "cheaper"]
     assert len(result.edits) == 10
@@ -472,7 +480,6 @@ def test_a_validation_failure_is_a_typed_vga_error_with_a_plain_message() -> Non
             200,
         ),
         ("black blazer max 249.99", 249.99),
-        ("black blazer for under four hundred dirhams", 400),  # written in words: no digit to check
     ],
 )
 def test_a_budget_that_matches_a_number_in_the_text_is_kept(text: str, price: float) -> None:
@@ -507,3 +514,160 @@ def test_edits_are_kept_when_the_shopper_wrote_the_text() -> None:
     result = _validate(make_reading(edits=["cheaper"]), text="same but cheaper", has_image=True)
 
     assert result.edits == ["cheaper"]
+
+
+# --------------------------------------------------------------------------------------------
+# A budget needs the shopper's own typed words behind it (a price on a sign is not a limit)
+# --------------------------------------------------------------------------------------------
+
+_SIGN_PRICE = 1.0
+
+
+@pytest.mark.parametrize(
+    ("text", "price"),
+    [
+        ("black blazer under 400 AED", 400),
+        ("black blazer for under four hundred dirhams", 400),
+        ("black blazer, four hundred and fifty dirhams at most", 450),
+        ("black blazer under a thousand dirhams", 1000),
+        ("قميص أبيض بأقل من مئتين درهم", 200),
+        ("قميص أبيض أقل من مئتين درهم", 200),
+        ("قميص أبيض بأقل من ٢٠٠ درهم", 200),
+        ("قميص أبيض بحد أقصى ثلاثمئة درهم", 300),
+        ("أبحث عن قميص أبيض ميزانيتي ألف ريال", 1000),
+    ],
+)
+def test_a_budget_is_kept_when_the_typed_text_states_a_number(text: str, price: float) -> None:
+    reading = make_reading(budget=make_reading_budget(max_price=price))
+
+    result = _validate(reading, text=text, has_image=True)
+
+    assert result.budget is not None
+    assert result.budget.max_price == pytest.approx(price)
+    assert result.warnings == []
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "black bomber jacket for men",
+        "cheap black bomber jacket for men",  # a wish for a low price is not a number
+        "three quarter sleeve blazer",  # small number words are counts and cuts
+        "one shoulder dress, two piece set",
+        "جاكيت أسود رخيص للرجال",
+        "رخيص وبسعر مناسب",
+    ],
+)
+def test_a_budget_is_dropped_when_the_typed_text_states_no_number(text: str) -> None:
+    # For example a price read off a sign in the photo while the shopper typed a request with no
+    # number in it. Nothing the shopper wrote is being ignored, so there is nothing to explain.
+    reading = make_reading(budget=make_reading_budget(max_price=_SIGN_PRICE, currency="AED"))
+
+    result = _validate(reading, text=text, has_image=True)
+
+    assert result.budget is None
+    assert result.warnings == []
+
+
+def test_a_budget_the_typed_text_does_not_support_is_not_even_checked_for_validity() -> None:
+    # A sign can make a model return nonsense (a zero or negative price). With no number typed it
+    # is not the shopper's budget at all, so it is not a reason to ask the model to try again.
+    reading = make_reading(budget=make_reading_budget(max_price=0, currency="DOLLARS"))
+
+    result = _validate(reading, text="black bomber jacket for men", has_image=True)
+
+    assert result.budget is None
+
+
+# --------------------------------------------------------------------------------------------
+# An edit is kept only when the typed text asks for that change (a sign cannot ask for one)
+# --------------------------------------------------------------------------------------------
+
+
+def _kept_edits(text: str, *edits: str) -> list[str]:
+    return _validate(make_reading(edits=list(edits)), text=text, has_image=True).edits
+
+
+@pytest.mark.parametrize(
+    ("text", "edits", "kept"),
+    [
+        # the golden photo + text cases
+        (
+            "similar but dark green and cheaper",
+            ["dark green", "cheaper"],
+            ["dark green", "cheaper"],
+        ),
+        (
+            "same cut but in black, under 250 AED",
+            ["black", "under 250 AED"],
+            ["black", "under 250 AED"],
+        ),
+        ("same cut but in black, under 250 AED", ["black"], ["black"]),
+        # price direction
+        ("same but less expensive", ["cheaper"], ["cheaper"]),
+        ("same but not too pricey", ["cheaper"], ["cheaper"]),
+        (
+            "same but more affordable",
+            ["cheaper", "more affordable"],
+            ["cheaper", "more affordable"],
+        ),
+        ("same but pricier", ["more expensive"], ["more expensive"]),
+        # colours, materials, genders and other changes are kept when the shopper wrote the words
+        ("same but in Dark Brown", ["dark brown"], ["dark brown"]),
+        ("same but in leather", ["leather"], ["leather"]),
+        ("same but in leather", ["suede"], []),
+        ("same but for women", ["women"], ["women"]),
+        ("same but longer sleeves", ["long sleeves"], []),  # a rephrasing cannot be verified
+        ("same but longer sleeves", ["longer sleeves"], ["longer sleeves"]),
+        ("same but with slim fit", ["slim fit"], ["slim fit"]),
+    ],
+)
+def test_an_edit_is_kept_when_the_typed_text_asks_for_it(
+    text: str, edits: list[str], kept: list[str]
+) -> None:
+    assert _kept_edits(text, *edits) == kept
+
+
+@pytest.mark.parametrize(
+    ("text", "edits", "kept"),
+    [
+        # "cheaper" read off a sign switches the request to the value-first price mix
+        ("black bomber jacket for men", ["cheaper"], []),
+        ("black bomber jacket for men", ["cheaper", "dark brown", "women"], []),
+        ("same but in grey", ["grey", "cheaper"], ["grey"]),
+        ("same but in black, under 250 AED", ["black", "cheaper"], ["black"]),  # a limit is no wish
+        ("same but in black, under 250 AED", ["black", "under 1 AED"], ["black"]),
+        ("same but premium", ["cheaper"], []),  # the wrong direction
+        ("same but cheaper", ["more expensive", "pricier"], []),
+        ("same but in black", ["women"], []),
+        ("same but for men", ["women"], []),
+        ("same but in black", ["it"], []),  # a change with nothing in it
+        ("same but in black", ["the", "with"], []),
+    ],
+)
+def test_an_edit_the_typed_text_does_not_ask_for_is_dropped(
+    text: str, edits: list[str], kept: list[str]
+) -> None:
+    assert _kept_edits(text, *edits) == kept
+
+
+@pytest.mark.parametrize(
+    ("text", "edits", "kept"),
+    [
+        ("نفس القطعة بس أرخص", ["cheaper"], ["cheaper"]),
+        ("نفس القطعة بسعر أقل", ["cheaper"], ["cheaper"]),
+        ("نفس القطعة بلون أخضر غامق", ["dark green"], ["dark green"]),
+        ("نفس القطعة باللون الأسود وأرخص", ["black", "cheaper"], ["black", "cheaper"]),
+        ("نفس القطعة بس باللون الأسود", ["black", "cheaper"], ["black"]),
+        ("نفس القطعة بلون أخضر", ["red"], []),
+        ("نفس القطعة بس من الجلد", ["leather"], ["leather"]),
+        ("نفس القطعة للنساء", ["for women"], ["for women"]),
+        ("نفس القطعة للنساء", ["for men"], []),
+        ("نفس القطعة بس أرخص", ["oversized"], []),  # no Arabic spelling listed: not verifiable
+        ("same but أسود and cheaper", ["black", "cheaper"], ["black", "cheaper"]),
+    ],
+)
+def test_arabic_text_can_ask_for_the_same_changes(
+    text: str, edits: list[str], kept: list[str]
+) -> None:
+    assert _kept_edits(text, *edits) == kept

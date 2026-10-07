@@ -6,10 +6,8 @@ picture should be gone. These tests give the whole pipeline a photo that hides a
 place at a time (the EXIF block, a GPS position, a colour profile, an XMP packet, a comment, a PNG
 text chunk) and read the bytes OpenAI receives.
 
-The comment cases are marked as expected failures: the app removes every one of those places but a
-comment, and the comment goes out with the picture. See the note in ``docs/privacy.md``. When the
-app is fixed those tests start to pass, pytest reports that as a failure (``strict``), and the
-marks are to be removed.
+The comment cases were expected failures until ``prepare_image`` started drawing the pixels into a
+new image: Pillow's JPEG writer re-used a comment from the source image's metadata.
 """
 
 import io
@@ -31,12 +29,6 @@ from tests.understand.fake_openai import answer
 EXIF_GPS_IFD = 0x8825
 EXIF_DESCRIPTION = 0x010E
 
-COMMENT_IS_KEPT = (
-    "prepare_image() re-saves the picture without passing comment=, but Pillow's JPEG writer "
-    "reuses image.info['comment'] when none is given, so a JPEG comment segment (or a PNG text "
-    "chunk named 'comment') is sent to OpenAI. vga/understand/image.py says comments are stripped."
-)
-
 
 def sending(fmt: str, *carriers: str) -> Scenario:
     return Scenario(
@@ -56,19 +48,8 @@ STRIPPED = [
     pytest.param(sending("PNG", "exif", "gps", "icc"), id="PNG EXIF, GPS and colour profile"),
     pytest.param(sending("PNG", "text"), id="PNG text chunks (Description, Author)"),
     pytest.param(sending("WEBP", "exif", "gps", "icc", "xmp"), id="WebP EXIF, GPS, profile, XMP"),
-]
-
-NOT_STRIPPED = [
-    pytest.param(
-        sending("JPEG", "comment"),
-        marks=pytest.mark.xfail(strict=True, reason=COMMENT_IS_KEPT),
-        id="JPEG comment",
-    ),
-    pytest.param(
-        sending("PNG", "comment"),
-        marks=pytest.mark.xfail(strict=True, reason=COMMENT_IS_KEPT),
-        id="PNG text chunk named comment",
-    ),
+    pytest.param(sending("JPEG", "comment"), id="JPEG comment"),
+    pytest.param(sending("PNG", "comment"), id="PNG text chunk named comment"),
 ]
 
 
@@ -86,7 +67,7 @@ def carried_by(upload: bytes, carrier: str, marker: bytes) -> bool:
             return marker in upload
 
 
-@pytest.mark.parametrize("scenario", [*STRIPPED, *NOT_STRIPPED])
+@pytest.mark.parametrize("scenario", STRIPPED)
 async def test_nothing_but_the_picture_goes_to_openai(scenario: Scenario, run) -> None:
     audited = await run(scenario)
 
