@@ -1,0 +1,286 @@
+{
+ "resources": {
+  "results": {
+   "products": [
+    {
+     "available": true,
+     "body": "<p>S-26-003</p>\n<p><span style=\"font-size: 0.875rem;\">Linen-cotton blend with soft textured weave and printed cuff detail.</span></p>\n<div>Sizes:</div>\n<ul>\n<li style=\"text-align: left;\"><span>Size 1 (Small to Medium)</span></li>\n<li style=\"text-align: left;\"><span>Size 2 (Medium to Large)</span></l",
+     "compare_at_price_max": "55.000",
+     "compare_at_price_min": "55.000",
+     "featured_image": {
+      "alt": "Amber Kaftan",
+      "aspect_ratio": 0.667,
+      "height": 2048,
+      "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/files/S-26-003_2.jpg?v=1764065684",
+      "width": 1365
+     },
+     "handle": "short-seline-kaftan-copy-1",
+     "id": 10133113733437,
+     "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/files/S-26-003_2.jpg?v=1764065684",
+     "price": "55.000",
+     "price_max": "55.000",
+     "price_min": "55.000",
+     "tags": [
+      "Kaftan"
+     ],
+     "title": "Amber Kaftan",
+     "type": "KAFTAN",
+     "url": "/products/short-seline-kaftan-copy-1?_pos=1&_psq=kaftan&_psid=932581982&_ss=e",
+     "variants": [],
+     "vendor": "Hamsa by Sharifa AlGhanim"
+    },
+    {
+     "available": true,
+     "body": "<p>W-26-001L</p>\n<p>Fabric: Faux Suede<br>Detail: Faux Leather Cord<br>Care: Dry Clean Only</p>\n<div>Sizes:</div>\n<div><span> • Size 1: Fits Small to Medium</span></div>\n<div><span> • Size 2: Fits Medium to Large</span></div>\n<div><br></div>\n<div>Length:</div>\n<div>\n<span> • Short: 60 inches</span><",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Long Cord Kaftan",
+      "aspect_ratio": 0.667,
+      "height": 2027,
+      "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/files/W-26-001L_13.jpg?v=1764065816",
+      "width": 1351
+     },
+     "handle": "short-cord-kaftan-copy",
+     "id": 10092082790717,
+     "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/files/W-26-001L_13.jpg?v=1764065816",
+     "price": "80.000",
+     "price_max": "80.000",
+     "price_min": "80.000",
+     "tags": [
+      "DAILY",
+      "Dress",
+      "Kaftan",
+      "Long Dresses"
+     ],
+     "title": "Long Cord Kaftan",
+     "type": "KAFTAN",
+     "url": "/products/short-cord-kaftan-copy?_pos=2&_psq=kaftan&_psid=932581982&_ss=e",
+     "variants": [],
+     "vendor": "Hamsa by Sharifa AlGhanim"
+    },
+    {
+     "available": true,
+     "body": "<p>W-26-003S (Short)</p>\n<p>Faux suede — luxuriously smooth, mid-weight, and comfortable for day-to-evening wear.</p>\n<p>Camel Beige <br>Chocolate Brown <br>Ivory Sand<br>Dusty Blue</p>\n<div>Sizes:</div>\n<ul>\n<li style=\"text-align: left;\"><span>Small</span></li>\n<li style=\"text-align: left;\"><span>M",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Short Seline Kaftan",
+      "aspect_ratio": 0.666,
+      "height": 1961,
+      "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/files/W-26-003S_6.jpg?v=1764065727",
+      "width": 1307
+     },
+     "handle": "long-seline-kaftan-copy",
+     "id": 10126098563389,
+     "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/files/W-26-003S_6.jpg?v=1764065727",
+     "price": "65.000",
+     "price_max": "65.000",
+     "price_min": "65.000",
+     "tags": [],
+     "title": "Short Seline Kaftan",
+     "type": "KAFTAN",
+     "url": "/products/long-seline-kaftan-copy?_pos=3&_psq=kaftan&_psid=932581982&_ss=e",
+     "variants": [],
+     "vendor": "Hamsa by Sharifa AlGhanim"
+    },
+    {
+     "available": true,
+     "body": "<p>S-20-053-Top and Inner</p>\n<p>Pistachio Gazar kaftan With Silver Embroidery</p>\n<p>Size( Top ) : Free Size</p>\n<p>Size (Slip Dress): Size1, Size2</p>",
+     "compare_at_price_max": "320.000",
+     "compare_at_price_min": "320.000",
+     "featured_image": {
+      "alt": "Ameera Kaftan",
+      "aspect_ratio": 0.667,
+      "height": 2100,
+      "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-053.jpg?v=1613573861",
+      "width": 1400
+     },
+     "handle": "gazar-kaftan-with-silver-embroidery",
+     "id": 4794607534161,
+     "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-053.jpg?v=1613573861",
+     "price": "115.000",
+     "price_max": "115.000",
+     "price_min": "115.000",
+     "tags": [
+      "Evening 2021",
+      "Party"
+     ],
+     "title": "Ameera Kaftan",
+     "type": "DRESS",
+     "url": "/products/gazar-kaftan-with-silver-embroidery?_pos=4&_psq=kaftan&_psid=932581982&_ss=e",
+     "variants": [],
+     "vendor": "Hamsakw"
+    },
+    {
+     "available": true,
+     "body": "<p>S-20-050-Top and Slip Dress</p>\n<p>Pistachio Gazar Kaftan With Embroidery</p>\n<p>Size ( Top ) : Free Size</p>\n<p>Size ( Inner Dress ) : Size1 , Size2</p>\n<p> </p>",
+     "compare_at_price_max": "230.000",
+     "compare_at_price_min": "230.000",
+     "featured_image": {
+      "alt": "Rhadiah Kaftan",
+      "aspect_ratio": 0.667,
+      "height": 2100,
+      "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-050.jpg?v=1613570645",
+      "width": 1400
+     },
+     "handle": "gazar-kaftan-with-embroidery",
+     "id": 4794593771601,
+     "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-050.jpg?v=1613570645",
+     "price": "70.000",
+     "price_max": "70.000",
+     "price_min": "70.000",
+     "tags": [
+      "Evening 2021",
+      "Kaftan",
+      "Party"
+     ],
+     "title": "Rhadiah Kaftan",
+     "type": "KAFTAN",
+     "url": "/products/gazar-kaftan-with-embroidery?_pos=5&_psq=kaftan&_psid=932581982&_ss=e",
+     "variants": [],
+     "vendor": "Hamsakw"
+    },
+    {
+     "available": true,
+     "body": "<div style=\"text-align: center;\">Code : W-23-003</div>\n<div style=\"text-align: center;\">Sizes : Free Size</div>\n<div style=\"text-align: center;\"><strong>Length : 57 inches</strong></div>",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Brick Acker Kaftan",
+      "aspect_ratio": 0.773,
+      "height": 4636,
+      "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/W-23-003_10_aa2ceba3-5fa7-406b-a5fc-f3cd38de2dfe.jpg?v=1669121708",
+      "width": 3584
+     },
+     "handle": "orange-acker-kaftan",
+     "id": 8015851389245,
+     "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/W-23-003_10_aa2ceba3-5fa7-406b-a5fc-f3cd38de2dfe.jpg?v=1669121708",
+     "price": "95.000",
+     "price_max": "95.000",
+     "price_min": "95.000",
+     "tags": [
+      "WINTER 23"
+     ],
+     "title": "Brick Acker Kaftan",
+     "type": "KAFTAN",
+     "url": "/products/orange-acker-kaftan?_pos=6&_psq=kaftan&_psid=932581982&_ss=e",
+     "variants": [],
+     "vendor": "Hamsa by Sharifa AlGhanim"
+    },
+    {
+     "available": true,
+     "body": "<div style=\"text-align: center;\"> S-22-008-Short</div>\n<div style=\"text-align: center;\">Linen &amp; Silver Thread</div>\n<div style=\"text-align: center;\">\n<span>Sizes : </span><span>Size 1 (small/medium) Size 2 (medium/large)</span>\n</div>",
+     "compare_at_price_max": "225.000",
+     "compare_at_price_min": "225.000",
+     "featured_image": {
+      "alt": "Short Amar Kaftan",
+      "aspect_ratio": 0.743,
+      "height": 1918,
+      "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-22-008_2.jpg?v=1647275374",
+      "width": 1426
+     },
+     "handle": "short-amar-kaftan",
+     "id": 6827446501457,
+     "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-22-008_2.jpg?v=1647275374",
+     "price": "65.000",
+     "price_max": "65.000",
+     "price_min": "65.000",
+     "tags": [
+      "NEW ARRIVAL 2022"
+     ],
+     "title": "Short Amar Kaftan",
+     "type": "casual dresses",
+     "url": "/products/short-amar-kaftan?_pos=7&_psq=kaftan&_psid=932581982&_ss=e",
+     "variants": [],
+     "vendor": "Hamsakw"
+    },
+    {
+     "available": true,
+     "body": "<p>W-20-004</p>\n<p>BLACK GAZAR KAFTAN WITH BRONZE EMBROIDERY</p>\n<p>Color        : BLACK </p>\n<p>Material    : GAZAR</p>\n<p>Type         : KAFTAN</p>\n<p>Hamsa by Sharifa Alghanim offers you to attract compliments by this attractive stitched dress made with fine quality material and beautiful work.</",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Rania Kaftan",
+      "aspect_ratio": 0.667,
+      "height": 900,
+      "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/W-20-004_1.jpg?v=1575628514",
+      "width": 600
+     },
+     "handle": "black-gazar-kaftan-with-bronze-embroidery",
+     "id": 4404769456209,
+     "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/W-20-004_1.jpg?v=1575628514",
+     "price": "320.000",
+     "price_max": "320.000",
+     "price_min": "320.000",
+     "tags": [
+      "Evening",
+      "Kaftan",
+      "NEW ARRIVAL",
+      "WINTER",
+      "WINTER 22"
+     ],
+     "title": "Rania Kaftan",
+     "type": "KAFTAN",
+     "url": "/products/black-gazar-kaftan-with-bronze-embroidery?_pos=8&_psq=kaftan&_psid=932581982&_ss=e",
+     "variants": [],
+     "vendor": "Hamsakw"
+    },
+    {
+     "available": true,
+     "body": "<div style=\"text-align: center;\">S-23-047</div>\n<div style=\"text-align: center;\">Sizes : Free Size</div>",
+     "compare_at_price_max": "295.000",
+     "compare_at_price_min": "295.000",
+     "featured_image": {
+      "alt": "Pistachio Lotfia Kaftan",
+      "aspect_ratio": 0.667,
+      "height": 5081,
+      "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-23-047_14.jpg?v=1677080445",
+      "width": 3388
+     },
+     "handle": "lotfia-kaftan-by-order",
+     "id": 8141860634941,
+     "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-23-047_14.jpg?v=1677080445",
+     "price": "160.000",
+     "price_max": "160.000",
+     "price_min": "160.000",
+     "tags": [
+      "Evening SS23"
+     ],
+     "title": "Pistachio Lotfia Kaftan",
+     "type": "KAFTAN",
+     "url": "/products/lotfia-kaftan-by-order?_pos=9&_psq=kaftan&_psid=932581982&_ss=e",
+     "variants": [],
+     "vendor": "Hamsa by Sharifa AlGhanim"
+    },
+    {
+     "available": true,
+     "body": "<p>W-26-033</p>\n<p style=\"margin-bottom: .0001pt;\" class=\"MsoNormal\">Description:</p>\n<p style=\"margin-bottom: .0001pt;\" class=\"MsoNormal\">A long kaftan with a straight, fluid silhouette, featuring velvet side panels and a woven fabric center. Finished with geometric embroidery at the neckline for a",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Riwaq Kaftan",
+      "aspect_ratio": 0.667,
+      "height": 1600,
+      "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/files/W-26-0332.jpg?v=1767182814",
+      "width": 1067
+     },
+     "handle": "riwaq-kaftan",
+     "id": 10195451511101,
+     "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/files/W-26-0332.jpg?v=1767182814",
+     "price": "95.000",
+     "price_max": "95.000",
+     "price_min": "95.000",
+     "tags": [
+      "WINTER"
+     ],
+     "title": "Riwaq Kaftan",
+     "type": "KAFTAN",
+     "url": "/products/riwaq-kaftan?_pos=10&_psq=kaftan&_psid=932581982&_ss=e",
+     "variants": [],
+     "vendor": "Hamsa by Sharifa AlGhanim"
+    }
+   ]
+  }
+ }
+}

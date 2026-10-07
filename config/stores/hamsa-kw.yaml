@@ -1,0 +1,32 @@
+# Hamsa by Sharifa AlGhanim: a Kuwaiti abaya, kaftan and dress label on Shopify (single brand).
+# Prices are in Kuwaiti dinars with three decimals ("95.000"); the response has no currency, so
+# KWD is pinned here. The app shows the dinar price and an approximate dirham figure (ADR 0006).
+# Data path: Shopify's public predictive search, /search/suggest.json, which robots.txt leaves open.
+# Evidence: docs/store-qualification/hamsa-kw.md. Quirks and what would break this file:
+# docs/store-notes/hamsa-kw.md
+id: hamsa-kw
+name: Hamsa
+country: KW             # Kuwait is searched too through `extra_store_countries: [KW]` in config/settings.yaml
+currency: KWD           # the suggest response has no currency field; KWD is store-level (product page JSON-LD priceCurrency, Shopify.currency)
+search_url_template: "https://hamsakw.com/search/suggest.json?q={query}&resources[type]=product&resources[limit]=10"
+allowed_hosts:
+  - hamsakw.com         # product links; the apex answered directly, no redirect
+  - cdn.shopify.com     # product images
+extraction:
+  strategies:
+    - name: shopify
+      options:
+        # THE PRICE TRAP. The search response's `price` is the CHEAPEST variant. Hamsa sells a head
+        # scarf as a cheap variant of the same product as an abaya, so 5 of the 10 abaya records
+        # showed KWD 20 to 95 for an abaya that costs KWD 75 to 365: the wrong price range, and a
+        # false "within budget". Neither end of the range can be trusted from the search response
+        # alone (the highest was a set on one record), so a record is kept only when its variants
+        # all cost the same (price_max is at most 1 x price_min); the others are dropped, never
+        # corrected. Without this line the store must not be enabled.
+        max_price_spread: 1
+genders:
+  - women               # abayas, kaftans and dresses only: 20 of 20 records seen; no field names a gender, so this rests on the range and the brand
+categories:
+  - dresses             # abayas, kaftans, kaftan dresses and an abaya coat: no shoes, trousers, tops or jackets in the records seen (docs/store-qualification/hamsa-kw.md)
+tier_hint: premium      # garments KWD 55-365, about AED 660-4,400
+enabled: true           # the live smoke test passed on 2026-10-08 (tests/stores/hamsa-kw); on only because max_price_spread above keeps the scarf-priced abayas out
