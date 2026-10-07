@@ -12,8 +12,9 @@ file as the always-on summary and open the matching doc when you need full depth
   Every result links to the store's own product page.
 - **Status (2026-10-07):** the implementation plan
   [`docs/plans/2026-10-07-vga-ai-shopping-agent-implementation-plan.md`](./docs/plans/2026-10-07-vga-ai-shopping-agent-implementation-plan.md)
-  is approved (v3). Wave 1 is merged; Wave 2 is next. **Build only what the plan specifies**, in its
-  phases and waves. Integration branch: `develop`.
+  is approved (v3). Waves 1 and 2 (Phases 1 to 11) are merged; Wave 3 (pipeline and store adapters)
+  is in progress. **Build only what the plan specifies**, in its phases and waves. Integration
+  branch: `develop`.
 - **Stores (decided 2026-10-07):** store qualification found that no large GCC retailer can be read
   by an honest client (see [`docs/store-qualification/SUMMARY.md`](./docs/store-qualification/SUMMARY.md)).
   The demo therefore searches six Shopify storefronts through `/search/suggest.json`: Giordano UAE,
@@ -54,17 +55,22 @@ file as the always-on summary and open the matching doc when you need full depth
 7. Never send price words ("cheap", "budget") to a store search; they are filters only.
 8. Gender inferred by the model is shown, not applied, until the shopper confirms it.
 
-## Commands (planned; they exist once Phase 1 of the plan lands)
+## Commands
 
 ```bash
-uv sync                                   # install
-uv run pytest                             # unit + integration tests (no network)
-uv run pytest -m live                     # live store / OpenAI smoke tests; needs keys, never in CI
-uv run ruff check && uv run mypy src      # lint and types
-uv run streamlit run app/main.py          # the demo UI  (VGA_UI_FIXTURE=1 for fixture mode)
-uv run python -m vga.search --text "..."  # pipeline from the CLI, prints JSON
-uv run python -m eval.harness --replay    # acceptance run from a recording, no network
+uv sync                                        # install (add --group ml for the image model)
+uv run pytest                                  # unit + integration tests (no network)
+uv run pytest -m live                          # live store / OpenAI tests; needs keys, never in CI
+uv run ruff check && uv run mypy src           # lint and types
+VGA_UI_FIXTURE=1 uv run streamlit run app/main.py   # the UI on sample data (run from the repo root)
+uv run --group ml python -m vga.rank.image.download # one-off: fetch the pinned image-model weights
+uv run python -m eval.harness --mock           # acceptance harness on a fake pipeline
+uv run python -m eval.harness --record DIR     # live acceptance run, recorded
+uv run python -m eval.harness --replay DIR     # re-run from a recording, no network
 ```
+
+Not available until Phase 13 and 15 land: `uv run python -m vga.search --text "..."` (the pipeline
+from the CLI) and the UI connected to the real pipeline.
 
 Environment variables are documented in `.env.example` (`OPENAI_API_KEY`, `OPENAI_MODEL`,
 `VGA_USER_AGENT`, `VGA_IMAGE_RANKER`, `VGA_LOG_DIR`, `VGA_LOG_LEVEL`, `VGA_LOG_PROMPTS`,

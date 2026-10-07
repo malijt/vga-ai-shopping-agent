@@ -1,8 +1,8 @@
 # VGA AI Shopping Agent: Implementation Plan
 
 > **Generated:** 2026-10-07
-> **Status:** Approved (v2) on 2026-10-07; amended the same day (v3) after the Phase 2 gate failed. The user chose store route A (more Shopify storefronts) for the demo and asked for routes B, C and D to be planned for later: they are Phases 17-19. Verified against `docs/Best Practices/` (section 12). Assumptions A1-A18 stand as written unless changed later.
-> **Progress:** Wave 1 complete and merged into `develop` (Phases 1, 2, 3, 4). Wave 2 next.
+> **Status:** Approved (v2) on 2026-10-07; amended the same day (v3) after the Phase 2 gate failed. The user chose store route A (more Shopify storefronts) for the demo and asked for routes B, C and D to be planned for later: they are Phases 17-19. Verified against `docs/Best Practices/` (section 12). Assumptions A1-A22 stand as written unless changed later.
+> **Progress (2026-10-08):** Waves 1 and 2 are complete and merged into `develop` (Phases 1 to 11). Wave 3 (Phase 13 pipeline and the six Phase 12 store adapters) is running. Nothing has run end to end yet, and the Understand step has not been exercised against the real OpenAI API (no key was available).
 > **Inputs:** `docs/01-business-requirements.md`, `docs/02-prd.md`, `docs/03-proposed-ideas.md` (all v0.2), `comprehensive_doc.md`, open-source research from 2026-10-07 (section 2), `docs/Best Practices/*.md`, `CLAUDE.md`
 > **Rule for this document:** it is a plan. No code is written until you approve it.
 
@@ -919,6 +919,9 @@ These were considered and left out on purpose. Build one only when its trigger i
 | A16 | A request with nothing to shop for (nonsense, only price words, an injection with no garment, a handbag, a dress) ends with a plain message, not a search (`eval/data/edge_cases.yaml`) | The PRD's fallback covers model failure only |
 | A17 | If Luxury For You is ever enabled, the app shows the higher, struck-through list price, not the lower padlocked "member" price | What a non-member pays is unverified; the list price never understates the cost |
 | A18 | If Luxury For You is ever enabled, it gets a 15 s timeout, one keyword variant and a 3 MB response cap | Its pages took 7-15 s and 2.7 MB; under the PRD's 6 s timeout (R5) it would always be skipped |
+| A20 | For an outfit photo, "at least 20 results" applies to the whole query, and every garment must have at least 1 result; price ranges and the top-10 rule are checked per garment | A2 gives each garment 12 results, so 20 per garment could never pass |
+| A21 | A thin price range borrows only from the range next to it and otherwise shows fewer results | A header such as "Budget · 45-1,600 AED" would mislead; the PRD says to return fewer instead of padding |
+| A22 | The budget is set in one place, the budget chip (or in the request text); the sidebar has only the price-mix presets. The request box is a single line | Two budget boxes could disagree; Streamlit's multi-line box lost the first click on the search button |
 | A19 | The demo searches six stores: Giordano UAE, Nautica UAE, Sacoor Brothers UAE, Oh Polly UAE, Club L London UAE, Maison D'Vie. The Bear House UAE, Good Times and Luxury For You are readable but held in reserve | The BRD caps the demo at 6 stores and lets the team pick the ones that work. The six were chosen for the widest cover of gender, category and price; say if you want a different six |
 
 ## 12. Best-Practices Verification
