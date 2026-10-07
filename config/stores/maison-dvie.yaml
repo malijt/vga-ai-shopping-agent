@@ -1,0 +1,19 @@
+# Maison D'Vie (maisondvie.com): a UAE multi-brand designer boutique on Shopify.
+# Data path: Shopify's public predictive search, /search/suggest.json (robots.txt leaves it open).
+# Notes, quirks and what would break this file: docs/store-notes/maison-dvie.md
+id: maison-dvie
+name: "Maison D'Vie"
+country: AE
+currency: AED          # the suggest response has no currency; AED is the store's, confirmed on a product page
+search_url_template: "https://maisondvie.com/search/suggest.json?q={query}&resources[type]=product&resources[limit]=10"
+allowed_hosts:
+  - maisondvie.com
+  - cdn.shopify.com
+extraction:
+  strategies:
+    - name: shopify
+      options:
+        image_width: 400   # the CDN serves a 400 px thumbnail instead of the multi-MB original
+# genders: left unset on purpose. The store sells women's and men's items (tags "Women" / "Men").
+tier_hint: luxury      # designer pricing seen: AED 490 to 4,430
+enabled: true          # live smoke test passed 2026-10-08 (tests/stores/maison-dvie); set false if it stops passing
