@@ -15,8 +15,8 @@ from tests.factories import (
     make_understand_result,
 )
 from tests.fakes import FakeClock, FakeImageRanker, FakeUnderstander
+from tests.pipeline.builders import OUTFIT, outfit_understander
 from tests.pipeline.conftest import PipelineMaker
-from tests.pipeline.test_outfit import OUTFIT, outfit_understander
 from tests.pipeline.world import DEFAULT_PRICES, StoreWorld, generated_body, store_for
 from tests.understand.fake_openai import FakeOpenAI, http_error
 from vga.errors import CallBudgetExceededError, InvalidInputError, LlmError

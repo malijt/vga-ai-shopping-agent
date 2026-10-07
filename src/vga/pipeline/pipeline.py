@@ -32,6 +32,7 @@ step the photo is dropped and only its embedding (numbers) is kept, in the respo
 import asyncio
 from collections.abc import Awaitable, Callable, Iterable, Iterator, Sequence
 from contextlib import contextmanager
+from dataclasses import replace
 
 from vga.errors import LlmError, VgaError
 from vga.fetch.deadline import deadline
@@ -279,6 +280,14 @@ class SearchPipeline:
         elif embedding:
             state.query = QueryImage(embedding=list(embedding))
 
+        # The earlier search could not compare these products with the photo. If there is nothing
+        # to compare with now either, the results are still ranked without it, and still say so.
+        if state.query is None and any(
+            run.cached is not None and not run.cached.image_done for run in state.items
+        ):
+            log.warning("image similarity unavailable; reused results are ranked without it")
+            state.warn(messages.IMAGE_SIMILARITY_UNAVAILABLE)
+
     async def _search(self, state: RunState) -> None:
         pending: list[ItemRun] = []
         for run in state.items:
@@ -299,11 +308,17 @@ class SearchPipeline:
             # they begin in is the order a recording of the run keeps them in.
             for run in pending:
                 for store in run.stores:
-                    run.tasks[store.id] = asyncio.create_task(
-                        self._searcher.search(run.item, [store])
-                    )
+                    run.tasks[store.id] = asyncio.create_task(self._search_one(run, store))
             for run in pending:
                 await self._collect(state, run)
+
+    async def _search_one(self, run: ItemRun, store: StoreConfig) -> list[StoreResult]:
+        """One store's search for one item, noting when it came back: the age of the products
+        counts from then, not from when the pipeline got round to collecting them."""
+        try:
+            return await self._searcher.search(run.item, [store])
+        finally:
+            run.answered_at[store.id] = self._clock.monotonic()
 
     async def _collect(self, state: RunState, run: ItemRun) -> None:
         """Wait for each store of one item, in store order, and merge what they found."""
@@ -337,11 +352,12 @@ class SearchPipeline:
         state.warn(messages.SEARCH_CRASHED)
 
     def _merge_found(self, state: RunState, run: ItemRun) -> None:
-        """Put the products of the stores that answered into one list. The products are good to
-        reuse for ``store_cache_ttl_s`` from when the last store answered."""
+        """Put the products of the stores that answered into one list. They are good to reuse for
+        ``store_cache_ttl_s`` from when the OLDEST of the answers came back."""
         run.products = merge_products(run.results)
-        if run.search_complete:
-            run.fetched_expires_at = self._clock.monotonic() + state.settings.store_cache_ttl_s
+        if run.stores and run.search_complete:
+            oldest = min(run.answered_at[store.id] for store in run.stores)
+            run.fetched_expires_at = oldest + state.settings.store_cache_ttl_s
 
     def _filter(self, state: RunState) -> None:
         self._step(state, Step.FILTER)
@@ -362,11 +378,19 @@ class SearchPipeline:
         self._step(state, Step.RANK)
         with self._stage(state, Step.RANK.value):
             for run in state.items:
-                scored = run.scored or []
-                if state.query is not None and run.cached is None and scored:
+                if self._wants_images(state, run):
+                    scored = run.scored or []
                     run.candidates = select_candidates([entry.product for entry in scored])
                 else:
                     self._final_rank(state, run)
+
+    @staticmethod
+    def _wants_images(state: RunState, run: ItemRun) -> bool:
+        """Whether this item's products are to be compared with the photo in this run: yes for a
+        fresh search, and for a reused one whose earlier comparison did not happen."""
+        if state.query is None or not run.scored:
+            return False
+        return run.cached is None or not run.cached.image_done
 
     def _final_rank(self, state: RunState, run: ItemRun) -> None:
         run.ranked = apply_image_scores(run.scored or [], run.image_scores, state.settings)
@@ -394,6 +418,7 @@ class SearchPipeline:
             log.warning("the image ranker failed", exc_info=True)
             scores, run.image_failed = {}, True
         run.image_scores = dict(scores)
+        run.image_scored = True
         self._final_rank(state, run)
 
     def _check_image_scores(self, state: RunState, asked: Sequence[ItemRun]) -> None:
@@ -541,6 +566,15 @@ class SearchPipeline:
             warning = messages.store_warning(name, report.status)
             if warning is not None:
                 state.warn(warning)
+        if not state.timed_out:  # at the deadline, the deadline warning explains the gaps
+            for report in summary.partly_failed:
+                log.warning(
+                    "store failed for some of the items",
+                    extra={"store": report.store_id},
+                )
+                state.warn(
+                    messages.store_partial_warning(names.get(report.store_id, report.store_id))
+                )
         self._note_empty_items(state)
 
     def _note_empty_items(self, state: RunState) -> None:
@@ -577,7 +611,10 @@ class SearchPipeline:
         items: dict[int, CachedItem] = {}
         for run in state.items:
             if run.cached is not None:
-                items[run.index] = run.cached
+                earlier = run.cached
+                if not earlier.image_done and self._image_done(state, run):
+                    earlier = replace(earlier, image_scores=dict(run.image_scores), image_done=True)
+                items[run.index] = earlier  # keeps its own expiry: a re-run does not renew it
                 continue
             answered = any(r.status in (StoreStatus.OK, StoreStatus.EMPTY) for r in run.results)
             if not (run.search_complete and answered):
@@ -591,6 +628,7 @@ class SearchPipeline:
                 reports=tuple(outcome.report for outcome in outcomes),
                 searched_ids=frozenset(o.report.store_id for o in outcomes if o.searched),
                 expires_at=run.fetched_expires_at or self._clock.monotonic(),
+                image_done=self._image_done(state, run),
             )
         if not items:
             return
@@ -599,6 +637,21 @@ class SearchPipeline:
             state.req.request_id,
             CachedRun(items=items, query_embedding=tuple(embedding) if embedding else None),
         )
+
+    @staticmethod
+    def _image_done(state: RunState, run: ItemRun) -> bool:
+        """Whether this item's comparison with the photo happened, or was never needed.
+
+        It did not happen when the ranker failed, or was cut short by the deadline, or came back
+        without a single score although the settings say the model should be working. Such an
+        item is remembered as "not compared", so a re-run does not take "no scores" for the answer.
+        """
+        if not run.candidates:
+            return True  # no photo to compare with, or no products to compare
+        if not run.image_scored or run.image_failed:
+            return False
+        has_score = any(score is not None for score in run.image_scores.values())
+        return has_score or state.settings.image_ranker != "siglip"
 
     # ------------------------------------------------------------------------------------
     # Small helpers

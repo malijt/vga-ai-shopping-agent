@@ -49,6 +49,8 @@ class ItemRun:
     """One running search per store, by store id, in the order the stores are searched."""
     store_results: dict[str, StoreResult] = field(default_factory=dict)
     """What each store gave, as it finished. A store missing here had not answered yet."""
+    answered_at: dict[str, float] = field(default_factory=dict)
+    """When each store's search came back, on the pipeline's clock."""
     fetched_expires_at: float | None = None
     """When the products found for this item are too old to reuse."""
 
@@ -59,6 +61,8 @@ class ItemRun:
     """The best matches, chosen to be compared with the photo."""
     image_scores: dict[str, float | None] = field(default_factory=dict)
     image_asked: bool = False
+    image_scored: bool = False
+    """The image ranker came back (with scores or without), so the comparison was not cut short."""
     image_failed: bool = False
     ranked: list[ScoredProduct] | None = None
     group: GarmentGroup | None = None

@@ -14,6 +14,7 @@ Nothing here touches the network when it is built.
 """
 
 import asyncio
+import weakref
 from collections.abc import Callable, Sequence
 
 from vga.interfaces import Clock, ImageRanker, StoreSearcher, SystemClock, Understander
@@ -31,24 +32,29 @@ PipelineFactory = Callable[[Understander, StoreSearcher, ImageRanker], SearchPip
 class LazyUnderstander:
     """An ``Understander`` that builds the real ``OpenAIUnderstander`` on first use.
 
-    The OpenAI client is tied to the event loop it is first used in, so the real understander is
-    rebuilt when a different loop calls (a UI that runs ``asyncio.run`` for every search). Building
-    one is cheap and shares the process-wide daily call counter, so nothing is lost by it.
+    The OpenAI client is tied to the event loop it is first used in, so there is one real
+    understander per event loop: a UI that runs ``asyncio.run`` for every search gets a fresh one
+    each time, and the old one is dropped with its loop instead of piling up. Building one is cheap
+    and shares the process-wide daily call counter, so nothing is lost by it. The table is keyed by
+    the loop and read and written in single steps, so searches on different threads, each with its
+    own loop, never use one another's client.
     """
 
     def __init__(self, settings: Settings, *, clock: Clock | None = None) -> None:
         self._settings = settings
         self._clock = clock
-        self._loop: asyncio.AbstractEventLoop | None = None
-        self._understander: OpenAIUnderstander | None = None
+        self._by_loop: weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, OpenAIUnderstander] = (
+            weakref.WeakKeyDictionary()
+        )
 
     async def understand(self, req: SearchRequest) -> UnderstandResult:
         loop = asyncio.get_running_loop()
-        if self._understander is None or self._loop is not loop:
+        understander = self._by_loop.get(loop)
+        if understander is None:
             # Raises ConfigError (a plain message) when the model or the API key is not set.
-            self._understander = OpenAIUnderstander(self._settings, clock=self._clock)
-            self._loop = loop
-        return await self._understander.understand(req)
+            understander = OpenAIUnderstander(self._settings, clock=self._clock)
+            self._by_loop[loop] = understander
+        return await understander.understand(req)
 
 
 def build_pipeline(

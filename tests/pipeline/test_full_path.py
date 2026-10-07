@@ -7,8 +7,8 @@ a photo and text; a second search changes only the mix.
 """
 
 from tests.factories import make_search_request, make_settings
+from tests.pipeline.builders import rerun
 from tests.pipeline.conftest import PipelineMaker
-from tests.pipeline.test_rerun import rerun
 from tests.pipeline.world import StoreWorld
 from tests.understand.fake_openai import FakeOpenAI, answer
 from tests.understand.readings import make_reading, make_reading_budget, make_reading_item

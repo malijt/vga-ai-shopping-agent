@@ -2,43 +2,13 @@
 
 from itertools import pairwise
 
-from tests.factories import make_item_intent, make_search_request, make_understand_result
+from tests.factories import make_search_request, make_understand_result
 from tests.fakes import FakeImageRanker, FakeUnderstander
+from tests.pipeline.builders import OUTFIT, outfit_understander
 from tests.pipeline.conftest import PipelineMaker
 from tests.pipeline.world import StoreWorld
-from vga.models import Category, InputType, ItemIntent, Tier
+from vga.models import Category, Tier
 from vga.settings import Settings
-
-OUTFIT = [
-    make_item_intent(
-        category=Category.OUTERWEAR,
-        search_keywords=["black blazer", "oversized blazer", "tailored jacket"],
-    ),
-    make_item_intent(
-        category=Category.TOPS,
-        colour="white",
-        style="shirt",
-        search_keywords=["white shirt", "cotton shirt", "oxford shirt"],
-    ),
-    make_item_intent(
-        category=Category.BOTTOMS,
-        colour="blue",
-        style="jeans",
-        search_keywords=["blue jeans", "wide-leg jeans", "straight jeans"],
-    ),
-    make_item_intent(
-        category=Category.SHOES,
-        colour="white",
-        style="sneakers",
-        search_keywords=["white sneakers", "leather sneakers", "court shoes"],
-    ),
-]
-
-
-def outfit_understander(items: list[ItemIntent] | None = None) -> FakeUnderstander:
-    return FakeUnderstander(
-        make_understand_result(input_type=InputType.OUTFIT_PHOTO, items=items or OUTFIT)
-    )
 
 
 async def test_four_garments_give_four_groups_in_the_order_they_were_detected(

@@ -19,7 +19,7 @@ from eval.harness.wiring import Boundaries
 from tests.factories import make_item_intent, make_settings, make_understand_result
 from tests.fakes import FakeClock, FakeImageRanker, FakeUnderstander
 from tests.harness.helpers import make_query
-from tests.pipeline.test_outfit import OUTFIT
+from tests.pipeline.builders import OUTFIT
 from tests.pipeline.world import StoreWorld, store_for
 from vga.models import InputType, SearchRequest, SearchResponse, UnderstandResult
 from vga.pipeline import pipeline_factory

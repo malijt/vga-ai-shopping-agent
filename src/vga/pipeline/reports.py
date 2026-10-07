@@ -49,6 +49,9 @@ class StoreSummary:
     timings: list[StepTiming]
     failed: list[StoreReport]
     """The skipped stores that failed (blocked, slow, broken), for warnings and logs."""
+    partly_failed: list[StoreReport]
+    """Used stores that gave products for one item but failed for another (an outfit), so some
+    garment has fewer results than it should."""
 
 
 def outcomes_for_item(run: ItemRun) -> list[StoreOutcome]:
@@ -97,6 +100,7 @@ def summarise(active: Sequence[StoreConfig], runs: Sequence[ItemRun]) -> StoreSu
     skipped: list[StoreReport] = []
     timings: list[StepTiming] = []
     failed: list[StoreReport] = []
+    partly_failed: list[StoreReport] = []
     for store in active:
         outcomes = [o for item in per_item for o in item if o.report.store_id == store.id]
         if not outcomes:
@@ -114,11 +118,15 @@ def summarise(active: Sequence[StoreConfig], runs: Sequence[ItemRun]) -> StoreSu
             )
         if merged.status is StoreStatus.OK:
             used.append(merged)
+            if any(o.report.status in _FAILURES for o in outcomes):
+                partly_failed.append(merged)
         else:
             skipped.append(merged)
             if merged.status in _FAILURES:
                 failed.append(merged)
-    return StoreSummary(used=used, skipped=skipped, timings=timings, failed=failed)
+    return StoreSummary(
+        used=used, skipped=skipped, timings=timings, failed=failed, partly_failed=partly_failed
+    )
 
 
 def _merge(store_id: str, outcomes: Sequence[StoreOutcome]) -> StoreReport:

@@ -17,10 +17,9 @@ from pydantic import BaseModel
 
 from tests.factories import make_image_bytes, make_search_request, make_settings
 from tests.fakes import FakeClock, FakeImageRanker
+from tests.pipeline.builders import OUTFIT, outfit_understander, photo_search, rerun
 from tests.pipeline.conftest import PipelineMaker
 from tests.pipeline.disk import files_under, read_bytes
-from tests.pipeline.test_outfit import OUTFIT, outfit_understander
-from tests.pipeline.test_rerun import photo_search, rerun
 from tests.pipeline.world import StoreWorld, store_for
 from vga.errors import InvalidInputError
 from vga.log import LOG_FILE_NAME, configure_logging

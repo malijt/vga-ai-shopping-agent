@@ -94,6 +94,11 @@ _STORE_WARNINGS: dict[StoreStatus, str] = {
 """A store that failed is named in ``SearchResponse.warnings``. ``empty`` is not a failure."""
 
 
+def store_partial_warning(store_name: str) -> str:
+    """A store that answered for some of the shopper's items but not for all of them."""
+    return f"{store_name} could not be searched for every item, so some results may be missing."
+
+
 def store_reason(status: StoreStatus) -> str:
     return STORE_REASONS[status]
 
@@ -118,11 +123,13 @@ _CATEGORY_WORDS: dict[Category, str] = {
 
 
 def gender_word(gender: Gender) -> str:
-    return _GENDER_WORDS[gender]
+    return _GENDER_WORDS.get(gender, gender.value)
 
 
 def category_word(category: Category) -> str:
-    return _CATEGORY_WORDS[category]
+    # A category added later reads as its own name until it is given a word here, rather than
+    # turning a plain warning into a crash.
+    return _CATEGORY_WORDS.get(category, category.value)
 
 
 def store_not_for_gender(store: StoreConfig, gender: Gender) -> str:

@@ -11,9 +11,9 @@ import pytest
 
 from tests.factories import make_search_request, make_settings
 from tests.fakes import FakeImageRanker
+from tests.pipeline.builders import OUTFIT, outfit_understander
 from tests.pipeline.conftest import PipelineMaker
 from tests.pipeline.disk import exists, files_under
-from tests.pipeline.test_outfit import OUTFIT, outfit_understander
 from tests.pipeline.world import StoreWorld
 from vga.models import SearchResponse, Tier
 from vga.pipeline.dump import dump_path

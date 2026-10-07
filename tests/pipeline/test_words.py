@@ -31,6 +31,7 @@ def message_texts() -> Iterator[str]:
         yield from filter(None, [messages.store_warning("Some Store", status)])
         if status is not StoreStatus.OK:
             yield messages.store_reason(status)
+    yield messages.store_partial_warning("Some Store")
     yield messages.photo_too_large(8_000_000)
     yield messages.text_too_long(2000)
     yield messages.deadline_warning(30)
@@ -67,6 +68,7 @@ def test_every_message_function_is_covered_by_the_scan_above() -> None:
         "deadline_warning",
         "store_reason",
         "store_warning",
+        "store_partial_warning",
         "gender_word",
         "category_word",
         "store_not_for_gender",

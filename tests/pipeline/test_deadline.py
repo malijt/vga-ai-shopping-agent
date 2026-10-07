@@ -17,8 +17,8 @@ from tests.factories import (
     make_understand_result,
 )
 from tests.fakes import FakeClock, FakeImageRanker, FakeUnderstander
+from tests.pipeline.builders import OUTFIT, outfit_understander
 from tests.pipeline.conftest import PipelineMaker
-from tests.pipeline.test_outfit import OUTFIT, outfit_understander
 from tests.pipeline.world import StoreWorld, store_for
 from vga.errors import VgaError
 from vga.models import Product, QueryImage, StoreStatus, UnderstandResult

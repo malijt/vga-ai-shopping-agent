@@ -12,11 +12,11 @@ import pytest
 from tests.factories import (
     make_budget,
     make_chip_edits,
-    make_item_intent,
     make_search_request,
     make_understand_result,
 )
 from tests.fakes import FakeClock, FakeUnderstander
+from tests.pipeline.builders import BLAZER, SHIRT, photo_search, rerun
 from tests.pipeline.conftest import PipelineMaker
 from tests.pipeline.world import StoreWorld
 from vga.errors import InvalidInputError
@@ -29,27 +29,10 @@ from vga.models import (
     RunOverrides,
     SearchRequest,
     SearchResponse,
-    SettingsOverride,
     Step,
-    TierMix,
 )
 from vga.pipeline.rerun import MAX_REQUESTS, CachedItem, CachedRun, RerunCache
 from vga.settings import Settings
-
-BLAZER = make_item_intent(
-    colour="black",
-    search_keywords=["black oversized blazer", "oversized blazer"],
-)
-SHIRT = make_item_intent(
-    category=Category.TOPS,
-    colour="white",
-    style="shirt",
-    search_keywords=["white shirt", "cotton shirt"],
-)
-
-
-def photo_search(items: list | None = None, input_type: InputType = InputType.PHOTO_TEXT):
-    return FakeUnderstander(make_understand_result(input_type=input_type, items=items or [BLAZER]))
 
 
 @dataclass(frozen=True)
@@ -77,27 +60,6 @@ def counts(world: StoreWorld, understander: FakeUnderstander, maker: PipelineMak
         model_batches=len(maker.embedder.batch_sizes),
         searcher_calls=len(maker.spy.calls),
         ranker_calls=len(maker.ranker_spy.calls),
-    )
-
-
-def rerun(
-    first: SearchResponse,
-    *,
-    mix: TierMix | None = None,
-    budget=None,
-    chips=None,
-) -> tuple[SearchRequest, RunOverrides]:
-    """What the app sends after a first search: no text, no photo, the earlier understanding and
-    the photo's embedding."""
-    sidebar = SettingsOverride(tier_mix=mix, budget=budget) if mix or budget else None
-    return (
-        SearchRequest(rerun_of=first.request_id),
-        RunOverrides(
-            settings=sidebar,
-            chips=chips,
-            understood=first.understood,
-            query_embedding=first.query_embedding,
-        ),
     )
 
 

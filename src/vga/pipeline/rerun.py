@@ -8,8 +8,8 @@ Rules
 - In memory, per process, keyed by the request id (a re-run names it in ``rerun_of``). Nothing is
   written to disk.
 - An entry is good for ``Settings.store_cache_ttl_s`` seconds on the injected ``Clock``, counted
-  from when its stores were really asked. A re-run that reuses an entry does not renew it, so old
-  products never live longer than the stores' own cache would let them.
+  from when its oldest store answered. A re-run that reuses an entry does not renew it, so old
+  products do not live longer by being re-shaped.
 - It holds no photo (BRD Rule 4): products, numbers, store reports, and the image *embedding*
   (a vector of numbers, which plan assumption A8 allows to be kept for chip edits).
 - Small and bounded: the oldest request goes first.
@@ -42,7 +42,14 @@ class CachedItem:
     searched_ids: frozenset[str]
     """Which of those stores were really searched (the others were skipped for their gender)."""
     expires_at: float
-    """Clock time after which the products are too old to reuse."""
+    """Clock time after which the products are too old to reuse. Counted from when the OLDEST
+    store answered (not from when the pipeline finished waiting for the others). An answer that
+    the store engine served from its own cache is counted from when it arrived here, so in that
+    one case a product can be up to twice ``store_cache_ttl_s`` old."""
+    image_done: bool = True
+    """False when the photo could not be compared with these products (the model was missing, the
+    comparison failed or was cut short by the deadline). A re-run that still has the photo's
+    embedding then tries again instead of reusing "no image scores" as if it were the answer."""
 
 
 @dataclass(frozen=True)
