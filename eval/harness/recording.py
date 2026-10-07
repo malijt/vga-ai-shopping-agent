@@ -263,6 +263,15 @@ class _RecordingImageRanker:
         self._inner = inner
         self._session = session
 
+    async def warm_up(self) -> bool:
+        """Pass the pipeline's warm-up on to the real ranker. The pipeline looks for ``warm_up``
+        on whatever ranker it was given; without this the recorder would hide it, the model would
+        load during the first photo query, and that query's time would include the load."""
+        warm = getattr(self._inner, "warm_up", None)
+        if warm is None:
+            return True  # nothing to load (the ranker is off)
+        return bool(await warm())
+
     async def score(
         self, query: QueryImage | None, products: Sequence[Product]
     ) -> dict[str, float | None]:

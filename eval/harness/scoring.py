@@ -35,5 +35,7 @@ def score_run(
         )
         for run in loaded.runs
     )
-    verdict = overall_verdict(evaluations, config.required_queries)
+    # Only the frozen acceptance set is judged by the "most queries" rule (assumption A6).
+    required = config.required_queries if loaded.meta.query_set == "acceptance" else None
+    verdict = overall_verdict(evaluations, required)
     return ScoredRun(loaded, evaluations, verdict, config, labels is not None)

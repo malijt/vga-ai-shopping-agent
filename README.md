@@ -92,7 +92,7 @@ These describe the design; the features themselves land in later phases.
 - **Gender inferred from a photo is shown, never applied,** until the shopper confirms it. Gender stated in the text is applied.
 - **Arabic is translated to English keywords** for store search; translation quality varies. The translated chip can be corrected.
 - **Body size is never guessed** from a photo.
-- **The photo is sent to OpenAI** for analysis. EXIF data is stripped and the image is downscaled first, and the app keeps nothing after the request. Faces in outfit photos are **not** redacted. Review the privacy position (UAE PDPL / GDPR) before real users.
+- **The photo is sent to OpenAI** for analysis. EXIF data is stripped and the image is downscaled first, and the app keeps nothing after the request. Faces in outfit photos are **not** redacted. Review the privacy position (UAE PDPL / GDPR) before real users. What is sent, what is kept in memory and in logs, and what to review before real users are in [docs/privacy.md](docs/privacy.md).
 - **Store coverage is the biggest risk.** A store that blocks an honest client is dropped, never bypassed, so results may come from fewer stores. If no luxury-leaning store works, "Luxury" only means "most expensive found".
 - **Price ranges are relative.** Their borders are quartiles of the prices found for this search, not fixed market bands.
 - **This is a demo.** Each store's terms of use must be checked before any real use.

@@ -10,6 +10,7 @@ plain message, never a stack trace) so the report lists it as a failed query and
 still run. Nothing is swallowed silently.
 """
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Literal, Protocol
@@ -64,10 +65,25 @@ def build_request(query: AcceptanceQuery, image: bytes | None) -> SearchRequest:
     return SearchRequest(text=query.text, image=image)
 
 
+_BYTES_LITERAL = re.compile(r"""\bb(['"]).*?(?<!\\)\1""", re.DOTALL)
+_MAX_MESSAGE_CHARS = 500
+
+
+def _without_bytes(text: str) -> str:
+    """Hide anything printed as a bytes literal, and keep the message short.
+
+    An unexpected exception's text is saved in ``run.json`` and the report, which may be committed.
+    A library error that quotes the value it choked on (a validation error shows ``input_value``)
+    could quote the shopper's photo, so no bytes literal is ever kept (BRD Rule 4)."""
+    shown = _BYTES_LITERAL.sub("<bytes omitted>", text)
+    return shown if len(shown) <= _MAX_MESSAGE_CHARS else shown[:_MAX_MESSAGE_CHARS] + "..."
+
+
 def _failure_from(exc: Exception) -> PipelineFailure:
     if isinstance(exc, VgaError):
         return PipelineFailure(exc.code, exc.user_message, type(exc).__name__)
-    return PipelineFailure("unexpected", f"{type(exc).__name__}: {exc}", type(exc).__name__)
+    message = _without_bytes(f"{type(exc).__name__}: {exc}")
+    return PipelineFailure("unexpected", message, type(exc).__name__)
 
 
 async def run_query(

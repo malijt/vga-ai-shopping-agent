@@ -6,8 +6,8 @@ Adapter notes for plan feature 12.x.4. Written 2026-10-08, after the live smoke 
 - Config: `config/stores/hanayen.yaml`. Tests and fixtures: `tests/stores/hanayen/`.
 - Qualification (2026-10-08): `docs/store-qualification/hanayen.md`; the dress and modest-wear pass it
   belongs to: `docs/store-qualification/dress-store-discovery.md`.
-- **Status: built, held disabled.** The live smoke test passed on 2026-10-08 (see "Observed live
-  today"), but the file says `enabled: false` until the store set for the demo is decided.
+- **Status: enabled.** The live smoke test passed on 2026-10-08 (see "Observed live today"), and
+  the store was enabled the same day when the user raised the store limit (plan A25).
 
 ## Data path
 
@@ -106,6 +106,13 @@ smoke test. Every response was HTTP 200, no redirect, no challenge, CAPTCHA or l
   title or tag in the recorded answers names a gender. The data itself carries no gender field, so
   this rests on the range and the brand, as for Oh Polly. A men's request is therefore not sent to
   this store.
+- **Categories:** `categories: [dresses]`. Evidence: the 40 qualification records and the 20 recorded
+  today are abayas, under-abaya dresses and sheilas (accessories, out of scope); no shoes, trousers,
+  tops or jackets were seen. A search for any other category is therefore not sent to this store (it
+  would only waste a request, and an abaya's title often names no garment, so it would pass the
+  category filter for any request). Listed among the skipped stores as "Not searched: Hanayen does not
+  sell shoes." and so on. "Not seen" is not "not sold": if the store adds other garments, remove the
+  line.
 
 ## robots.txt comment addressed to AI agents (data, not acted on)
 

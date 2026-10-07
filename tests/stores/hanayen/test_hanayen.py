@@ -28,7 +28,7 @@ from protego import Protego
 from tests.factories import make_item_intent, make_settings
 from tests.fakes import FakeClock
 
-from vga.models import Gender, Product, StoreConfig, StoreStatus, Tier
+from vga.models import Category, Gender, Product, StoreConfig, StoreStatus, Tier
 from vga.stores.engine import StoreSearchEngine
 from vga.stores.extractors import ExtractionChain, default_registry
 from vga.stores.extractors.chain import ChainOutcome
@@ -112,6 +112,15 @@ def test_a_mens_request_is_not_sent_to_this_women_only_store(store: StoreConfig)
     assert store.sells_for_gender(None)
     assert store.sells_for_gender(Gender.UNISEX)
     assert not store.sells_for_gender(Gender.MEN)
+
+
+def test_only_a_dresses_search_is_sent_to_this_dress_store(store: StoreConfig) -> None:
+    # Every garment seen here is an abaya or an under-abaya dress (docs/store-notes/hanayen.md), so
+    # a search for shoes, jeans, tops or jackets would only waste a request to it.
+    assert store.categories == frozenset({Category.DRESSES})
+    assert store.sells_category(Category.DRESSES)
+    for other in (Category.TOPS, Category.OUTERWEAR, Category.BOTTOMS, Category.SHOES):
+        assert not store.sells_category(other)
 
 
 def test_robots_txt_allows_the_search_path_and_still_closes_the_cart() -> None:

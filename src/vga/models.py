@@ -539,6 +539,14 @@ class StoreConfig(VgaModel):
     a men's query to such a store or show its products for one: see ``sells_for_gender``. In YAML
     and JSON this is a list such as ``[women]``, written in a fixed order. It cannot be empty (a
     store that sells for nobody should be ``enabled: false``)."""
+    categories: frozenset[Category] | None = Field(default=None, min_length=1)
+    """The garment categories this store sells; ``None`` means all, or not known. Several of the
+    stores an honest client can read sell only one family of garments (the dress and modest-wear
+    boutiques sell dresses, kaftans and abayas, nothing else), and the pipeline must not send them a
+    search for shoes or jeans: it only wastes a request to the store and their titles often name no
+    garment, so the category filter would let an unrelated product through. See ``sells_category``.
+    In YAML and JSON this is a list such as ``[dresses]``, written in a fixed order. It cannot be
+    empty (a store that sells nothing we search for should be ``enabled: false``)."""
     tier_hint: Tier | None = None
     """``luxury`` marks a luxury-leaning store (affects the ``relative_range`` flag)."""
     enabled: bool = False
@@ -560,12 +568,29 @@ class StoreConfig(VgaModel):
             return True
         return Gender.UNISEX in self.genders or gender in self.genders
 
+    def sells_category(self, category: Category) -> bool:
+        """Whether a search for ``category`` should go to this store.
+
+        Yes when the store does not say which categories it sells (``categories is None``) or when
+        it lists the requested one. Unlike gender there is no "no preference" value: every item is
+        searched for one category.
+        """
+        return self.categories is None or category in self.categories
+
     @field_serializer("genders")
     def _genders_in_a_fixed_order(self, value: frozenset[Gender] | None) -> list[Gender] | None:
         # A set has no order; sorting by the enum's order keeps dumps and logs deterministic.
         if value is None:
             return None
         return [gender for gender in Gender if gender in value]
+
+    @field_serializer("categories")
+    def _categories_in_a_fixed_order(
+        self, value: frozenset[Category] | None
+    ) -> list[Category] | None:
+        if value is None:
+            return None
+        return [category for category in Category if category in value]
 
     @field_validator("allowed_hosts")
     @classmethod

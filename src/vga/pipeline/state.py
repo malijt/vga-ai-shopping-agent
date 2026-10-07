@@ -39,9 +39,10 @@ class ItemRun:
     item: ItemIntent
     """What is searched for: the understood item, with at most 2 keywords for an outfit."""
     stores: list[StoreConfig]
-    """The stores asked for it: those that sell for the item's stated gender."""
-    gender_skipped: list[StoreConfig]
-    """Active stores that were left out because they do not sell for the item's gender."""
+    """The stores asked for it: those that sell its category and sell for its stated gender."""
+    skipped: list[StoreConfig]
+    """Active stores that were left out because they do not sell the item's category or do not
+    sell for its stated gender. No request is made to them for it."""
     cached: CachedItem | None = None
     """The earlier search of this very item, when it can be reused (a mix or budget change)."""
 
@@ -94,6 +95,10 @@ class RunState:
     usage: Usage = field(default_factory=Usage)
     budget: Budget | None = None
     items: list[ItemRun] = field(default_factory=list)
+    compares_images: bool = True
+    """Whether the products are compared with the shopper's photo in this run. False for an outfit
+    photo (also on a re-run): it is searched garment by garment, with no thumbnail fetched, no
+    photo embedded and no image score applied. Not a failure, so it raises no warning."""
     query: QueryImage | None = None
     query_embedding: list[float] | None = None
 

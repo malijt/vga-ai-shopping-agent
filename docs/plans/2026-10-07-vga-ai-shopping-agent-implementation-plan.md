@@ -997,5 +997,5 @@ Checked against all nine files in `docs/Best Practices/` and the hard rules in `
 | Image ranker | The component that scores image similarity: `siglip` or `off`. |
 | Qualification | Checking a store's robots.txt, reachability and data path before writing an adapter. |
 | Record / replay | Saving a live run's store and OpenAI responses so the pipeline can be re-run offline. |
-| Cooldown | Period during which a store that blocked or failed is not contacted again. |
+| Cooldown | Period during which a store that blocked us (403, 429, a challenge or CAPTCHA page, a login wall) is not contacted again. A store that only errors or times out is skipped for that search and asked again on the next one (ADR 0003). |
 | Wave | A set of agent assignments that can run in parallel; the next wave starts after the previous one merges. |

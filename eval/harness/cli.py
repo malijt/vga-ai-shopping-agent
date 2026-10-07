@@ -19,6 +19,15 @@ One of four modes is required:
 Every run is saved to a folder under ``eval/results/`` (``run-N`` for a live run, ``mock`` and
 ``replay`` for the others): the raw responses, ``run.json``, ``results.md`` and a blank
 ``labels.csv``. A live run's folder is never overwritten.
+
+A live run first warms the pipeline up (loads the image model) and reports how long that took,
+apart from the queries: the 30 s limit is for a search on an app that is already running.
+
+``--queries`` names the queries file. The frozen ``eval/data/queries.yaml`` (the default) is the
+acceptance set: it must have the PRD mix of 10 and it decides the demo. Any other file, such as
+``eval/data/extra_queries.yaml`` (the 11 extra photos), is an *extra set*: no mix is required, the
+report says plainly that it is not the acceptance result, no demo verdict is given, and its
+results go to ``extras-N`` (``replay-extras`` for a replay) instead of ``run-N``.
 """
 
 import argparse
@@ -26,7 +35,7 @@ import asyncio
 import csv
 import re
 import sys
-from collections.abc import Callable, Collection, Mapping, Sequence
+from collections.abc import Awaitable, Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import date
 from pathlib import Path
@@ -45,7 +54,14 @@ from eval.harness.links import (
     products_to_check,
 )
 from eval.harness.offline import MockLinkFetch, allowed_hosts_from_responses, placeholder_image
-from eval.harness.queries import QUERIES_PATH, AcceptanceQuery, load_queries, read_query_image
+from eval.harness.queries import (
+    QUERIES_PATH,
+    AcceptanceQuery,
+    QuerySet,
+    load_queries,
+    query_set_of,
+    read_query_image,
+)
 from eval.harness.recording import RecordingSession, ReplaySession
 from eval.harness.report import render_report
 from eval.harness.runner import ImageLoader, QueryRun, QueryScope, run_queries
@@ -55,6 +71,7 @@ from eval.harness.runstore import (
     LoadedRun,
     Mode,
     RunMeta,
+    WarmUp,
     load_run,
     save_run,
 )
@@ -62,10 +79,12 @@ from eval.harness.scoring import ScoredRun, score_run
 from eval.harness.wiring import Wiring, WiringFactory, load_wiring_factory
 from vga.errors import VgaError
 from vga.interfaces import Clock, Pipeline, SystemClock
+from vga.models import StoreConfig
 from vga.settings import PROJECT_ROOT, Settings, load_settings
 
 RESULTS_DIR = Path("eval") / "results"
-_RUN_DIR = re.compile(r"^run-(\d+)$")
+_RUN_DIR = re.compile(r"^(?:run|extras)-(\d+)$")
+_FOLDER_PREFIX: dict[QuerySet, str] = {"acceptance": "run", "extra": "extras"}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -73,7 +92,8 @@ def build_parser() -> argparse.ArgumentParser:
         prog="python -m eval.harness",
         description=(
             "Run the 10 acceptance queries headless, score them against the BRD pass rule, "
-            "and leave only the good-match labels to a person."
+            "and leave only the good-match labels to a person. Another --queries file is run "
+            "as an extra set, which is reported but never scored against the pass rule."
         ),
     )
     mode = parser.add_mutually_exclusive_group(required=True)
@@ -103,7 +123,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--out",
         metavar="DIR",
         help="output folder (default: eval/results/run-N for --record, eval/results/mock, "
-        "eval/results/replay; for --rescore, the run's own folder)",
+        "eval/results/replay; extra sets use extras-N and replay-extras; for --rescore, "
+        "the run's own folder)",
     )
     parser.add_argument(
         "--overwrite", action="store_true", help="allow --out to be a folder that already has files"
@@ -116,7 +137,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="function that builds the real application parts: (Settings) -> Wiring",
     )
     parser.add_argument(
-        "--queries", metavar="PATH", default=str(QUERIES_PATH), help="the queries file"
+        "--queries",
+        metavar="PATH",
+        default=str(QUERIES_PATH),
+        help="the queries file (default: the frozen acceptance set; any other file is run as an "
+        "extra set that does not count towards the pass rule, for example "
+        "eval/data/extra_queries.yaml)",
     )
     return parser
 
@@ -135,22 +161,30 @@ class _Setup:
     replay: ReplaySession | None = None
     recording: RecordingSession | None = None
     clock: Clock = field(default_factory=SystemClock)
+    close: Callable[[], Awaitable[None]] | None = None
+    """Releases what the real application holds open (its HTTP client). Called once, on the
+    event loop the run used."""
+    warm_up: WarmUp | None = None
+    """Set by the run, before the first query."""
+    stores: Sequence[StoreConfig] = ()
+    """The stores the real application searches, to say so when a run starts."""
 
 
-def _next_run_number(results_dir: Path) -> int:
+def _next_run_number(results_dir: Path, prefix: str = "run") -> int:
     numbers = [
         int(match.group(1))
-        for child in results_dir.glob("run-*")
+        for child in results_dir.glob(f"{prefix}-*")
         if (match := _RUN_DIR.match(child.name))
     ]
     return max(numbers, default=0) + 1
 
 
 def _resolve_output(
-    args: argparse.Namespace, mode: Mode, root: Path
+    args: argparse.Namespace, mode: Mode, root: Path, query_set: QuerySet = "acceptance"
 ) -> tuple[Path, int | None, bool]:
     """The output folder, the run number and whether the folder may already hold files."""
     results_dir = root / RESULTS_DIR
+    prefix = _FOLDER_PREFIX[query_set]
     if args.out:
         out = Path(args.out)
         match = _RUN_DIR.match(out.name)
@@ -164,9 +198,11 @@ def _resolve_output(
         if match:
             number = args.run if args.run is not None else int(match.group(1))
             return beside, number, bool(args.overwrite)
-        number = args.run if args.run is not None else _next_run_number(results_dir)
-        return results_dir / f"run-{number}", number, bool(args.overwrite)
-    return results_dir / mode, args.run, True
+        number = args.run if args.run is not None else _next_run_number(results_dir, prefix)
+        return results_dir / f"{prefix}-{number}", number, bool(args.overwrite)
+    # A mock or replay folder is replaced each time, so an extra set gets its own: replaying the
+    # extras must not wipe the replay of the acceptance run.
+    return results_dir / (mode if query_set == "acceptance" else f"{mode}-extras"), args.run, True
 
 
 def _ensure_output_is_free(out: Path, overwrite: bool) -> None:
@@ -219,6 +255,7 @@ def _setup_replay(
         scope=session,
         source=str(args.replay),
         replay=session,
+        stores=wiring.stores,
     )
 
 
@@ -236,8 +273,11 @@ def _setup_record(
     if links is not LinksMode.NONE and wiring.link_fetch is None:
         msg = "The wiring has no link_fetch, so links cannot be checked. Use --links none."
         raise WiringError(msg)
+    # Build the live parts before the recording folder exists: a missing key or model is found
+    # here, in plain words, and leaves nothing behind.
+    boundaries = wiring.build_boundaries()
     session = RecordingSession(args.record)
-    live = session.wrap(wiring.build_boundaries())
+    live = session.wrap(boundaries)
     return _Setup(
         mode="record",
         pipeline=wiring.pipeline_factory(live.understander, live.searcher, live.image_ranker),
@@ -246,6 +286,8 @@ def _setup_record(
         link_fetch=wiring.link_fetch,
         allowed_hosts=allowed_hosts_from_stores(wiring.stores),
         recording=session,
+        close=wiring.aclose,
+        stores=wiring.stores,
     )
 
 
@@ -277,6 +319,29 @@ def _link_tools(
     return setup.link_fetch, setup.allowed_hosts or {}
 
 
+async def _warm_up(setup: _Setup) -> WarmUp | None:
+    """Load the image model before the first timed query, and say how long that took.
+
+    The 30 s limit is about a search on an app that is already running (plan 16.1.1), so the
+    model's load time must not land inside the first photo query. Only a live run loads anything:
+    a replay serves the recorded scores and a mock has no model. A pipeline with no ``warm_up``
+    has nothing to load either."""
+    if setup.mode != "record":
+        return None
+    warm = getattr(setup.pipeline, "warm_up", None)
+    if warm is None:
+        return None
+    started = setup.clock.monotonic()
+    ready = False
+    detail: str | None = None
+    try:
+        ready = bool(await warm())
+    except Exception as exc:  # a warm-up that raises must not stop the run; it is reported
+        detail = f"{type(exc).__name__}: {exc}"
+    elapsed_ms = max(setup.clock.monotonic() - started, 0.0) * 1000.0
+    return WarmUp(duration_ms=elapsed_ms, ready=ready, detail=detail)
+
+
 async def _run_and_check(
     setup: _Setup,
     queries: list[AcceptanceQuery],
@@ -284,28 +349,35 @@ async def _run_and_check(
     links: LinksMode,
     progress: Callable[[QueryRun], None],
     checkpoint: Callable[[list[QueryRun]], None],
+    on_warm_up: Callable[[WarmUp | None], None],
 ) -> tuple[list[QueryRun], dict[str, list[LinkCheck]]]:
-    """Run the queries, save them, then check links. One event loop for all of it, because a
-    fetch function or pipeline may keep an HTTP client that belongs to the loop it first ran in.
+    """Warm up, run the queries, save them, then check links. One event loop for all of it,
+    because a fetch function or pipeline may keep an HTTP client that belongs to the loop it
+    first ran in.
 
     ``checkpoint`` is called with the finished runs before the first link is fetched, so the
     expensive part of a live run is on disk even if the link phase is interrupted."""
-    runs = await run_queries(
-        queries,
-        setup.pipeline,
-        settings,
-        clock=setup.clock,
-        load_image=setup.load_image,
-        scope=setup.scope,
-        progress=progress,
-    )
-    if setup.replay is not None:
-        runs = [_with_recorded_duration(run, setup.replay) for run in runs]
-    checkpoint(runs)
-    if links is LinksMode.NONE:
-        return runs, {}
-    fetch, allowed = _link_tools(setup, runs)
-    return runs, await _check_links(runs, links, fetch, allowed)
+    try:
+        on_warm_up(await _warm_up(setup))
+        runs = await run_queries(
+            queries,
+            setup.pipeline,
+            settings,
+            clock=setup.clock,
+            load_image=setup.load_image,
+            scope=setup.scope,
+            progress=progress,
+        )
+        if setup.replay is not None:
+            runs = [_with_recorded_duration(run, setup.replay) for run in runs]
+        checkpoint(runs)
+        if links is LinksMode.NONE:
+            return runs, {}
+        fetch, allowed = _link_tools(setup, runs)
+        return runs, await _check_links(runs, links, fetch, allowed)
+    finally:
+        if setup.close is not None:
+            await setup.close()
 
 
 def _with_recorded_duration(run: QueryRun, replay: ReplaySession) -> QueryRun:
@@ -328,6 +400,14 @@ def _run_notes(setup: _Setup, runs: Sequence[QueryRun]) -> list[str]:
             "The replay could not serve " + ", ".join(unservable) + " from the recording (not "
             "recorded, incomplete, or the pipeline asked for something else). Those queries "
             "count as failed; the others ran. This is a limit of the recording, not a store fault."
+        )
+    warm_up = setup.warm_up
+    if warm_up is not None and not warm_up.ready:
+        notes.append(
+            "Image scoring was not available when the run started"
+            + (f" ({warm_up.detail})" if warm_up.detail else "")
+            + ": photo queries were ranked on text and price only, so this run does not show what "
+            "the finished app does with a photo. The reason is in the log."
         )
     if setup.recording is not None and setup.recording.incomplete:
         notes.append(
@@ -384,11 +464,29 @@ def _load_labels(path: str | None, runs: Sequence[QueryRun]) -> LabelSet | None:
     return import_label_sheet(path, runs) if path else None
 
 
+def _warm_up_line(warm_up: WarmUp) -> str:
+    took = f"{warm_up.duration_ms / 1000:.1f} s"
+    if warm_up.ready:
+        return (
+            f"Warm-up: done in {took}, before the first query and outside every query's time. "
+            "Image scoring is ready."
+        )
+    return (
+        f"Warm-up: done in {took}, but image scoring is NOT available, so photo queries will be "
+        "ranked on text and price only. The reason is in the log. The image model needs "
+        "`uv sync --group ml` and `uv run --group ml python -m vga.rank.image.download`."
+    )
+
+
 def _print_verdict(scored: ScoredRun, out: TextIO) -> None:
     verdict = scored.verdict
     if scored.loaded.meta.mode == "mock":
         print("Mock run: the verdict below says nothing about the real app.", file=out)
-    print(f"Verdict: {verdict.label}. {verdict.headline}.", file=out)
+    if verdict.required is None:
+        print(f"Extra set, not the acceptance result: {verdict.headline}.", file=out)
+        print("  It has no demo verdict and does not count towards the 7 of 10 rule.", file=out)
+    else:
+        print(f"Verdict: {verdict.label}. {verdict.headline}.", file=out)
     if verdict.pending:
         print(
             f"  {len(verdict.pending)} query(ies) still undecided (labels or links missing).",
@@ -431,11 +529,16 @@ def _execute(
         if args.links
         else (LinksMode.NONE if mode == "replay" else LinksMode.ALL)
     )
-    out, number, overwrite = _resolve_output(args, mode, root)
+    query_set = query_set_of(args.queries)
+    out, number, overwrite = _resolve_output(args, mode, root, query_set)
     _ensure_output_is_free(out, overwrite)
 
+    # Only the frozen acceptance set must have the PRD mix; an extra set has none to check.
     queries: list[AcceptanceQuery] = load_queries(
-        args.queries, repo_root=root, require_images=mode == "record"
+        args.queries,
+        repo_root=root,
+        require_images=mode == "record",
+        check_mix=query_set == "acceptance",
     )
     if mode == "mock":
         setup = _setup_mock()
@@ -445,6 +548,9 @@ def _execute(
         setup = _setup_record(args, settings, wiring_factory, links, root)
     if clock is not None:
         setup.clock = clock
+    if setup.stores:
+        names = ", ".join(store.id for store in setup.stores)
+        print(f"Stores in this run ({len(setup.stores)}): {names}", file=out_stream)
 
     def progress(run: QueryRun) -> None:
         if run.response is not None:
@@ -462,12 +568,14 @@ def _execute(
     ) -> tuple[ScoredRun, Path, int]:
         meta = RunMeta(
             number=number,
+            query_set=query_set,
             mode=mode,
             date=today,
             links=links,
             price_range_mix=list(settings.tier_mix.as_tuple()),
             source=setup.source,
             notes=_run_notes(setup, runs),
+            warm_up=setup.warm_up,
         )
         loaded = LoadedRun(meta, runs, link_checks)
         # The folder was checked before the run (`_ensure_output_is_free`). By now it may hold
@@ -482,8 +590,13 @@ def _execute(
     def checkpoint(runs: list[QueryRun]) -> None:
         persist(runs, {}, use_labels=False)
 
+    def warmed_up(warm_up: WarmUp | None) -> None:
+        setup.warm_up = warm_up
+        if warm_up is not None:
+            print(_warm_up_line(warm_up), file=out_stream)
+
     runs, link_checks = asyncio.run(
-        _run_and_check(setup, queries, settings, links, progress, checkpoint)
+        _run_and_check(setup, queries, settings, links, progress, checkpoint, warmed_up)
     )
     scored, sheet, rows = persist(runs, link_checks, use_labels=True)
 

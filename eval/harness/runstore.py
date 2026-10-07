@@ -24,7 +24,7 @@ from pydantic import Field, ValidationError
 
 from eval.harness.errors import RunFileError
 from eval.harness.links import LinkCheck, LinksMode
-from eval.harness.queries import AcceptanceQuery
+from eval.harness.queries import AcceptanceQuery, QuerySet
 from eval.harness.runner import DurationSource, PipelineFailure, QueryRun
 from vga.models import SearchResponse, VgaModel
 
@@ -37,11 +37,28 @@ LABELS_FILE = "labels.csv"
 Mode = Literal["mock", "record", "replay"]
 
 
+class WarmUp(VgaModel):
+    """Loading the image model once before the first query (plan 16.1.1).
+
+    The 30 s limit is about a search on an app that is already running, so this time is reported
+    here and is never inside any query's time."""
+
+    duration_ms: float = Field(ge=0)
+    ready: bool
+    """``False`` when image scoring is unavailable: photo queries then rank on text and price
+    only, and the run does not show what the finished app does."""
+    detail: str | None = None
+    """What went wrong, when the warm-up raised instead of answering."""
+
+
 class RunMeta(VgaModel):
     """What kind of run this was."""
 
     number: int | None = None
     """The run number (``run-1``), or ``None`` for a mock or replay run."""
+    query_set: QuerySet = "acceptance"
+    """``acceptance`` for the 10 frozen queries; ``extra`` for any other set (for example the 11
+    extra photos). An extra set is never scored against the pass rule."""
     mode: Mode
     date: date
     links: LinksMode
@@ -51,6 +68,8 @@ class RunMeta(VgaModel):
     """Where a replay's recording came from."""
     notes: list[str] = Field(default_factory=list)
     """Plain notes from the run itself, copied into the report."""
+    warm_up: WarmUp | None = None
+    """The warm-up before the first query. ``None`` for a mock or replay run: nothing is loaded."""
 
 
 class FailureRecord(VgaModel):

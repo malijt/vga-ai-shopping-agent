@@ -1,9 +1,10 @@
 """The combiner: one total score from the text, image and price scores (plan 7.2.4, PRD R8).
 
 A weighted sum with the weights from ``settings.ranking_weights`` (ADR 0004; rank fusion is
-deliberately not used). When a product has no image score (no photo, the image ranker is off or
-failed, or this product could not be scored) the image weight is dropped and the other weights
-are renormalised, so the total stays on the same 0-1 scale.
+deliberately not used). When there is no image score at all (no photo, the image ranker is off or
+failed) the image weight is dropped and the other weights are renormalised, so the total stays on
+the same 0-1 scale. ``apply_image_scores`` does not pass ``None`` for a single product that was not
+compared when others were: it passes a neutral value, so that being compared is not a penalty.
 """
 
 from vga.settings import RankingWeights

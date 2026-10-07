@@ -10,6 +10,10 @@ has labelled it, a query may be undecided, and so may the verdict:
 - ``PENDING``: neither yet. The report says how many queries are still undecided.
 
 The harness never says ``PASS`` on evidence that is still missing.
+
+An *extra set* (for example the 11 extra photos) is not part of the pass rule. It gets no demo
+verdict: ``required`` is ``None``, the label reads ``EXTRA SET``, and the headline only counts how
+many of its N queries pass the per-query rule.
 """
 
 from collections.abc import Sequence
@@ -24,13 +28,14 @@ class Verdict:
     passed: tuple[str, ...]
     failed: tuple[str, ...]
     pending: tuple[str, ...]
-    required: int
+    required: int | None
+    """Queries that must pass for the demo to pass; ``None`` for an extra set, which has no rule."""
     total: int
 
     @property
     def label(self) -> str:
-        """``PASS``, ``FAIL`` or ``PENDING``."""
-        return self.status.value.upper()
+        """``PASS``, ``FAIL`` or ``PENDING``; ``EXTRA SET`` when no pass rule applies."""
+        return "EXTRA SET" if self.required is None else self.status.value.upper()
 
     @property
     def headline(self) -> str:
@@ -40,11 +45,16 @@ class Verdict:
         )
 
 
-def overall_verdict(evaluations: Sequence[QueryEvaluation], required: int = 7) -> Verdict:
-    """Apply the "most queries" rule to a run's evaluations."""
+def overall_verdict(evaluations: Sequence[QueryEvaluation], required: int | None = 7) -> Verdict:
+    """Apply the "most queries" rule to a run's evaluations. ``required=None`` is an extra set:
+    the counts are kept and no rule is applied."""
     passed = tuple(e.query_id for e in evaluations if e.status is Status.PASS)
     failed = tuple(e.query_id for e in evaluations if e.status is Status.FAIL)
     pending = tuple(e.query_id for e in evaluations if e.status is Status.PENDING)
+    if required is None:
+        # No rule applies, so `status` means nothing here (PENDING by convention); callers check
+        # `required is None` first and print the counts only.
+        return Verdict(Status.PENDING, passed, failed, pending, None, len(evaluations))
     if len(passed) >= required:
         status = Status.PASS
     elif len(passed) + len(pending) < required:

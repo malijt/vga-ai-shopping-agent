@@ -15,9 +15,9 @@ file as the always-on summary and open the matching doc when you need full depth
   of scope.
 - **Status (2026-10-07):** the implementation plan
   [`docs/plans/2026-10-07-vga-ai-shopping-agent-implementation-plan.md`](./docs/plans/2026-10-07-vga-ai-shopping-agent-implementation-plan.md)
-  is approved (v3). Waves 1 to 3 (Phases 1 to 13) are merged and the first real end-to-end searches
-  ran on 2026-10-08. In progress: the dresses code change, four more store adapters, and
-  qualification of the designer stores the user named. **Build only what the plan specifies**, in its phases and waves. Integration
+  is approved (v3). Phases 1 to 13 and 15 are merged, ten stores are enabled, and real end-to-end
+  searches ran on 2026-10-08. In progress: Phase 14 (guards), currency support and three dinar
+  stores, ranking fixes from the real runs, and the acceptance harness's real wiring. **Build only what the plan specifies**, in its phases and waves. Integration
   branch: `develop`.
 - **Stores (decided 2026-10-07):** store qualification found that no large GCC retailer can be read
   by an honest client (see [`docs/store-qualification/SUMMARY.md`](./docs/store-qualification/SUMMARY.md)).
@@ -79,9 +79,9 @@ uv run python -m eval.harness --record DIR     # live acceptance run, recorded
 uv run python -m eval.harness --replay DIR     # re-run from a recording, no network
 ```
 
-`uv run python -m vga.search --text "..."` runs the real pipeline from the command line (real OpenAI
-and real stores; needs the key in `.env`). Not available until Phase 15 lands: the UI connected to
-the real pipeline.
+`uv run python -m vga.search --text "..."` runs the real pipeline from the command line, and
+`uv run --group ml streamlit run app/main.py` runs the page on it (both use real OpenAI and real
+stores, and need the key in `.env`).
 
 Environment variables are documented in `.env.example` (`OPENAI_API_KEY`, `OPENAI_MODEL`,
 `VGA_USER_AGENT`, `VGA_IMAGE_RANKER`, `VGA_LOG_DIR`, `VGA_LOG_LEVEL`, `VGA_LOG_PROMPTS`,
@@ -198,7 +198,7 @@ docs/adr/             decision records    docs/store-notes/, docs/store-qualific
 
 ### Architecture & Infrastructure — principles
 - One process, modular monolith. No services, queues or databases without a current, concrete reason.
-- Assume the other side fails: timeout, cooldown for a failing store, graceful degradation, no silent failure.
+- Assume the other side fails: timeout, cooldown for a store that blocks us (a store that only errors or times out is skipped for that search and asked again next time, ADR 0003), graceful degradation, no silent failure.
 - Add stores and extractors by configuration or a new class.
 
 ### DevOps — CI only

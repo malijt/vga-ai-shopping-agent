@@ -39,12 +39,19 @@ def items_to_search(understood: UnderstandResult) -> list[ItemIntent]:
 def stores_for_item(
     active: Sequence[StoreConfig], item: ItemIntent
 ) -> tuple[list[StoreConfig], list[StoreConfig]]:
-    """Split the active stores into those to search for ``item`` and those that do not sell for
-    its gender. Only a stated or confirmed gender counts (BRD Rule 8): a guessed one excludes
-    nothing."""
+    """Split the active stores into those to search for ``item`` and those left out.
+
+    A store is left out when it does not sell the item's category (a dresses-only boutique is not
+    asked for shoes) or does not sell for its gender. Only a stated or confirmed gender counts
+    (BRD Rule 8): a guessed one excludes nothing.
+    """
     gender = effective_gender(item)
-    searched = [store for store in active if store.sells_for_gender(gender)]
-    skipped = [store for store in active if not store.sells_for_gender(gender)]
+
+    def sells(store: StoreConfig) -> bool:
+        return store.sells_category(item.category) and store.sells_for_gender(gender)
+
+    searched = [store for store in active if sells(store)]
+    skipped = [store for store in active if not sells(store)]
     return searched, skipped
 
 

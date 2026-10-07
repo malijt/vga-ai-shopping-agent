@@ -8,7 +8,7 @@ things are faked (plan section 7, Phase 13 test rule): the stores' HTTP (here), 
 
 - ``/robots.txt`` (allow everything), and
 - the Shopify ``/search/suggest.json`` endpoint, answering from a body per kind of garment (the
-  kind is read from the query: "blazer", "shoes", "shirt" or "jeans"), and
+  kind is read from the query: "blazer", "shoes", "shirt", "jeans" or "dress"), and
 - the thumbnail CDN, answering with a tiny PNG.
 
 It counts requests so a test can say "no request was made", and a store can be made slow or
@@ -34,7 +34,7 @@ from tests.fetch.conftest import (
     suggest_body,
     text_response,
 )
-from vga.models import Gender, StoreConfig
+from vga.models import Category, Gender, StoreConfig
 
 CDN_HOST = "cdn.shopify.com"
 CDN_PREFIX = f"https://{CDN_HOST}/"
@@ -44,6 +44,7 @@ KINDS: dict[str, re.Pattern[str]] = {
     "shoes": re.compile(r"shoe|sneaker|boot|heel|mule"),
     "shirt": re.compile(r"shirt|blouse|\btop\b"),
     "jeans": re.compile(r"jeans|trouser|pants"),
+    "dress": re.compile(r"dress|gown|kaftan|abaya"),
 }
 
 TITLES: dict[str, str] = {
@@ -51,12 +52,14 @@ TITLES: dict[str, str] = {
     "shoes": "{colour} Leather Sneakers {tag}{n}",
     "shirt": "{colour} Cotton Shirt {tag}{n}",
     "jeans": "{colour} Wide-Leg Jeans {tag}{n}",
+    "dress": "{colour} Evening Dress {tag}{n}",
 }
 PRODUCT_TYPES = {
     "blazer": "Coats & Jackets",
     "shoes": "Footwear",
     "shirt": "Tops",
     "jeans": "Bottoms",
+    "dress": "Dresses",
 }
 
 DEFAULT_PRICES: dict[str, Sequence[float]] = {
@@ -64,6 +67,7 @@ DEFAULT_PRICES: dict[str, Sequence[float]] = {
     "shoes": (150, 210, 260, 320, 430, 540, 700, 990),
     "shirt": (60, 85, 110, 140, 190, 260, 340, 480),
     "jeans": (90, 130, 170, 220, 300, 380, 520, 760),
+    "dress": (110, 160, 240, 330, 450, 620, 880, 1300),
 }
 
 
@@ -101,6 +105,7 @@ def store_for(
     key: str,
     *,
     genders: Sequence[Gender] | None = None,
+    categories: Sequence[Category] | None = None,
     host: str | None = None,
     **overrides: Any,
 ) -> StoreConfig:
@@ -112,6 +117,7 @@ def store_for(
         "search_url_template": f"https://{where}{SUGGEST_PATH}",
         "allowed_hosts": [where, CDN_HOST],
         "genders": frozenset(genders) if genders is not None else None,
+        "categories": frozenset(categories) if categories is not None else None,
         "tier_hint": None,
     }
     return shopify_store(**{**fields, **overrides})

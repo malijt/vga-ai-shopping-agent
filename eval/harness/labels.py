@@ -2,9 +2,15 @@
 
 The harness scores everything it can by itself. The one thing only a person can judge is whether
 a product is a "good match" (``rubric.md``). The sheet is a CSV with one row per result in the
-top 10 of each garment group::
+top 10 of each garment group, with everything the person needs to judge it::
 
-    query_id, group, rank, title, store, url, label
+    query_id, photo, group, rank, title, price, store, price_range, url, label
+
+``photo`` is the file name of the query's photo (empty for a text-only query), so the person knows
+which photo to open; the file is in ``eval/data/assets/private/``. ``group`` is the garment: an
+outfit photo has one block of rows per garment (assumption A20). ``price_range`` is the range the
+app showed the product in (Budget, Mid-range, Premium or Luxury); price is not part of the label.
+The rows of a group are in rank order, best match first.
 
 ``label`` is left blank on export. The person fills it with ``1`` (good) or ``0`` (not good),
 nothing else. On import every row is checked against the run that produced the sheet: a label
@@ -24,14 +30,25 @@ with an apostrophe. The import never reads the title back, so labels are unaffec
 import csv
 import io
 from collections.abc import Sequence
-from dataclasses import dataclass
-from pathlib import Path
+from dataclasses import dataclass, replace
+from pathlib import Path, PurePosixPath
 
 from eval.harness.errors import LabelSheetError
-from eval.harness.groups import TOP_N, group_names, top_results
+from eval.harness.groups import TOP_N, format_price, group_names, price_range_labels, top_results
 from eval.harness.runner import QueryRun
 
-LABEL_COLUMNS = ("query_id", "group", "rank", "title", "store", "url", "label")
+LABEL_COLUMNS = (
+    "query_id",
+    "photo",
+    "group",
+    "rank",
+    "title",
+    "price",
+    "store",
+    "price_range",
+    "url",
+    "label",
+)
 _MAX_ERRORS_SHOWN = 15
 _FORMULA_STARTS = ("=", "+", "-", "@", "\t", "\r")
 
@@ -44,6 +61,11 @@ class LabelRow:
     title: str
     store: str
     url: str
+    photo: str = ""
+    """File name of the query's photo; empty for a text-only query."""
+    price: str = ""
+    """The price as the shopper sees it, for example ``349 AED``."""
+    price_range: str = ""
     label: int | None = None
 
 
@@ -79,12 +101,22 @@ def label_rows(runs: Sequence[QueryRun]) -> list[LabelRow]:
     for run in runs:
         if run.response is None:
             continue
+        photo = PurePosixPath(run.query.image).name if run.query.image else ""
         for name, group in zip(group_names(run.response), run.response.groups, strict=True):
+            ranges = price_range_labels(group)
             for rank, scored in enumerate(top_results(group), start=1):
                 product = scored.product
                 rows.append(
                     LabelRow(
-                        run.query.id, name, rank, product.title, product.store, product.product_url
+                        query_id=run.query.id,
+                        group=name,
+                        rank=rank,
+                        title=product.title,
+                        store=product.store,
+                        url=product.product_url,
+                        photo=photo,
+                        price=format_price(product),
+                        price_range=ranges.get(product.key, ""),
                     )
                 )
     return rows
@@ -106,10 +138,13 @@ def export_label_sheet(runs: Sequence[QueryRun], path: Path | str) -> int:
             writer.writerow(
                 [
                     row.query_id,
+                    row.photo,
                     row.group,
                     row.rank,
                     _safe_cell(row.title),
+                    row.price,
                     _safe_cell(row.store),
+                    row.price_range,
                     row.url,
                     "",
                 ]
@@ -164,9 +199,7 @@ def _check_record(
     if label not in {"0", "1"}:
         shown = "blank" if not label else repr(label)
         return None, f"row {line} ({where}): label must be 1 or 0, got {shown}"
-    return LabelRow(
-        row.query_id, row.group, row.rank, row.title, row.store, row.url, int(label)
-    ), None
+    return replace(row, label=int(label)), None
 
 
 def import_label_sheet(path: Path | str, runs: Sequence[QueryRun]) -> LabelSet:
