@@ -29,14 +29,15 @@ from pydantic import ValidationError
 from vga.fetch.allowlist import check_url
 from vga.fetch.errors import UrlNotAllowedError
 from vga.log import get_logger
-from vga.models import Product, StoreConfig
+from vga.models import Gender, Product, StoreConfig
 from vga.stores.prices import PriceFormatError, parse_price
 
 log = get_logger(__name__)
 
 RawRecord = Mapping[str, Any]
 """One product as an extractor read it: keys are ``Product`` field names (``title``, ``price``,
-``image_url``, ``product_url``, ``colour``, ``in_stock``), values are the store's own text."""
+``image_url``, ``product_url``, ``colour``, ``in_stock``, ``gender``), values are the store's own
+text (``gender`` is already a ``Gender``, or ``None`` when the store does not say)."""
 
 
 class DropReason(StrEnum):
@@ -205,6 +206,7 @@ def _to_product(record: RawRecord, store: StoreConfig, base_url: str) -> Product
 
     colour = _clean_text(record.get("colour")) or None
     in_stock = record.get("in_stock")
+    gender = record.get("gender")
     try:
         return Product(
             title=title,
@@ -215,6 +217,7 @@ def _to_product(record: RawRecord, store: StoreConfig, base_url: str) -> Product
             store=store.display_name,
             colour=colour if colour is None or len(colour) <= 60 else None,
             in_stock=in_stock if isinstance(in_stock, bool) else None,
+            gender=gender if isinstance(gender, Gender) else None,
         )
     except ValidationError as exc:
         log.warning(

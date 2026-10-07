@@ -626,6 +626,8 @@ class Product(VgaModel):
     """``None`` means the store page does not say; only ``False`` removes a product (PRD R7)."""
     category: Category | None = None
     """Inferred from the title or breadcrumb by the ranker; ``None`` when ambiguous."""
+    gender: Gender | None = None
+    """Who the product is for, when the store's own data says so; ``None`` means unknown."""
 
     @field_validator("colour")
     @classmethod

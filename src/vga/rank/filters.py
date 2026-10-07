@@ -4,7 +4,11 @@ A product is dropped when
 - the store says it is out of stock (``in_stock is False``; ``None`` means unknown and is kept),
 - its title names a garment outside the four categories (dress, bag, belt, ...),
 - its category is known and differs from the one requested, or
-- the request names a gender explicitly and the title clearly names the other one.
+- the request names a gender explicitly and the product is clearly for the other one.
+
+"Clearly for the other one" is what the store's own data says (``Product.gender``, read from its
+``type`` and ``tags``) and, only when that is unknown (``None``), what the title says. A unisex
+product, and one whose gender nobody states, is kept for either request.
 
 A product is never dropped for being over budget (assumption A4) and never for a category that
 cannot be inferred (it is kept without a category bonus). Gender that the model only inferred
@@ -42,6 +46,11 @@ def _drop(reason: DropReason) -> FilterResult:
     return FilterResult(keep=False, reason=reason, category=None)
 
 
+def _stated_gender(product: Product) -> Gender | None:
+    """Who the product is for: the store's own data when it says, else a clear cue in the title."""
+    return product.gender if product.gender is not None else title_gender(product.title)
+
+
 def apply_hard_filters(item: ItemIntent, product: Product) -> FilterResult:
     """Decide whether ``product`` may be shown for ``item``."""
     if product.in_stock is False:
@@ -55,7 +64,7 @@ def apply_hard_filters(item: ItemIntent, product: Product) -> FilterResult:
         return _drop(DropReason.WRONG_CATEGORY)
 
     if item.gender in (Gender.MEN, Gender.WOMEN) and item.gender_source is GenderSource.EXPLICIT:
-        stated = title_gender(product.title)
+        stated = _stated_gender(product)
         if stated in (Gender.MEN, Gender.WOMEN) and stated is not item.gender:
             return _drop(DropReason.GENDER_MISMATCH)
 

@@ -7,6 +7,7 @@ import pytest
 
 from tests.factories import make_product, make_store_config
 from tests.fetch.conftest import CDN, HOST
+from vga.models import Gender
 from vga.stores.normalise import DropReason, dedupe_products, normalise_records, normalise_title
 
 BASE = f"https://{HOST}/search?q=blazer"
@@ -190,6 +191,30 @@ def test_an_image_on_the_stores_own_second_host_is_fine() -> None:
 # --------------------------------------------------------------------------------------------
 # Other fields
 # --------------------------------------------------------------------------------------------
+
+
+def test_a_gender_the_extractor_read_is_kept_on_the_product() -> None:
+    batch = normalise(
+        record(1, gender=Gender.MEN),
+        record(2, gender=Gender.WOMEN),
+        record(3, gender=Gender.UNISEX),
+    )
+
+    assert [p.gender for p in batch.products] == [Gender.MEN, Gender.WOMEN, Gender.UNISEX]
+
+
+def test_a_record_without_a_gender_gives_a_product_with_an_unknown_gender() -> None:
+    batch = normalise(record(1), record(2, gender=None))
+
+    assert [p.gender for p in batch.products] == [None, None]
+    assert batch.dropped == {}
+
+
+def test_a_gender_that_is_not_a_gender_value_is_ignored_and_does_not_drop_the_record() -> None:
+    batch = normalise(record(1, gender="kids"), record(2, gender=7))
+
+    assert [p.gender for p in batch.products] == [None, None]
+    assert batch.dropped == {}
 
 
 def test_in_stock_is_only_ever_a_real_boolean_or_none() -> None:

@@ -59,9 +59,11 @@ allowed_hosts:
 extraction:
   strategies:
     - name: shopify
-      options:               # every option the shopify strategy has; both are optional
+      options:               # every option the shopify strategy has; all are optional
         name_field: vendor   # "title" (default) or "vendor" (name kept in `vendor`)
         image_width: 400     # default 400; a positive whole number, or null to keep the URL
+        gender_fields: [type, tags]   # default; which fields say who a product is for, first
+                                      # one that names a gender wins; [] turns the reading off
 rps: 1                   # optional overrides: rps, timeout_s, max_response_bytes, max_variants
 tier_hint: mid_range
 enabled: false           # true only after the live smoke test passes
@@ -74,7 +76,11 @@ def test_a_hand_written_shopify_store_file_loads_as_documented(tmp_path: Path) -
     [store] = load_store_configs(tmp_path)
 
     assert store.id == "the-bear-house"
-    assert store.extraction.strategies[0].options == {"name_field": "vendor", "image_width": 400}
+    assert store.extraction.strategies[0].options == {
+        "name_field": "vendor",
+        "image_width": 400,
+        "gender_fields": ["type", "tags"],
+    }
     assert store.enabled is False
     assert "resources[type]=product" in store.search_url_template
 
@@ -93,6 +99,30 @@ def test_image_width_null_in_a_store_file_is_accepted(tmp_path: Path) -> None:
     [store] = load_store_configs(tmp_path)
 
     assert store.extraction.strategies[0].options["image_width"] is None
+
+
+def test_gender_fields_empty_in_a_store_file_is_accepted(tmp_path: Path) -> None:
+    text = HAND_WRITTEN_SHOPIFY_FILE.replace("[type, tags]  ", "[]            ")
+    write(tmp_path, "the-bear-house.yaml", text)
+
+    [store] = load_store_configs(tmp_path)
+
+    assert store.extraction.strategies[0].options["gender_fields"] == []
+
+
+@pytest.mark.parametrize(
+    "value", ["type", "[title]", "[type, type]", "null", "[Tags]", "[type, tags, vendor]"]
+)
+def test_a_bad_gender_fields_in_a_store_file_names_the_file_and_the_option(
+    tmp_path: Path, value: str
+) -> None:
+    text = HAND_WRITTEN_SHOPIFY_FILE.replace("[type, tags]  ", f"{value}  ")
+    write(tmp_path, "the-bear-house.yaml", text)
+
+    detail = load_error(tmp_path).detail or ""
+
+    assert "the-bear-house.yaml: extraction.strategies.0 (shopify)" in detail
+    assert "options.gender_fields" in detail
 
 
 @pytest.mark.parametrize("value", ["0", "-1", "400.5", "'wide'", "true"])
