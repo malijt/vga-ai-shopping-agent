@@ -339,10 +339,12 @@ class StoreSearchEngine:
         None]]``. It finds the product's store, checks the image URL is https and on that store's
         ``allowed_hosts``, checks the image host's robots.txt (fetched once per host and cached,
         like the store's own; a redirect target is checked the same way), takes a slot from the
-        image-host rate limiter, allows 4 seconds,
-        keeps the response size cap, never retries and keeps the bytes in memory only. The response
-        must be an image (a challenge page or an error body is not). A robots refusal (or an
-        unreadable robots.txt) gives ``None`` and is logged with its reason.
+        image-host rate limiter, allows 4 seconds, keeps the response size cap, never retries and
+        keeps the bytes in memory only. A thumbnail on a host of the store's own site is held to
+        the store's cooldown (no request while the store is cooling, and a refusal there puts the
+        store in cooldown); a separate image CDN has its own. The response must be an image (a
+        challenge page or an error body is not). A robots refusal (or an unreadable robots.txt)
+        gives ``None`` and is logged with its reason.
         """
         try:
             store = self.registry.by_display_name(product.store)

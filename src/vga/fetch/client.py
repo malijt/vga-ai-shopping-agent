@@ -75,7 +75,9 @@ class FetchPolicy:
     timeout_s: float
     max_bytes: int
     cooldown_key: str
-    """What a block puts in cooldown: the store id for pages, ``host:<name>`` for image hosts."""
+    """What a block puts in cooldown, and what a cooldown stops: ``PoliteClient.contact_key`` of
+    the host asked, so the store id for every host of the store's own site (pages, robots.txt and
+    thumbnails alike) and ``host:<name>`` for any other host, such as a shared image CDN."""
     accept: str = ACCEPT_PAGE
 
 
@@ -175,17 +177,20 @@ class PoliteClient:
 
     @staticmethod
     def contact_key(store: StoreConfig, host: str) -> str:
-        """Who a request to ``host`` is addressed to, as far as the rate limit is concerned: the
+        """Who a request to ``host`` is addressed to, for the rate limit and for cooldowns: the
         store (its id) for any host of the store's own site, else that host alone
         (``host:<name>``, which cannot clash with a store id). The BRD's "about one request a
-        second" is per store, so the bare domain and its ``www.`` share one queue; a shared image
-        CDN is another party with its own."""
+        second" and "not contacted again during its cooldown" are both per store, so the bare
+        domain and its ``www.`` share one queue and one cooldown; a shared image CDN is another
+        party with its own."""
         return store.id if belongs_to_store_site(store, host) else f"host:{normalise_host(host)}"
 
     def image_policy(self, store: StoreConfig, host: str, *, timeout_s: float) -> FetchPolicy:
         """Limits for a thumbnail. A host that belongs to the store itself keeps the store's
-        rate; only a separate image CDN gets the faster ``rps_images_per_host`` (assumption A5).
-        A block puts that image host, never the store, in cooldown."""
+        rate and, with it, the store's cooldown: a store that has just refused us is not asked for
+        thumbnails on its own host, and a thumbnail it refuses puts the store in cooldown. Only a
+        separate image CDN gets the faster ``rps_images_per_host`` (assumption A5) and its own
+        cooldown, so a CDN that refuses us never puts the store in cooldown."""
         rps = (
             store.rps or self.settings.rps_per_store
             if belongs_to_store_site(store, host)
@@ -195,7 +200,7 @@ class PoliteClient:
             rps=rps,
             timeout_s=timeout_s,
             max_bytes=store.max_response_bytes or self.settings.max_response_bytes,
-            cooldown_key=f"host:{host}",
+            cooldown_key=self.contact_key(store, host),
             accept=ACCEPT_IMAGE,
         )
 
@@ -211,7 +216,7 @@ class PoliteClient:
             page,
             rps=self.settings.rps_images_per_host,
             timeout_s=IMAGE_TIMEOUT_S,
-            cooldown_key=f"host:{host}",
+            cooldown_key=self.contact_key(store, host),
         )
 
     # ------------------------------------------------------------------------------------

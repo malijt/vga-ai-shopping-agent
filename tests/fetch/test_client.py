@@ -797,6 +797,23 @@ def test_an_image_cdn_gets_the_image_rate_but_the_stores_own_domain_keeps_the_st
     assert polite.image_policy(store, CDN, timeout_s=4).rps == 1  # same registered domain
 
 
+def test_a_thumbnail_on_the_stores_own_domain_is_in_the_stores_cooldown_not_a_hosts() -> None:
+    polite = PoliteClient(make_settings(), clock=FakeClock())
+    store = make_store_config()
+
+    assert polite.image_policy(store, HOST, timeout_s=4).cooldown_key == store.id
+    assert polite.image_policy(store, CDN, timeout_s=4).cooldown_key == store.id  # same domain
+
+
+def test_a_thumbnail_on_a_separate_image_cdn_is_in_that_hosts_cooldown_not_the_stores() -> None:
+    polite = PoliteClient(make_settings(), clock=FakeClock())
+    store = make_store_config()
+
+    policy = polite.image_policy(store, "cdn.shopify.com", timeout_s=4)
+
+    assert policy.cooldown_key == "host:cdn.shopify.com"
+
+
 def test_robots_txt_of_the_stores_own_domain_uses_the_page_policy(clock: FakeClock) -> None:
     polite = PoliteClient(make_settings(), clock=clock)
     store = make_store_config(rps=2, timeout_s=15)

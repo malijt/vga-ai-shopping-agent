@@ -2,8 +2,9 @@
 
 Each test states a rule the code is meant to keep. They began as ``xfail(strict=True)`` tests with
 the reason each failed; when the product was fixed the test started to pass, pytest reported that
-as an error, and the marker was removed in the fixing change. A test that still carries the marker
-is a gap that is still open. They sit together so they can be routed as a list.
+as an error, and the marker was removed in the fixing change. All four are fixed; a new finding
+goes here as a strict ``xfail`` test again until its fix lands. They sit together so they can be
+routed as a list.
 
 1. ``robots.txt`` is read for a redirect target (BRD Rule 2: respect robots.txt). Fixed: the
    client asks the store's robots check about every redirect target before it follows it.
@@ -15,13 +16,13 @@ is a gap that is still open. They sit together so they can be routed as a list.
    page). Fixed: a product link must be on the store's own site; image links still use the whole
    allow-list.
 4. Thumbnails on the store's own host are not fetched while the store is in cooldown after a block
-   (BRD Rule 2: a store that blocks is not contacted again during its cooldown).
+   (BRD Rule 2: a store that blocks is not contacted again during its cooldown). Fixed: a thumbnail
+   on any host of the store's own site shares the store's cooldown; an image CDN keeps its own.
 """
 
 from urllib.parse import urlsplit
 
 import httpx
-import pytest
 
 from tests.factories import make_search_request
 from tests.guards.scraping.support import (
@@ -92,15 +93,6 @@ async def test_a_product_link_on_the_image_host_is_not_shown_as_a_product_page(
     assert [page for page in pages if urlsplit(page).hostname == CDN_HOST] == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "FINDING 4: a block puts the store id in cooldown but a thumbnail on the store's own "
-        "host is fetched under cooldown_key='host:<name>' (PoliteClient.image_policy), so images "
-        "are still requested from a host that has just refused the search. Not reachable with "
-        "today's six stores: all serve images from cdn.shopify.com"
-    ),
-)
 async def test_a_store_host_that_just_refused_a_search_is_not_asked_for_thumbnails(
     world: GuardWorld, build: GuardPipelines, settings: Settings, photo: bytes
 ) -> None:
