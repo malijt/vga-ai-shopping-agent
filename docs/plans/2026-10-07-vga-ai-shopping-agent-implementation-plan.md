@@ -1,7 +1,8 @@
 # VGA AI Shopping Agent: Implementation Plan
 
 > **Generated:** 2026-10-07
-> **Status:** Approved (v2) on 2026-10-07. Verified against `docs/Best Practices/` on 2026-10-07 (section 12). Assumptions A1-A13 stand as written unless changed later.
+> **Status:** Approved (v2) on 2026-10-07; amended the same day (v3) after the Phase 2 gate failed. The user chose store route A (more Shopify storefronts) for the demo and asked for routes B, C and D to be planned for later: they are Phases 17-19. Verified against `docs/Best Practices/` (section 12). Assumptions A1-A18 stand as written unless changed later.
+> **Progress:** Wave 1 complete and merged into `develop` (Phases 1, 2, 3, 4). Wave 2 next.
 > **Inputs:** `docs/01-business-requirements.md`, `docs/02-prd.md`, `docs/03-proposed-ideas.md` (all v0.2), `comprehensive_doc.md`, open-source research from 2026-10-07 (section 2), `docs/Best Practices/*.md`, `CLAUDE.md`
 > **Rule for this document:** it is a plan. No code is written until you approve it.
 
@@ -183,19 +184,24 @@ flowchart TD
 | 14 | Guards + Audits | DEPENDENT(6, 13) | 15 |
 | 15 | UI Integration | DEPENDENT(10, 13) | 14 |
 | 16 | Acceptance, Tuning, Hand-off | DEPENDENT(4, 11, 12, 14, 15) | None (serial tail) |
+| 17 | *Later:* Stores' official agent endpoints | DEPENDENT(16) | 18, 19 |
+| 18 | *Later:* Store search APIs and headless rendering | DEPENDENT(16) and a per-store terms sign-off | 17, 19 |
+| 19 | *Later:* Category pages + sitemap index | DEPENDENT(16) | 17, 18 |
+
+Phases 17-19 are not in the wave schedule. They start after the demo, each on the user's go-ahead.
 
 > **Parallel Work Guide:** a phase can start the moment all its listed dependencies are merged. Phases 1-4 start together. Phases 5-11 depend only on Wave 1 work, so up to seven run at once.
 
 ## 6. Parallel Execution Schedule (5-8 Agents)
 
-| Wave | Agent 1 | Agent 2 | Agent 3 | Agent 4 | Agent 5 | Agent 6 | Agent 7 |
-|---|---|---|---|---|---|---|---|
-| **1** | P1 Foundation + Contracts | P2.1 Qualify 6thStreet, Namshi | P2.2 Qualify Noon, Splash/Max/Centrepoint, Level Shoes | P2.3 Qualify Ounass, Styli, + discover alternatives | P3 SigLIP spike | P4 Acceptance + edge set | none |
-| **2** (after Wave 1 merged) | P5 Understand | P6 Fetch + Extract | P7 Text + Price rank | P8 Image ranker | P9 Tier shaper | P10 UI (fixtures) | P11 Harness |
-| **3** (after P5-P9 merged) | P13 Pipeline | P12.1 Store A adapter | P12.2 Store B adapter | P12.3 Store C adapter | P12.4 Store D adapter | P12.5 Store E adapter | none |
-| **4** (after P13 merged) | P14.1 Scraping + host guards | P14.2 Photo privacy audit | P14.3 Injection + untrusted-content tests | P15.1 UI wiring | P15.2 Chips + outfit view | none | none |
-| **5** | P16.1 Acceptance run #1 | P16.2 Docs | none | none | none | none | none |
-| **6** | P16.3 Tuning + final run | none | none | none | none | none | none |
+| Wave | Agent 1 | Agent 2 | Agent 3 | Agent 4 | Agent 5 | Agent 6 | Agent 7 | Agent 8 |
+|---|---|---|---|---|---|---|---|---|
+| **1** (done) | P1 Foundation + Contracts | P2.1 Qualify 6thStreet, Namshi | P2.2 Qualify Noon, Splash/Max/Centrepoint, Level Shoes | P2.3 Qualify Ounass, Styli, + discover alternatives | P3 SigLIP spike | P4 Acceptance + edge set | none | none |
+| **2** (after Wave 1 merged) | P5 Understand | P6 Fetch + Extract | P7 Text + Price rank | P8 Image ranker | P9 Tier shaper | P10 UI (fixtures) | P11 Harness | P2.4 Shopify store discovery |
+| **3** (after P5-P9 and P2.4 merged) | P13 Pipeline | P12.1 Oh Polly UAE | P12.2 Club L London UAE | P12.3 Luxury For You | P12.4 Shopify store from 2.4 | P12.5 Shopify store from 2.4 | none | none |
+| **4** (after P13 merged) | P14.1 Scraping + host guards | P14.2 Photo privacy audit | P14.3 Injection + untrusted-content tests | P15.1 UI wiring | P15.2 Chips + outfit view | none | none | none |
+| **5** | P16.1 Acceptance run #1 | P16.2 Docs | none | none | none | none | none | none |
+| **6** | P16.3 Tuning + final run | none | none | none | none | none | none | none |
 
 Wave 3 uses one agent per qualified store (expect 4-5). Waves 5-6 are the serial tail: acceptance needs real data and a human to label results.
 
@@ -294,7 +300,8 @@ Effort key: **S** about 30 min, **M** about 1 h, **L** about 2 h.
 
 **Goal:** know which stores can legitimately be read, and how, before any adapter is written.
 **Milestone:** `docs/store-qualification/SUMMARY.md` with a go/no-go per store. Gate: **at least 4 go (target 5), including at least 1 luxury-leaning**; otherwise escalate to the user (risk R1).
-**Gate result (2026-10-07): FAILED.** 34 sites checked, 3 readable (Oh Polly UAE, Club L London UAE, and Luxury For You conditionally). Every large GCC retailer is blocked, disallows search in robots.txt, or serves no data. See [`SUMMARY.md`](../store-qualification/SUMMARY.md). Phases 6 and 12 are on hold until the user chooses a route; the store-independent phases (5, 7, 8, 9, 10, 11) are unaffected.
+**Gate result (2026-10-07): FAILED.** 34 sites checked, 3 readable (Oh Polly UAE, Club L London UAE, and Luxury For You conditionally). Every large GCC retailer is blocked, disallows search in robots.txt, or serves no data. See [`SUMMARY.md`](../store-qualification/SUMMARY.md).
+**Decision (user, 2026-10-07):** take the easiest route, A: more Shopify storefronts (Module 2.4 below). Routes B, C and D are planned as Phases 17, 18 and 19 for later. Phases 6 and 12 proceed with the `shopify` and `css` strategies.
 **Estimated Effort:** L (research against live sites, 3 agents)
 
 **Rules for every qualification agent:** identifying `User-Agent`; read `robots.txt` first and honour it; 1 request/s; on the first CAPTCHA, login wall, 403/429 or JS challenge, stop and record "drop". Never bypass. Must run from the user's network if this machine cannot reach the site.
@@ -323,6 +330,17 @@ Effort key: **S** about 30 min, **M** about 1 h, **L** about 2 h.
 | 2.3.2 | Styli report | Same | Report with go / no-go | S |
 | 2.3.3 | Alternative discovery | Find up to 3 more GCC fashion stores (at least 1 luxury-leaning), qualify each | Up to 3 additional reports; each states platform and data path | L |
 | 2.3.4 | Qualification summary | `SUMMARY.md`: all stores (go/no-go, data path, **extraction strategy needed**, hosts, currency, tier hint, adapter priority), count vs gate | Gate result stated; ordered list for Phase 12; list of strategies Phase 6 must build | S |
+
+#### Module 2.4: Shopify storefront discovery (added after the gate; store route A)
+**Purpose:** reach at least 4 readable stores using the one data path that already works for two of them. One `shopify` extractor then serves every store found.
+**Rules:** the same request rules as the rest of Phase 2, `protego` for robots.txt, and `scripts/qualify_store.py` for every check.
+
+| # | Feature | Description | Acceptance Criteria | Effort |
+|---|---|---|---|---|
+| 2.4.1 | Candidate list | Find GCC (UAE-first) fashion storefronts that run on Shopify and price in AED, favouring ones that sell **menswear** and the four categories (tops, outerwear, bottoms, shoes), and multi-brand over single-brand | A list of at least 12 candidates with how each was identified as Shopify | M |
+| 2.4.2 | Qualify the best candidates | For each: robots.txt allows `/search/suggest.json`; three queries return product data; note gender coverage, categories seen, price range, hosts | Full reports for every GO store, at most 6; each with a trimmed sample | L |
+| 2.4.3 | Coverage table | Per GO store: men / women, which of the four categories returned results, price range seen, tier hint | Table shows whether the men's acceptance queries (q06, q07) can reach 3 stores | S |
+| 2.4.4 | Updated summary | Orchestrator updates `SUMMARY.md` with the new gate count | Gate restated: at least 4 GO, at least 1 luxury-leaning | S |
 
 ---
 
@@ -414,7 +432,7 @@ Effort key: **S** about 30 min, **M** about 1 h, **L** about 2 h.
 
 | # | Feature | Description | Acceptance Criteria | Effort |
 |---|---|---|---|---|
-| 6.1.1 | Client wrapper | `httpx.AsyncClient`, honest `User-Agent`, timeout 6 s, response size cap, **https only**, at most 3 redirects | UA header present; oversized response aborted; `http://` URL refused | S |
+| 6.1.1 | Client wrapper | `httpx.AsyncClient`, honest `User-Agent`, timeout from settings (6 s) or the store's `timeout_s`, response size cap from `max_response_bytes` (setting or per-store override), **https only**, at most 3 redirects, and a redirect to another registered domain stops the request | UA header present; oversized response aborted; `http://` URL refused; cross-domain redirect not followed | S |
 | 6.1.2 | Host allow-list | Every outgoing URL (search page, thumbnail, link check) must resolve to a host in the store's `allowed_hosts`, re-checked after each redirect; private, loopback and link-local addresses refused | Tests: off-list host, `127.0.0.1`, `169.254.x.x` and an off-list redirect are never requested | M |
 | 6.1.3 | Per-host rate limiter | Async token bucket, default 1 rps, configurable per store and per image host, injected `Clock` | N requests take at least (N-1)/rps seconds on the fake clock; independent per host | M |
 | 6.1.4 | Block detection + cooldown | 403, 429, CAPTCHA/challenge markers raise a blocked error; no retry, no workaround; the store is then skipped for `store_cooldown_s` | A 403 produces `blocked` with exactly one request; the next query within the cooldown makes zero requests and reports `cooldown` | M |
@@ -423,7 +441,7 @@ Effort key: **S** about 30 min, **M** about 1 h, **L** about 2 h.
 
 | # | Feature | Description | Acceptance Criteria | Effort |
 |---|---|---|---|---|
-| 6.2.1 | robots checker | Fetch and cache per host; `can_fetch(url)` via `protego` (wildcard-aware; the stdlib parser is not on 3.12); the full URL including its query string is checked; RFC 9309 behaviour (4xx means allowed, 5xx or unreachable means disallowed) | Table-driven tests per status class; a denied URL is never fetched; wildcard rules `Disallow: /*/search?`, `/*/search$` and `*/catalogsearch/` are honoured | M |
+| 6.2.1 | robots checker | Fetch and cache per host; `can_fetch(url)` via `protego` (wildcard-aware; the stdlib parser is not on 3.12); the full URL including its query string is checked; RFC 9309 behaviour (4xx means allowed, 5xx or unreachable means disallowed); a malformed rule whose value starts with neither `/` nor `*` is read as if it began with `*` (Namshi's `Disallow: ?q=`); an HTML page served in place of robots.txt counts as unreachable | Table-driven tests per status class; a denied URL is never fetched; wildcard rules `Disallow: /*/search?`, `/*/search$` and `*/catalogsearch/` are honoured; the saved Noon, Level Shoes and Namshi robots files give the verdicts in their reports | M |
 
 #### Module 6.3: Store registry
 
@@ -433,25 +451,22 @@ Effort key: **S** about 30 min, **M** about 1 h, **L** about 2 h.
 | 6.3.2 | URL builder | `{query}` template with correct URL-encoding | Spaces, `&` and Arabic characters encode correctly | S |
 
 #### Module 6.4: Extractors
-Build the core strategies now. Build an optional strategy **only if `SUMMARY.md` lists a go-store that needs it** (YAGNI). A new strategy is a new class registered by name; the chain is not edited.
+Build only the strategies a qualified store needs (YAGNI). `SUMMARY.md` says that is `shopify` (two stores, more expected from 2.4) and `css` (Luxury For You). `store_json`, `json_ld` and `embedded_json` are **not built now**: no readable store needs them; they belong to Phases 18 and 19. A new strategy is a new class registered by name; the chain is not edited.
 
 | # | Feature | Description | Acceptance Criteria | Effort |
 |---|---|---|---|---|
-| 6.4.1 | Strategy interface + chain (core) | `Extractor` protocol; try configured strategies in order; first that yields at least 1 valid product wins; record which one | First strategy empty, second used, name in `StoreResult.strategy` | S |
-| 6.4.2 | `store_json` (core) | Map a store's own JSON to `Product` via dotted-path field mapping from config | Fixture maps nested JSON; a missing path drops the record, no crash | M |
-| 6.4.3 | `json_ld` (core) | `extruct` JSON-LD: `Product`, `ItemList`, `offers` | Fixture with 3 JSON-LD shapes parses correctly | M |
-| 6.4.4 | `embedded_json` (optional) | JSON from a `<script>` tag (e.g. `__NEXT_DATA__`), then mapped as 6.4.2 | Fixture test; malformed JSON returns empty with a logged reason | M |
-| 6.4.5 | `css` (optional) | `selectolax` with per-field selectors from config | Fixture test; relative URLs made absolute | M |
-| 6.4.6 | `shopify` (optional) | `/search/suggest.json`, URL from handle, string prices | Fixture test; respects the 10-result cap | S |
+| 6.4.1 | Strategy interface + chain | `Extractor` protocol; try configured strategies in order; first that yields at least 1 valid product wins; record which one | First strategy empty, second used, name in `StoreResult.strategy` | S |
+| 6.4.2 | `shopify` | `/search/suggest.json?q=...&resources[type]=product&resources[limit]=10` (brackets percent-encoded); title, price string, image, relative `url` (tracking query removed), `available`; the response has no currency, so currency comes from the store config | Tests on the saved Oh Polly and Club L London samples: 10 valid products each, absolute https product URLs, currency AED from config | M |
+| 6.4.3 | `css` | `selectolax.lexbor.LexborHTMLParser` (in selectolax 1.0.0 `selectolax.parser` fails to import) with per-field selectors and attribute names from config; relative URLs made absolute; a config flag picks which of several price elements to read | Test on the saved Luxury For You sample: cards parsed with title, brand, price, image, product URL, colour; the list (struck-through) price is the one read (assumption A17) | M |
 
 #### Module 6.5: Normalisation, cache and orchestration
 
 | # | Feature | Description | Acceptance Criteria | Effort |
 |---|---|---|---|---|
-| 6.5.1 | Price and currency parsing | AED baseline plus exactly the formats recorded in the qualified stores' reports | Table-driven test built from the real samples; an unknown format drops the record with a logged reason | M |
+| 6.5.1 | Price and currency parsing | AED baseline plus exactly the formats recorded in the qualified stores' reports: Shopify price strings ("535.00") and Luxury For You's "AED 6,900" wrapped in bidi marks (strip U+2066 to U+2069) | Table-driven test built from the real samples; an unknown format drops the record with a logged reason | M |
 | 6.5.2 | Validation | Drop any product missing a required field (R6); absolutise URLs; `product_url` and `image_url` must be https and on `allowed_hosts`; dedupe by `product_url` per store | Counts of dropped vs kept with reasons; an off-domain product link is dropped | S |
 | 6.5.3 | Result cache | In-memory, per-process TTL cache (`store_cache_ttl_s`) of `StoreResult` keyed by store + query variant; a hit makes no store request | Second identical search within the TTL makes zero requests and sets `from_cache`; expiry tested with `FakeClock` | M |
-| 6.5.4 | Parallel store search | `StoreSearcher.search`: one task per store, 2-3 keyword variants each, per-store timeout, failure isolation. **No retries to stores** (deliberate: politeness and the deadline) | One store raises, one times out, one succeeds: all three results returned and the slow store never delays the others past its timeout | L |
+| 6.5.4 | Parallel store search | `StoreSearcher.search`: one task per store, 2-3 keyword variants each (fewer when the store sets `max_variants`), per-store timeout, failure isolation. **No retries to stores** (deliberate: politeness and the deadline) | One store raises, one times out, one succeeds: all three results returned and the slow store never delays the others past its timeout | L |
 
 ---
 
@@ -490,8 +505,9 @@ Build the core strategies now. Build an optional strategy **only if `SUMMARY.md`
 
 | # | Feature | Description | Acceptance Criteria | Effort |
 |---|---|---|---|---|
-| 8.1.1 | Model loader | Lazy singleton pinned to `siglip_revision`, device auto-select (`cuda`, `mps`, `cpu`), `eval()`, `no_grad`, warm-up | Second call does not reload; device and revision logged; an unpinned load is refused | M |
-| 8.1.2 | Embedding + cosine | Batch embed query image and thumbnails, cosine similarity, normalise to 0-1 with the Phase 3 constants | Identical image scores near 1; unrelated image clearly lower | M |
+| 8.1.1 | Model loader | Lazy singleton. Pin with `huggingface_hub.snapshot_download(repo, revision=siglip_revision, allow_patterns=[...])` then load `open_clip` from `local-dir:<path>` (the `hf-hub:` scheme cannot pin a revision). Image tower only: no `transformers` import. Device `cuda`, `mps`, then `cpu`; `eval()`, `no_grad`, warm-up | Second call does not reload; device and revision logged; an unpinned load is refused; loads with `transformers` blocked | M |
+| 8.1.2 | Embedding + cosine | Batch (8 or 16) embed the query image and thumbnails; transparent images composited onto white before conversion; cosine mapped to 0-1 with `siglip_cos_lo` / `siglip_cos_hi` from settings | Identical image scores near 1; unrelated image clearly lower; a transparent PNG is not turned black | M |
+| 8.1.4 | Weights download step | A documented setup command that downloads the pinned weights (about 816 MB) ahead of time; at run time a missing model means `off` with a warn log, never a 10-minute wait inside a request | Command is idempotent; with no weights present a request still completes text-only | S |
 | 8.1.3 | Query embedding reuse | Return the query embedding in `QueryImage` so chip re-runs need no photo (assumption A8) | Second score call with only the embedding gives the same ranking | S |
 
 #### Module 8.2: Thumbnails
@@ -605,7 +621,7 @@ Build the core strategies now. Build an optional strategy **only if `SUMMARY.md`
 
 ### Phase 12: Store Adapters `DEPENDENT(Phase 2, Phase 6)`
 
-**Goal:** one config entry per qualified store. One module per store; the module count follows the Phase 2 summary (expect 4-5).
+**Goal:** one config entry per qualified store. One module per store: Oh Polly UAE and Club L London UAE (`shopify`), Luxury For You (`css`, with `timeout_s: 15`, `max_response_bytes` of about 3 MB and `max_variants: 1`, assumption A18), plus the Shopify stores Module 2.4 finds.
 **Milestone:** each store returns at least 10 valid products for 3 sample queries within 6 s, live, and passes its fixture test offline.
 **Estimated Effort:** M per store
 
@@ -746,6 +762,63 @@ Time-boxed: **45 min per store**; if it cannot meet 12.x.3, leave `enabled: fals
 | 16.3.1 | Weight and threshold tuning | Adjust `ranking_weights`, `min_match_score`, keyword variants and image normalisation **against the run-1 recording in replay mode**, so tuning sends no extra traffic to stores. A prompt or model change re-runs the Phase 5 eval and gets a changelog entry | Each change recorded with its reason; no per-query hardcoding; every bug fixed has a regression test | M |
 | 16.3.2 | Final run and verdict | One more live run, label, and state pass/fail against the BRD criteria; tag `v0.1-demo` | Results table in `eval/results/final/`; the verdict states what failed, if anything | M |
 
+---
+
+### Later phases (after the demo; not in the wave schedule)
+
+The user chose route A for the demo and asked for the other three routes to be planned. Each of these starts only on the user's go-ahead. They are broken down to module level now; features get the same S/M/L detail when a phase is scheduled.
+
+---
+
+### Phase 17: Stores' Official Agent Endpoints `DEPENDENT(Phase 16)`
+
+**Goal:** search stores through the channel they themselves offer to AI agents, instead of a public page endpoint.
+**Why:** the two Shopify stores' robots.txt files carry comments telling agents to use the store's own endpoint (`/api/ucp/mcp`) for catalogue search. It was not requested or tested during qualification.
+**Milestone:** at least one store searched through its agent endpoint, with a decision record on whether to switch stores over.
+**Estimated Effort:** L
+
+| Module | Purpose | Key features | Done when |
+|---|---|---|---|
+| 17.1 Research | Understand the endpoint before calling it | Read the public documentation and each store's terms; record what catalogue search returns (fields, currency, result limits), auth needs and rate limits; one test call per store only after the user agrees | A research note and an ADR: adopt, adopt for some stores, or reject |
+| 17.2 Client | A second way to search a store | An `agent_endpoint` implementation behind the existing `StoreSearcher` contract; same allow-list, rate limit, timeout and cooldown rules; recorded fixtures and contract tests | Passes the `StoreSearcher` contract suite offline |
+| 17.3 Store switch-over | Use it where it is better | A per-store config choice between `shopify` and `agent_endpoint`; side-by-side comparison on the acceptance queries | Comparison table; stores switched only where results improve |
+| 17.4 Safety | Catalogue search only | No cart, checkout or account tools are ever called (BRD: out of scope); tool responses are treated as untrusted data; injection tests extended | Tests prove only the search tool is reachable |
+
+---
+
+### Phase 18: Store Search APIs and Headless Rendering `DEPENDENT(Phase 16)` + per-store sign-off
+
+**Goal:** reach large stores whose pages carry no data for a plain client, for example 6thStreet (now `aivi.com`), whose products load from a search service in the browser.
+**Gate before any work on a store:** the business records, per store, that it has read the store's terms of use and accepts this method. Without that record the store stays dropped. This phase never helps where robots.txt disallows search or a bot challenge blocks us, and it never includes impersonation, CAPTCHA solving, proxies or stealth plugins (Rule 2).
+**Milestone:** one signed-off store returning products through its own search API or a rendered page.
+**Estimated Effort:** XL
+
+| Module | Purpose | Key features | Done when |
+|---|---|---|---|
+| 18.1 Terms sign-off | Make the risk an explicit business decision | A checklist per store (terms of use, robots.txt of every host involved, API key ownership, rate limits) and a signed record in `docs/store-notes/` | A store without a record cannot be enabled (enforced by a config check) |
+| 18.2 `store_json` strategy | Read a store's own search JSON | Dotted-path field mapping from config; only endpoints and public keys the store's own page publishes; honest User-Agent; the API host goes on `allowed_hosts` and its robots.txt is honoured | Fixture tests; contract suite passes |
+| 18.3 Headless rendering strategy | Read pages that need JavaScript | A real browser driven with our honest User-Agent on robots-allowed paths only; stop on any challenge; strict time and memory limits; runs outside the request path if it cannot meet 6 s | Fixture tests; a measured latency report |
+| 18.4 Store adapters | Add the signed-off stores | One config per store with fixtures, live smoke test and fragility notes, as in Phase 12 | Each store passes the Phase 12 template |
+| 18.5 Review | Keep the standards | The headless-browser and `store_json` choices get ADRs; `devops` and `architecture` docs re-checked because a browser adds an operational burden | ADRs merged |
+
+---
+
+### Phase 19: Category Pages + Sitemap Index `DEPENDENT(Phase 16)`
+
+**Goal:** cover stores that disallow search pages but allow category pages and sitemaps (Noon, Namshi, Level Shoes and others), by keeping a small local index instead of searching live.
+**Note:** this reverses ADR 0001 (live search, no index) for those stores, so it starts with a new ADR. It adds a database, so the dormant database rules in `backend-best-practices.md` (versioned migrations, UTC timestamps) and the `rag-best-practices.md` retrieval rules become active, and `CLAUDE.md` must be updated first.
+**Milestone:** one search-disallowing store answering queries from the index, with live price and stock checked for the results shown.
+**Estimated Effort:** XL
+
+| Module | Purpose | Key features | Done when |
+|---|---|---|---|
+| 19.1 Decision and rules | Agree the limits first | ADR replacing 0001 for indexed stores; crawl budget per store (requests per day), freshness target, what is stored (URL, title, image URL, category, last seen) and what is never stored; terms check per store | ADR merged; limits in config |
+| 19.2 Sitemap and category reader | Find product URLs politely | Read `Sitemap:` lines from robots.txt, sitemap indexes and product sitemaps (URL, last-modified, image title); robots-checked, 1 request/s, resumable | Fixture tests on saved sitemap samples |
+| 19.3 Product reader | Get title, price, image | `json_ld` strategy on product or category pages; incremental: only pages changed since last seen | Fixture tests; contract suite passes |
+| 19.4 Local index | Store and search | SQLite with versioned migrations; keyword search over titles; optional image embeddings; scheduled refresh job with a run log | Migrations up and down tested; search returns candidates in under 1 s |
+| 19.5 Query-time path | Keep shown data honest | A per-store mode, `search` or `index`; candidates come from the index, then price and stock are re-read live for the results shown; a result whose live check fails is dropped | Stale-price test; the pipeline contract is unchanged |
+| 19.6 Evaluation | Prove it helps | Acceptance run with and without indexed stores; fetch and rank stages measured separately | Comparison table |
+
 ## 8. Risk Register
 
 | # | Risk | Impact | Likelihood | Mitigation |
@@ -769,6 +842,10 @@ Time-boxed: **45 min per store**; if it cannot meet 12.x.3, leave `enabled: fals
 | R17 | Prompt injection through user text or text inside a photo | M | L | Instructions separated from data, schema + output validation, tests in 14.3; no LLM ever reads store content |
 | R18 | Malicious or wrong links and server-side requests driven by store content | M | L | https only, `allowed_hosts` on every fetch and every shown link, private addresses refused, tests in 14.1.3 |
 | R19 | Streamlit keeps uploaded files in memory for the session | L | H | Rotate the uploader key after the first run (15.1.2); audit test |
+| R20 | The readable stores are small, mostly women-only boutiques. The men's acceptance queries (q06, q07) may not reach 3 stores, so the demo can fail its own pass rule even when everything works | H | H | Module 2.4 favours stores with menswear; the coverage table (2.4.3) shows the shortfall before the acceptance run; the verdict reports it honestly. Phases 17-19 are the real fix |
+| R21 | On a Linux GPU machine `torch` pulls 16 NVIDIA CUDA packages whose licences are proprietary and still marked "needs review" in `docs/licences.md` (Rule 5) | M | L (the demo runs on a Mac, where they are not installed) | Review NVIDIA's terms, or use CPU-only torch wheels, before any Linux GPU deployment |
+| R22 | Luxury For You's 7-15 s pages use half the 30 s budget and its price is ambiguous | M | H | One variant, 15 s timeout (A18), list price shown (A17); drop the store if it breaks the deadline in the acceptance run |
+| R23 | The CI workflow and the gitleaks hook have never run (nothing is pushed; no gitleaks binary locally) | M | M | Watch the first CI run after the first push; protect `main` with the required checks |
 
 ## 9. Test Strategy and Accepted Gaps
 
@@ -794,14 +871,16 @@ These were considered and left out on purpose. Build one only when its trigger i
 |---|---|
 | GPT-vision image ranker | Phase 3 shows SigLIP cannot score 40 thumbnails within 3 s on the demo machine |
 | Text-to-image scoring for text-only queries | Text-only queries fail good@10 in run 1 |
-| LLM extraction of store HTML | Fewer than 4 stores qualify with deterministic extractors. Needs its own injection hardening first, because a model would then read store content |
-| Headless browser | A must-have store only works with JavaScript and its terms allow it |
+| LLM extraction of store HTML | A readable store's page cannot be parsed deterministically. Needs its own injection hardening first, because a model would then read store content |
+| Headless browser, store search APIs | Now planned as Phase 18 (needs a per-store terms sign-off) |
+| Stores' official agent endpoints | Now planned as Phase 17 |
 | Shared password, per-session rate limits | The demo is served beyond localhost |
 | Good/bad feedback control in the UI | Real users, or labelling in CSV proves too slow |
 | Cache of Understand results | Identical queries become common |
 | Custom mix sliders, result-count control | A stakeholder asks for a mix the presets cannot express |
 | Dockerfile, hosting, IaC, health check, monitoring, backups | A decision to host the demo |
-| Sitemap-lite index | Live search proves too slow or fragile after the demo |
+| Category pages + sitemap index | Now planned as Phase 19 |
+| `store_json`, `json_ld`, `embedded_json` extractors | Built in Phases 18 and 19; no store readable today needs them |
 | Rank fusion instead of weighted score | Weight tuning proves unstable across queries |
 
 ## 11. Assumptions Needing Your Confirmation
@@ -824,6 +903,8 @@ These were considered and left out on purpose. Build one only when its trigger i
 | A14 | An outfit-photo query passes "7 of the top 10" only if **every** garment list reaches 7 (`eval/data/rubric.md`) | The PRD does not say how the rule applies to several lists |
 | A15 | "Top 10" means the 10 best results by overall match score across all price ranges, not by price; missing places count as not good | Results are shown grouped by price range, so there is no single displayed top 10 |
 | A16 | A request with nothing to shop for (nonsense, only price words, an injection with no garment, a handbag, a dress) ends with a plain message, not a search (`eval/data/edge_cases.yaml`) | The PRD's fallback covers model failure only |
+| A17 | For Luxury For You the app shows the higher, struck-through list price, not the lower padlocked "member" price | What a non-member pays is unverified; the list price never understates the cost |
+| A18 | Luxury For You gets a 15 s timeout, one keyword variant and a 3 MB response cap | Its pages took 7-15 s and 2.7 MB; under the PRD's 6 s timeout (R5) the only luxury store would always be skipped |
 
 ## 12. Best-Practices Verification
 
@@ -879,7 +960,7 @@ Checked against all nine files in `docs/Best Practices/` and the hard rules in `
 | `tier_mix` | Percentage of results taken from each price range; default 25/25/25/25. |
 | Store config | One YAML file describing how to search and read one store. |
 | `allowed_hosts` | The store's own domains and image CDNs: the only hosts the system will fetch from or link to for that store. |
-| Extraction strategy | A way to read products from a store response: `store_json`, `json_ld`, and optionally `embedded_json`, `css`, `shopify`. |
+| Extraction strategy | A way to read products from a store response. Built for the demo: `shopify`, `css`. Later (Phases 17-19): `agent_endpoint`, `store_json`, `json_ld`, headless rendering. |
 | Image ranker | The component that scores image similarity: `siglip` or `off`. |
 | Qualification | Checking a store's robots.txt, reachability and data path before writing an adapter. |
 | Record / replay | Saving a live run's store and OpenAI responses so the pipeline can be re-run offline. |

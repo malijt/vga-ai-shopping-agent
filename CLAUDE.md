@@ -12,8 +12,13 @@ file as the always-on summary and open the matching doc when you need full depth
   Every result links to the store's own product page.
 - **Status (2026-10-07):** the implementation plan
   [`docs/plans/2026-10-07-vga-ai-shopping-agent-implementation-plan.md`](./docs/plans/2026-10-07-vga-ai-shopping-agent-implementation-plan.md)
-  is approved (v2) and Wave 1 is in progress. **Build only what the plan specifies**, in its phases
-  and waves. Integration branch: `develop`.
+  is approved (v3). Wave 1 is merged; Wave 2 is next. **Build only what the plan specifies**, in its
+  phases and waves. Integration branch: `develop`.
+- **Stores (decided 2026-10-07):** store qualification found that no large GCC retailer can be read
+  by an honest client (see [`docs/store-qualification/SUMMARY.md`](./docs/store-qualification/SUMMARY.md)).
+  The demo therefore uses small Shopify storefronts plus Luxury For You. Reaching big retailers is
+  planned as later Phases 17-19 (agent endpoints, store APIs/headless with a terms sign-off, a
+  category + sitemap index). Do not start those without the user's go-ahead.
 - **What it is not (yet):** not multi-tenant, no accounts, no billing or credits, no database, no
   RAG, not hosted. The rules for those domains are dormant (see "Domain applicability"). Do not
   build toward them speculatively.
@@ -28,9 +33,9 @@ file as the always-on summary and open the matching doc when you need full depth
 |---|---|
 | Language / env | Python 3.12 via `uv` (system Python is 3.14; do not use it), `uv.lock` committed |
 | LLM | OpenAI for every language and vision task; native structured outputs with Pydantic; a **dated model snapshot** pinned in `config/settings.yaml`, never an alias |
-| Image similarity | Local Marqo-FashionSigLIP via `open_clip`, pinned to a Hugging Face revision; `off` as the fallback |
+| Image similarity | Local Marqo-FashionSigLIP via `open_clip`, pinned to a Hugging Face revision with `snapshot_download` + `local-dir:` (the `hf-hub:` scheme cannot pin); a low-weight nudge, never a filter; `off` as the fallback |
 | Fetching | `httpx` async with an honest, identifying User-Agent. **Never** `curl_cffi`, Scrapling fetchers, proxies, or any browser impersonation |
-| Parsing | `extruct` (JSON-LD), `selectolax`, stdlib `json`, `protego` for robots.txt. **Never `urllib.robotparser`:** on Python 3.12 it ignores `*` and `$` and wrongly allows disallowed paths |
+| Parsing | `selectolax` (use `selectolax.lexbor`), stdlib `json`, `protego` for robots.txt; `extruct` (JSON-LD) only from Phase 19. **Never `urllib.robotparser`:** on Python 3.12 it ignores `*` and `$` and wrongly allows disallowed paths |
 | Contracts / config | Pydantic v2 models in `src/vga/models.py`, YAML settings, env overrides |
 | UI | Streamlit (`app/`), one theme source in `.streamlit/config.toml` |
 | Quality | `pytest`, `pytest-asyncio`, `respx`, Streamlit `AppTest`, `ruff`, `mypy`, `pip-audit`, `gitleaks`, GitHub Actions |
