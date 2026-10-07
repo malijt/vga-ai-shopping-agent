@@ -11,7 +11,7 @@ Rules (deterministic, no interpolation):
   border 1 is Budget, at or below border 2 Mid-range, at or below border 3 Premium, above it Luxury.
 - Tie rule: a product priced exactly at a border belongs to the cheaper range, so equal prices never
   straddle two ranges. When many candidates share one price the ranges above it can come out empty;
-  the selection step then fills them from the nearest range (see ``vga.tiers.shape``).
+  the selection step then fills them from the nearest range (see ``vga.tiers.shaper``).
 - With 100 candidates each range holds 25. With fewer than 4 candidates not every range can hold a
   product: 1 candidate is Budget; 2 candidates are Budget and Premium; 3 are Budget, Mid-range and
   Premium. Luxury needs at least 4 candidates.
