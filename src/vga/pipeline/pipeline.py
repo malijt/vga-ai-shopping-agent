@@ -284,42 +284,61 @@ class SearchPipeline:
             if run.stores:
                 pending.append(run)
             else:
-                run.results = []  # nothing to ask: no store sells for this item's gender
-                self._log_no_store(state, run)
+                self._log_no_store(state, run)  # nothing to ask: no store sells for the gender
         if not pending:
             return
 
         self._step(state, Step.SEARCH)
         with self._stage(state, Step.SEARCH.value):
-            # Start every search before waiting for any, in item order: the order the searches
-            # begin in is the order a recording of the run keeps them in.
+            # Every store gets its own search, so a slow store never holds back the answers of
+            # the others: at the deadline the stores that did answer still count. All searches
+            # are started before any is waited for, item by item and store by store: the order
+            # they begin in is the order a recording of the run keeps them in.
             for run in pending:
-                run.task = asyncio.create_task(self._searcher.search(run.item, run.stores))
+                for store in run.stores:
+                    run.tasks[store.id] = asyncio.create_task(
+                        self._searcher.search(run.item, [store])
+                    )
             for run in pending:
                 await self._collect(state, run)
 
     async def _collect(self, state: RunState, run: ItemRun) -> None:
-        assert run.task is not None  # noqa: S101 - set by the caller just before
-        try:
-            results = await run.task
-        except Exception:  # the searcher promises not to raise; if it does, one item is lost
-            self._search_crashed(state, run)
-        else:
-            self._record_results(state, run, results)
+        """Wait for each store of one item, in store order, and merge what they found."""
+        for store in run.stores:
+            try:
+                results = await run.tasks[store.id]
+            except Exception as exc:  # the searcher promises not to raise; if it does, one
+                self._store_search_crashed(state, run, store, exc)  # store of one item is lost
+            else:
+                self._take(run, store, results)
+        self._merge_found(state, run)
 
-    def _record_results(self, state: RunState, run: ItemRun, results: list[StoreResult]) -> None:
-        run.results = results
-        run.products = merge_products(results)
-        run.fetched_expires_at = self._clock.monotonic() + state.settings.store_cache_ttl_s
+    @staticmethod
+    def _take(run: ItemRun, store: StoreConfig, results: Sequence[StoreResult]) -> None:
+        by_id = {result.store_id: result for result in results}
+        run.store_results[store.id] = by_id.get(store.id) or StoreResult(
+            store_id=store.id, status=StoreStatus.ERROR, detail="the searcher gave no result"
+        )
 
-    def _search_crashed(self, state: RunState, run: ItemRun) -> None:
-        log.exception("the store search failed unexpectedly", extra={"item_index": run.index})
-        run.search_crashed = True
-        run.results = [
-            StoreResult(store_id=store.id, status=StoreStatus.ERROR, detail="search crashed")
-            for store in run.stores
-        ]
+    def _store_search_crashed(
+        self, state: RunState, run: ItemRun, store: StoreConfig, error: BaseException
+    ) -> None:
+        log.error(
+            "the store search failed unexpectedly",
+            exc_info=error,
+            extra={"store": store.id, "item_index": run.index},
+        )
+        run.store_results[store.id] = StoreResult(
+            store_id=store.id, status=StoreStatus.ERROR, detail="search crashed"
+        )
         state.warn(messages.SEARCH_CRASHED)
+
+    def _merge_found(self, state: RunState, run: ItemRun) -> None:
+        """Put the products of the stores that answered into one list. The products are good to
+        reuse for ``store_cache_ttl_s`` from when the last store answered."""
+        run.products = merge_products(run.results)
+        if run.search_complete:
+            run.fetched_expires_at = self._clock.monotonic() + state.settings.store_cache_ttl_s
 
     def _filter(self, state: RunState) -> None:
         self._step(state, Step.FILTER)
@@ -439,24 +458,30 @@ class SearchPipeline:
             self._shape_item(state, run)
 
     def _harvest(self, state: RunState, run: ItemRun) -> None:
-        """Take the result of a search that finished while another one was being waited for."""
-        task = run.task
-        if run.results is not None or task is None or not task.done() or task.cancelled():
-            return
-        if task.exception() is not None:
-            self._search_crashed(state, run)
-        else:
-            self._record_results(state, run, task.result())
+        """Take the stores' answers that arrived while another search was being waited for."""
+        for store in run.stores:
+            task = run.tasks.get(store.id)
+            if store.id in run.store_results or task is None:
+                continue
+            if not task.done() or task.cancelled():
+                continue
+            error = task.exception()
+            if error is None:
+                self._take(run, store, task.result())
+            else:
+                self._store_search_crashed(state, run, store, error)
+        self._merge_found(state, run)
 
     async def _cancel_unfinished(self, state: RunState) -> None:
-        tasks = [run.task for run in state.items if run.task is not None and not run.task.done()]
+        tasks = [t for run in state.items for t in run.tasks.values() if not t.done()]
         for task in tasks:
             task.cancel()
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
         for run in state.items:  # mark every outcome as seen so none is reported as never read
-            if run.task is not None and run.task.done() and not run.task.cancelled():
-                run.task.exception()
+            for task in run.tasks.values():
+                if task.done() and not task.cancelled():
+                    task.exception()
 
     # ------------------------------------------------------------------------------------
     # The response
@@ -551,9 +576,9 @@ class SearchPipeline:
             if run.cached is not None:
                 items[run.index] = run.cached
                 continue
-            results = run.results or []
-            if not any(r.status in (StoreStatus.OK, StoreStatus.EMPTY) for r in results):
-                continue  # nothing was learned from the stores, so a re-run must ask again
+            answered = any(r.status in (StoreStatus.OK, StoreStatus.EMPTY) for r in run.results)
+            if not (run.search_complete and answered):
+                continue  # partial or all failed: a re-run must ask the stores again
             outcomes = outcomes_for_item(run)
             items[run.index] = CachedItem(
                 item=run.item,

@@ -73,21 +73,17 @@ def outcomes_for_item(run: ItemRun) -> list[StoreOutcome]:
             outcomes.append(StoreOutcome(report, searched))
         return outcomes
 
-    by_id = {result.store_id: result for result in run.results or []}
     for store in run.stores:
-        result = by_id.get(store.id)
-        outcomes.append(
-            StoreOutcome(_report_for(store, result, finished=run.results is not None), True)
-        )
+        outcomes.append(StoreOutcome(_report_for(store, run.store_results.get(store.id)), True))
     return outcomes
 
 
-def _report_for(store: StoreConfig, result: StoreResult | None, *, finished: bool) -> StoreReport:
+def _report_for(store: StoreConfig, result: StoreResult | None) -> StoreReport:
     if result is None:
-        # The search never finished (the deadline), or the searcher left this store out.
-        status = StoreStatus.TIMEOUT if not finished else StoreStatus.ERROR
-        reason = messages.STORE_NOT_FINISHED if not finished else messages.store_reason(status)
-        return StoreReport(store_id=store.id, status=status, reason=reason)
+        # The store had not answered when the time ran out.
+        return StoreReport(
+            store_id=store.id, status=StoreStatus.TIMEOUT, reason=messages.STORE_NOT_FINISHED
+        )
     if result.status is StoreStatus.OK:
         return StoreReport.from_result(result)
     return StoreReport.from_result(result, reason=messages.store_reason(result.status))

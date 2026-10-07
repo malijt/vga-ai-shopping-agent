@@ -118,21 +118,21 @@ async def test_the_number_of_search_requests_is_capped_by_garments_stores_and_va
     assert world.requests_to("beta.example") == garments * variants + 1
 
 
-async def test_the_searches_start_in_item_order(
+async def test_the_searches_start_in_item_order_and_then_store_order(
     make_pipeline: PipelineMaker, two_stores: list, settings: Settings, photo: bytes
 ) -> None:
     pipeline = make_pipeline(understander=outfit_understander())
 
     await pipeline.run(make_search_request(image=photo, text=None), settings)
 
+    # Each store is searched on its own, so one slow store never holds the others back.
     assert make_pipeline.spy is not None
-    assert [call.category for call in make_pipeline.spy.calls] == [
-        Category.OUTERWEAR,
-        Category.TOPS,
-        Category.BOTTOMS,
-        Category.SHOES,
+    started = [(call.category, call.store_ids) for call in make_pipeline.spy.calls]
+    assert started == [
+        (category, (store,))
+        for category in (Category.OUTERWEAR, Category.TOPS, Category.BOTTOMS, Category.SHOES)
+        for store in ("alpha", "beta")
     ]
-    assert all(call.store_ids == ("alpha", "beta") for call in make_pipeline.spy.calls)
 
 
 async def test_every_garment_shares_one_rate_limiter_per_store(

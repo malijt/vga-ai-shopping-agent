@@ -8,8 +8,8 @@ of the run keeps them in.
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from vga.interfaces import StoreSearcher
-from vga.models import Category, ItemIntent, StoreConfig, StoreResult
+from vga.interfaces import ImageRanker, StoreSearcher
+from vga.models import Category, ItemIntent, Product, QueryImage, StoreConfig, StoreResult
 
 
 @dataclass(frozen=True)
@@ -29,3 +29,32 @@ class SpySearcher:
             SearchCall(item.category, tuple(item.search_keywords), tuple(s.id for s in stores))
         )
         return await self._inner.search(item, stores)
+
+
+@dataclass(frozen=True)
+class RankerCall:
+    had_photo: bool
+    had_embedding: bool
+    products: int
+
+
+class SpyImageRanker:
+    """Forwards to a real ranker and records what each ``score`` call was given: a photo, an
+    embedding, or neither, at the moment of the call (the ranker later stores the embedding on the
+    query and the pipeline clears the photo)."""
+
+    def __init__(self, inner: ImageRanker) -> None:
+        self._inner = inner
+        self.calls: list[RankerCall] = []
+
+    async def score(
+        self, query: QueryImage | None, products: Sequence[Product]
+    ) -> dict[str, float | None]:
+        self.calls.append(
+            RankerCall(
+                had_photo=query is not None and query.image is not None,
+                had_embedding=query is not None and query.embedding is not None,
+                products=len(products),
+            )
+        )
+        return await self._inner.score(query, products)

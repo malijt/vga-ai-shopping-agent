@@ -1,15 +1,17 @@
 """Fixtures shared by the Phase 13 tests. Nothing here touches the network: store HTTP is answered
 by ``respx`` and time by the shared ``FakeClock``."""
 
-from collections.abc import AsyncIterator, Iterator, Sequence
+import asyncio
+from collections.abc import AsyncIterator, Callable, Iterator, Sequence
 from pathlib import Path
+from typing import Any
 
 import pytest
 import respx
 
 from tests.factories import make_image_bytes, make_settings
 from tests.fakes import FakeClock, FakeImageRanker, FakeUnderstander
-from tests.pipeline.spies import SpySearcher
+from tests.pipeline.spies import SpyImageRanker, SpySearcher
 from tests.pipeline.world import StoreWorld, store_for
 from tests.rank_image.support import ColourEmbedder
 from vga.interfaces import ImageRanker, StoreSearcher, Understander
@@ -22,7 +24,17 @@ from vga.stores import StoreRegistry, StoreSearchEngine
 
 @pytest.fixture
 def clock() -> FakeClock:
-    return FakeClock()
+    """The shared fake clock, told to wait longer for the event loop to go quiet.
+
+    The ``FakeClock`` moves time on once the loop has run ``SETTLE_HOPS`` iterations without
+    anyone scheduling a new sleep. The pipeline's own deadline is a 30 s sleeper that is always
+    pending, so a stretch of zero-time work longer than that (a chain of mocked HTTP calls whose
+    rate-limit slot is already free) would fire the deadline early. A whole pipeline run has longer
+    such stretches than any single fetch, so the tests allow far more iterations.
+    """
+    fake = FakeClock()
+    fake.SETTLE_HOPS = 500
+    return fake
 
 
 @pytest.fixture
@@ -59,6 +71,17 @@ def two_stores(world: StoreWorld) -> list[StoreConfig]:
     return stores
 
 
+async def run_inline[T](function: Callable[..., T], /, *args: Any, **kwargs: Any) -> T:
+    """``asyncio.to_thread`` without the thread.
+
+    The real FashionSigLIP ranker hands its model work to a worker thread. The ``FakeClock`` moves
+    time on whenever the event loop looks idle, and a loop waiting for a thread looks idle, so
+    virtual time would race to the 30 s deadline while the (instant) fake model "runs". With a fake
+    embedder there is nothing to offload, so the tests run it in place.
+    """
+    return function(*args, **kwargs)
+
+
 class PipelineMaker:
     """Builds pipelines around the REAL store engine and remembers the parts of the last one.
 
@@ -68,12 +91,20 @@ class PipelineMaker:
     real requests to the fake CDN and can be counted.
     """
 
-    def __init__(self, world: StoreWorld, clock: FakeClock, settings: Settings) -> None:
+    def __init__(
+        self,
+        world: StoreWorld,
+        clock: FakeClock,
+        settings: Settings,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         self._world = world
         self._clock = clock
         self._settings = settings
+        self._monkeypatch = monkeypatch
         self.engines: list[StoreSearchEngine] = []
         self.spy: SpySearcher | None = None
+        self.ranker_spy: SpyImageRanker | None = None
         self.embedder: ColourEmbedder | None = None
 
     def __call__(
@@ -84,6 +115,7 @@ class PipelineMaker:
         stores: Sequence[StoreConfig] | None = None,
         engine_settings: Settings | None = None,
         thumbnails: bool = False,
+        wrap_searcher: Callable[[StoreSearcher], StoreSearcher] | None = None,
     ) -> SearchPipeline:
         chosen = list(stores) if stores is not None else self._world.stores()
         used = engine_settings or self._settings
@@ -91,8 +123,11 @@ class PipelineMaker:
         self.engines.append(engine)
         self.spy = SpySearcher(engine)
         searcher: StoreSearcher = self.spy
+        if wrap_searcher is not None:
+            searcher = wrap_searcher(searcher)
         ranker = image_ranker or FakeImageRanker()
         if thumbnails:
+            self._monkeypatch.setattr(asyncio, "to_thread", run_inline)
             self.embedder = ColourEmbedder()
             embedder = self.embedder
             ranker = SiglipImageRanker(
@@ -101,8 +136,13 @@ class PipelineMaker:
                 cos_lo=used.siglip_cos_lo,
                 cos_hi=used.siglip_cos_hi,
             )
+        self.ranker_spy = SpyImageRanker(ranker)
         return SearchPipeline(
-            understander or FakeUnderstander(), searcher, ranker, chosen, clock=self._clock
+            understander or FakeUnderstander(),
+            searcher,
+            self.ranker_spy,
+            chosen,
+            clock=self._clock,
         )
 
     async def aclose(self) -> None:
@@ -112,8 +152,8 @@ class PipelineMaker:
 
 @pytest.fixture
 async def make_pipeline(
-    world: StoreWorld, clock: FakeClock, settings: Settings
+    world: StoreWorld, clock: FakeClock, settings: Settings, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[PipelineMaker]:
-    maker = PipelineMaker(world, clock, settings)
+    maker = PipelineMaker(world, clock, settings, monkeypatch)
     yield maker
     await maker.aclose()

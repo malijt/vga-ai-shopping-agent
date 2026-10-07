@@ -23,7 +23,6 @@ from vga.models import (
     Step,
     StepTiming,
     StoreConfig,
-    StoreReport,
     StoreResult,
     UnderstandResult,
     Usage,
@@ -46,10 +45,10 @@ class ItemRun:
     cached: CachedItem | None = None
     """The earlier search of this very item, when it can be reused (a mix or budget change)."""
 
-    task: "asyncio.Task[list[StoreResult]] | None" = None
-    results: list[StoreResult] | None = None
-    """One result per store in ``stores``, or ``None`` while the search has not finished."""
-    search_crashed: bool = False
+    tasks: dict[str, asyncio.Task[list[StoreResult]]] = field(default_factory=dict)
+    """One running search per store, by store id, in the order the stores are searched."""
+    store_results: dict[str, StoreResult] = field(default_factory=dict)
+    """What each store gave, as it finished. A store missing here had not answered yet."""
     fetched_expires_at: float | None = None
     """When the products found for this item are too old to reuse."""
 
@@ -65,8 +64,14 @@ class ItemRun:
     group: GarmentGroup | None = None
 
     @property
-    def search_done(self) -> bool:
-        return self.cached is not None or self.results is not None
+    def results(self) -> list[StoreResult]:
+        """The results received so far, in the order of ``stores``."""
+        return [self.store_results[s.id] for s in self.stores if s.id in self.store_results]
+
+    @property
+    def search_complete(self) -> bool:
+        """Every store asked for this item has answered (or there was none to ask)."""
+        return all(store.id in self.store_results for store in self.stores)
 
 
 @dataclass
@@ -90,7 +95,6 @@ class RunState:
 
     timings: list[StepTiming] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
-    reports: list[StoreReport] = field(default_factory=list)
     timed_out: bool = False
 
     def warn(self, message: str) -> None:
