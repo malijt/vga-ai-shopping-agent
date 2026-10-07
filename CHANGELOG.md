@@ -23,6 +23,7 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 - This changelog is maintained from now on (user request).
 
 **Added**
+- **The acceptance harness paces a live run and tells the truth about a throttled one.** It waits 30 s between queries (`--pause`) and sends at most one link check every 2 s (`--link-interval`). A query that every store turned away is "not run", not "failed"; the run stops there, the verdict reads INCOMPLETE, and the report lists what to repeat. `--only` finishes a stopped run later without sending the finished queries again. Each query is now saved and link-checked before the next starts, so an interrupted run can be finished. A full ten-query run takes about 19 minutes.
 - **The acceptance harness answers "Who is this for?" the way the page does.** A photo query can record the shopper's answer (`shopper_gender`); after the first search the harness gives it, with no photo and no OpenAI call, and scores the results shown after the answer. The 30 s limit is applied to the first search, the wait before the shopper sees anything; the report shows the first search, the search after the answer and their sum. A query with no recorded answer runs as before. A recording replays offline with the extra search included.
 - **"Who is this for?" on the page.** When a garment's gender was guessed or not given, the page asks above the results, with Women, Men and Show both. Women or Men searches again with that gender and no OpenAI call; Show both closes the question and changes nothing. It is not asked when the shopper typed the gender.
 - **Dinar prices on the page, the labelling sheet and the debug dump:** `245.000 KWD (about 2,920 AED)`, with one sentence above the results saying that price ranges and the budget go by the AED figure.
@@ -47,6 +48,7 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 - Acceptance harness (Phase 11): runs the 10 frozen queries, checks the BRD pass rule, exports a labelling sheet, and can record a live run and replay it offline.
 
 **Fixed**
+- The harness's link check failed with an error for any store whose robots.txt sets a crawl delay.
 - A card no longer says "Colour: not listed" under a title that names the colour; the line appears only when the store lists a colour.
 - **The kind of request is decided by the code, not by the model's label.** A photo with one garment is a product photo; with two or more, an outfit photo; with typed text, photo + text. Live eval after the fix: 24 of 24 passed, typical answer 1.9 s, worst 3.0 s.
 - **All ten findings from the guard audits:**
