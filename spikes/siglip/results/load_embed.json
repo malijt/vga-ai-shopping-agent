@@ -1,0 +1,105 @@
+{
+  "devices_available": [
+    "mps",
+    "cpu"
+  ],
+  "offline": false,
+  "parameters_millions": 203.15597,
+  "per_device": {
+    "cpu": {
+      "dtype": "torch.float32",
+      "embedding_dim_image": 768,
+      "embedding_dim_text": 768,
+      "first_load_total_s": 2.619000374979805,
+      "image_embedding_norm": 1.0,
+      "image_input_shape": [
+        1,
+        3,
+        224,
+        224
+      ],
+      "loads": [
+        {
+          "build_and_to_device_s": 2.5472883750044275,
+          "run": 1,
+          "snapshot_s": 0.0022512080031447113,
+          "total_s": 2.619000374979805
+        },
+        {
+          "build_and_to_device_s": 2.461458665988175,
+          "run": 2,
+          "snapshot_s": 0.0026963750133290887,
+          "total_s": 2.606144833000144
+        },
+        {
+          "build_and_to_device_s": 2.4802055420004763,
+          "run": 3,
+          "snapshot_s": 0.002867542003514245,
+          "total_s": 2.552072999998927
+        }
+      ],
+      "median_load_total_s": 2.606144833000144,
+      "synthetic_image_vs_text_cosine": -0.03365767374634743,
+      "text_token_shape": [
+        1,
+        64
+      ]
+    },
+    "mps": {
+      "dtype": "torch.float32",
+      "embedding_dim_image": 768,
+      "embedding_dim_text": 768,
+      "first_load_total_s": 9.489974624972092,
+      "image_embedding_norm": 1.0,
+      "image_input_shape": [
+        1,
+        3,
+        224,
+        224
+      ],
+      "loads": [
+        {
+          "build_and_to_device_s": 2.7384655839996412,
+          "run": 1,
+          "snapshot_s": 0.004683915991336107,
+          "total_s": 9.489974624972092
+        },
+        {
+          "build_and_to_device_s": 2.6669955420074984,
+          "run": 2,
+          "snapshot_s": 0.0032573339994996786,
+          "total_s": 2.8263742080016527
+        },
+        {
+          "build_and_to_device_s": 2.6456723749870434,
+          "run": 3,
+          "snapshot_s": 0.0029972080083098263,
+          "total_s": 2.717624999990221
+        }
+      ],
+      "median_load_total_s": 2.8263742080016527,
+      "synthetic_image_vs_text_cosine": -0.033657655119895935,
+      "text_token_shape": [
+        1,
+        64
+      ]
+    }
+  },
+  "repo": "Marqo/marqo-fashionSigLIP",
+  "revision": "c56244cc94f92419e8369fa71efdaf403b124ce8",
+  "snapshot_bytes_on_disk": 815896175,
+  "snapshot_dir": "/Users/syedabdullahshah/Office_Projects/vga-ai-shopping-agent/.claude/worktrees/agent-a46963859c7b02f07/spikes/siglip/.cache/hf/hub/models--Marqo--marqo-fashionSigLIP/snapshots/c56244cc94f92419e8369fa71efdaf403b124ce8",
+  "versions": {
+    "httpx": "0.28.1",
+    "huggingface_hub": "1.33.0",
+    "machine": "arm64",
+    "numpy": "2.5.3",
+    "open_clip_torch": "3.3.0",
+    "pillow": "12.3.0",
+    "platform": "macOS-27.0.1-arm64-arm-64bit",
+    "python": "3.12.14",
+    "timm": "1.0.30",
+    "torch": "2.14.1",
+    "torchvision": "0.29.1"
+  }
+}

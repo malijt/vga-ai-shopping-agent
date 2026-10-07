@@ -1,0 +1,474 @@
+{
+  "accessed": "2026-10-07",
+  "images": [
+    {
+      "attribution_required": "true",
+      "author": "Daniel Furon under contract for the Wikimedia Foundation",
+      "category": "top",
+      "credit": "Wikimedia Shop",
+      "file": "images/01_top_tshirt.jpeg",
+      "id": "01_top_tshirt",
+      "kind": "tshirt",
+      "licence": "CC BY-SA 3.0",
+      "licence_url": "https://creativecommons.org/licenses/by-sa/3.0",
+      "original_size": [
+        1024,
+        1024
+      ],
+      "source_page": "https://commons.wikimedia.org/wiki/File:BlueIEditShirt-plainBackground.jpeg",
+      "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/69/BlueIEditShirt-plainBackground.jpeg/500px-BlueIEditShirt-plainBackground.jpeg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "title": "File:BlueIEditShirt-plainBackground.jpeg"
+    },
+    {
+      "attribution_required": "true",
+      "author": "Tobias \"ToBeFree\" Frei",
+      "category": "top",
+      "credit": "Own work",
+      "file": "images/02_top_tshirt.jpg",
+      "id": "02_top_tshirt",
+      "kind": "tshirt",
+      "licence": "CC BY-SA 4.0",
+      "licence_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "original_size": [
+        3024,
+        4032
+      ],
+      "source_page": "https://commons.wikimedia.org/wiki/File:Tshirt-userpage-tobefree-front.jpg",
+      "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/03/Tshirt-userpage-tobefree-front.jpg/500px-Tshirt-userpage-tobefree-front.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "title": "File:Tshirt-userpage-tobefree-front.jpg"
+    },
+    {
+      "attribution_required": "true",
+      "author": "https://www.flickr.com/photos/crystalliferous/",
+      "category": "top",
+      "credit": "https://www.flickr.com/photos/crystalliferous/2600503226/sizes/o/",
+      "file": "images/03_top_tshirt.jpg",
+      "id": "03_top_tshirt",
+      "kind": "tshirt",
+      "licence": "CC BY 2.0",
+      "licence_url": "https://creativecommons.org/licenses/by/2.0",
+      "original_size": [
+        265,
+        286
+      ],
+      "source_page": "https://commons.wikimedia.org/wiki/File:American_Eagle_Tank.jpg",
+      "thumbnail_url": "https://upload.wikimedia.org/wikipedia/commons/6/6a/American_Eagle_Tank.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+      "title": "File:American Eagle Tank.jpg"
+    },
+    {
+      "attribution_required": "true",
+      "author": "Ashjini",
+      "category": "top",
+      "credit": "Own work",
+      "file": "images/04_top_shirt.jpg",
+      "id": "04_top_shirt",
+      "kind": "shirt",
+      "licence": "CC BY-SA 3.0",
+      "licence_url": "https://creativecommons.org/licenses/by-sa/3.0",
+      "original_size": [
+        1200,
+        982
+      ],
+      "source_page": "https://commons.wikimedia.org/wiki/File:Arnaud_Rousseau_Dress_Shirt_with_a_Modern_Spread_Collar.jpg",
+      "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c7/Arnaud_Rousseau_Dress_Shirt_with_a_Modern_Spread_Collar.jpg/500px-Arnaud_Rousseau_Dress_Shirt_with_a_Modern_Spread_Collar.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "title": "File:Arnaud Rousseau Dress Shirt with a Modern Spread Collar.jpg"
+    },
+    {
+      "attribution_required": "true",
+      "author": "Labegola",
+      "category": "top",
+      "credit": "Own work",
+      "file": "images/05_top_shirt.jpg",
+      "id": "05_top_shirt",
+      "kind": "shirt",
+      "licence": "CC BY-SA 3.0",
+      "licence_url": "https://creativecommons.org/licenses/by-sa/3.0",
+      "original_size": [
+        2548,
+        2628
+      ],
+      "source_page": "https://commons.wikimedia.org/wiki/File:Madraskarohemd_Sir_Oliver.jpg",
+      "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4d/Madraskarohemd_Sir_Oliver.jpg/500px-Madraskarohemd_Sir_Oliver.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "title": "File:Madraskarohemd Sir Oliver.jpg"
+    },
+    {
+      "attribution_required": "true",
+      "author": "Arroser",
+      "category": "top",
+      "credit": "Own work",
+      "file": "images/06_top_sweater.jpg",
+      "id": "06_top_sweater",
+      "kind": "sweater",
+      "licence": "CC BY-SA 3.0",
+      "licence_url": "https://creativecommons.org/licenses/by-sa/3.0",
+      "original_size": [
+        3264,
+        2448
+      ],
+      "source_page": "https://commons.wikimedia.org/wiki/File:Pull_moncler_rose.jpg",
+      "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/85/Pull_moncler_rose.jpg/500px-Pull_moncler_rose.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "title": "File:Pull moncler rose.jpg"
+    },
+    {
+      "attribution_required": "true",
+      "author": "Robert Sheie",
+      "category": "top",
+      "credit": "Polo Ralph Lauren Gun Patch Sweater",
+      "file": "images/07_top_sweater.jpg",
+      "id": "07_top_sweater",
+      "kind": "sweater",
+      "licence": "CC BY 2.0",
+      "licence_url": "https://creativecommons.org/licenses/by/2.0",
+      "original_size": [
+        2656,
+        2968
+      ],
+      "source_page": "https://commons.wikimedia.org/wiki/File:Polo_Ralph_Lauren_Gun_Patch_Sweater_(13973497074).jpg",
+      "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/27/Polo_Ralph_Lauren_Gun_Patch_Sweater_%2813973497074%29.jpg/500px-Polo_Ralph_Lauren_Gun_Patch_Sweater_%2813973497074%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "title": "File:Polo Ralph Lauren Gun Patch Sweater (13973497074).jpg"
+    },
+    {
+      "attribution_required": "true",
+      "author": "Joan Rocaguinard",
+      "category": "top",
+      "credit": "Own work",
+      "file": "images/08_top_sweater.jpg",
+      "id": "08_top_sweater",
+      "kind": "sweater",
+      "licence": "CC BY-SA 3.0",
+      "licence_url": "https://creativecommons.org/licenses/by-sa/3.0",
+      "original_size": [
+        678,
+        768
+      ],
+      "source_page": "https://commons.wikimedia.org/wiki/File:Jersei-coll-alt.jpg",
+      "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ea/Jersei-coll-alt.jpg/500px-Jersei-coll-alt.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "title": "File:Jersei-coll-alt.jpg"
+    },
+    {
+      "attribution_required": "false",
+      "author": "Dusty Roy",
+      "category": "outerwear",
+      "credit": "--Dusty Roy 15:06, 9 February 2008 (UTC)eigene Arbeit",
+      "file": "images/09_outerwear_parka.jpg",
+      "id": "09_outerwear_parka",
+      "kind": "parka",
+      "licence": "Public domain",
+      "licence_url": null,
+      "original_size": [
+        750,
+        1009
+      ],
+      "source_page": "https://commons.wikimedia.org/wiki/File:DustyRoyParka.jpg",
+      "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/70/DustyRoyParka.jpg/500px-DustyRoyParka.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "title": "File:DustyRoyParka.jpg"
+    },
+    {
+      "attribution_required": "false",
+      "author": "Unknown authorUnknown author",
+      "category": "outerwear",
+      "credit": "LSH 89134 (hm_dig3319)",
+      "file": "images/10_outerwear_coat.jpg",
+      "id": "10_outerwear_coat",
+      "kind": "coat",
+      "licence": "Public domain",
+      "licence_url": null,
+      "original_size": [
+        2809,
+        4213
+      ],
+      "source_page": "https://commons.wikimedia.org/wiki/File:P%C5%82aszcz_m%C4%99ski.jpg",
+      "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5a/P%C5%82aszcz_m%C4%99ski.jpg/500px-P%C5%82aszcz_m%C4%99ski.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "title": "File:P\u0142aszcz m\u0119ski.jpg"
+    },
+    {
+      "attribution_required": "false",
+      "author": "Talon Zipper, fabricant",
+      "category": "outerwear",
+      "credit": "https://www.parismuseescollections.paris.fr/fr/musee-jean-moulin/oeuvres/us-jacket-field-od-second-type-stock-no-55-j-200-55-j-304#infos-principales",
+      "file": "images/11_outerwear_jacket.jpg",
+      "id": "11_outerwear_jacket",
+      "kind": "jacket",
+      "licence": "CC0",
+      "licence_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "original_size": [
+        4550,
+        4550
+      ],
+      "source_page": "https://commons.wikimedia.org/wiki/File:(US)_JACKET,_FIELD,_OD_(SECOND_TYPE_-_STOCK_No_55-J-200-55-J-304),_2002.1766.jpg",
+      "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f7/%28US%29_JACKET%2C_FIELD%2C_OD_%28SECOND_TYPE_-_STOCK_No_55-J-200-55-J-304%29%2C_2002.1766.jpg/500px-%28US%29_JACKET%2C_FIELD%2C_OD_%28SECOND_TYPE_-_STOCK_No_55-J-200-55-J-304%29%2C_2002.1766.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "title": "File:(US) JACKET, FIELD, OD (SECOND TYPE - STOCK No 55-J-200-55-J-304), 2002.1766.jpg"
+    },
+    {
+      "attribution_required": "true",
+      "author": "Museo del Bicentenario\n\n\n This file is licensed under the Creative Commons Attribution-Share Alike 3.0 Unported license.\nYou are free:\nto share \u2013 to copy, distribute and transmit the work\nto remix \u2013 to adapt the work\nUnder the following conditions:\nattribution \u2013 You must give appropriate credit, provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use.\nshare alike \u2013 If you remix, transform, or build upon the material, you must distribute your contributions under the same or compatible license as the original.https://creativecommons.org/licenses/by-sa/3.0CC BY-SA 3.0 Creative Commons Attribution-Share Alike 3.0 truetrue \u00a0\n.mw-parser-output .messagebox{margin:4px 0;width:auto;border-collapse:collapse;border:2px solid var(--border-color-progressive,#6485d1);background-color:var(--background-color-neutral-subtle,#fbfcff);color:var(--color-base,#202122);box-sizing:border-box;border-inline-start-width:8px}.mw-parser-output .messagebox.mbox-small{font-size:88%;line-height:1.25em}.mw-parser-output .mbox-warning,.mw-parser-output .mbox-speedy{border:2px solid var(--border-color-error,#b22222);background:var(--background-color-error-subtle,#ffdbdb);border-inline-start-width:8px}.mw-parser-output .mbox-serious,.mw-parser-output .mbox-delete,.mw-parser-output .mbox-stop{border:2px solid var(--border-color-error,#b22222);border-inline-start-width:8px}.mw-parser-output .mbox-issue,.mw-parser-output .mbox-content{border:2px solid #f28500;background:var(--background-color-warning-subtle,#ffe);border-inline-start-width:8px}.mw-parser-output .mbox-query,.mw-parser-output .mbox-style{border:2px solid #f4c430;background:var(--background-color-warning-subtle,#ffe);border-inline-start-width:8px}.mw-parser-output .mbox-shit{border:2px solid #960;border-inline-start-width:8px}.mw-parser-output .mbox-license{border:2px solid #88a;border-inline-start-width:initial}.mw-parser-output .mbox-legal{border:2px solid var(--border-color-notice,#666);background:var(--background-color-base,#fff);border-inline-start-width:8px}.mw-parser-output .mbox-honor{border:2px solid #ca3;background:var(--background-color-warning-subtle,#fcf4db);border-inline-start-width:8px}.mw-parser-output .mbox-growth{border:2px solid #8d4;background:var(--background-color-success-subtle,#d5fdf4);border-inline-start-width:8px}.mw-parser-output .mbox-move{border:2px solid #93c;border-inline-start-width:8px}.mw-parser-output .mbox-protection,.mw-parser-output .mbox-message{border:2px solid var(--border-color-base,#aaa);border-inline-start-width:8px}.mw-parser-output .messagebox .mbox-text{border:none;padding:0.25em 0.9em;width:100%}.mw-parser-output .messagebox .mbox-image{border:none;padding-top:2px;padding-bottom:2px;padding-inline-start:0.9em;padding-inline-end:0;text-align:center}.mw-parser-output .messagebox .mbox-imageright{border:none;padding-top:2px;padding-bottom:2px;padding-inline-start:0;padding-inline-end:0.9em;text-align:center}.mw-parser-output .messagebox .mbox-empty-cell{border:none;padding:0;width:1px}.mw-parser-output .messagebox .mbox-invalid-type{text-align:center}@media(min-width:720px){.mw-parser-output .messagebox{margin:4px 10%}.mw-parser-output .messagebox.mbox-small{clear:right;float:right;margin:4px 0 4px 1em;width:238px}}body.skin--responsive .mw-parser-output table.messagebox img{max-width:none!important}This work is free and may be used by anyone for any purpose. If you wish to use this content, you do not need to request permission as long as you follow any licensing requirements mentioned on this page.\nThe Wikimedia Foundation has received an e-mail confirming that the copyright holder has approved publication under the terms mentioned on this page. This correspondence has been reviewed by a Volunteer Response Team (VRT) member and stored in our permission archive. The correspondence is available to trusted volunteers as ticket #2015020310012351.\nIf you have questions about the archived correspondence, please use the VRT noticeboard.\nTicket link: https://ticket.wikimedia.org/otrs/index.pl?Action=AgentTicketZoom&TicketNumber=2015020310012351\nFind other files from the same ticket:",
+      "category": "outerwear",
+      "credit": "Pink House Museum",
+      "file": "images/12_outerwear_jacket.jpg",
+      "id": "12_outerwear_jacket",
+      "kind": "jacket",
+      "licence": "CC BY-SA 3.0",
+      "licence_url": "https://creativecommons.org/licenses/by-sa/3.0",
+      "original_size": [
+        4288,
+        2848
+      ],
+      "source_page": "https://commons.wikimedia.org/wiki/File:Museo_del_Bicentenario_-_Campera_de_gamuza_de_Fernando_De_la_R%C3%BAa.jpg",
+      "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/34/Museo_del_Bicentenario_-_Campera_de_gamuza_de_Fernando_De_la_R%C3%BAa.jpg/500px-Museo_del_Bicentenario_-_Campera_de_gamuza_de_Fernando_De_la_R%C3%BAa.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "title": "File:Museo del Bicentenario - Campera de gamuza de Fernando De la R\u00faa.jpg"
+    },
+    {
+      "attribution_required": "true",
+      "author": "THOR",
+      "category": "bottom",
+      "credit": "Jeans BW 2",
+      "file": "images/13_bottom_jeans.jpg",
+      "id": "13_bottom_jeans",
+      "kind": "jeans",
+      "licence": "CC BY 2.0",
+      "licence_url": "https://creativecommons.org/licenses/by/2.0",
+      "original_size": [
+        1448,
+        2048
+      ],
+      "source_page": "https://commons.wikimedia.org/wiki/File:Jeans_BW_2_(3213391837).jpg",
+      "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/75/Jeans_BW_2_%283213391837%29.jpg/500px-Jeans_BW_2_%283213391837%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "title": "File:Jeans BW 2 (3213391837).jpg"
+    },
+    {
+      "attribution_required": "true",
+      "author": "CMFong2",
+      "category": "bottom",
+      "credit": "Own work",
+      "file": "images/14_bottom_jeans.jpg",
+      "id": "14_bottom_jeans",
+      "kind": "jeans",
+      "licence": "CC BY-SA 4.0",
+      "licence_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "original_size": [
+        1335,
+        2000
+      ],
+      "source_page": "https://commons.wikimedia.org/wiki/File:Stretch_Jeans_from_AKINGS.jpg",
+      "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/65/Stretch_Jeans_from_AKINGS.jpg/500px-Stretch_Jeans_from_AKINGS.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "title": "File:Stretch Jeans from AKINGS.jpg"
+    },
+    {
+      "attribution_required": "true",
+      "author": "Eriksson Elisabeth",
+      "category": "bottom",
+      "credit": "Nordiska museet",
+      "file": "images/15_bottom_jeans.jpg",
+      "id": "15_bottom_jeans",
+      "kind": "jeans",
+      "licence": "CC BY-SA 4.0",
+      "licence_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "original_size": [
+        790,
+        1240
+      ],
+      "source_page": "https://commons.wikimedia.org/wiki/File:Jeans_Gul%26Bl%C3%A5_i_modellen_Dallas.jpg",
+      "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2b/Jeans_Gul%26Bl%C3%A5_i_modellen_Dallas.jpg/500px-Jeans_Gul%26Bl%C3%A5_i_modellen_Dallas.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "title": "File:Jeans Gul&Bl\u00e5 i modellen Dallas.jpg"
+    },
+    {
+      "attribution_required": "true",
+      "author": "Kuha455405",
+      "category": "bottom",
+      "credit": "Own work",
+      "file": "images/16_bottom_trousers.jpg",
+      "id": "16_bottom_trousers",
+      "kind": "trousers",
+      "licence": "CC BY-SA 3.0",
+      "licence_url": "http://creativecommons.org/licenses/by-sa/3.0/",
+      "original_size": [
+        1200,
+        1600
+      ],
+      "source_page": "https://commons.wikimedia.org/wiki/File:Trainingpants.jpg",
+      "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/af/Trainingpants.jpg/500px-Trainingpants.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "title": "File:Trainingpants.jpg"
+    },
+    {
+      "attribution_required": "true",
+      "author": "Claude TRUONG-NGOC",
+      "category": "bottom",
+      "credit": "de mon apprareil photo\u00a0; ;o))",
+      "file": "images/17_bottom_shorts.jpg",
+      "id": "17_bottom_shorts",
+      "kind": "shorts",
+      "licence": "CC BY-SA 4.0",
+      "licence_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "original_size": [
+        800,
+        600
+      ],
+      "source_page": "https://commons.wikimedia.org/wiki/File:GlattLederhose1.jpg",
+      "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1f/GlattLederhose1.jpg/500px-GlattLederhose1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "title": "File:GlattLederhose1.jpg"
+    },
+    {
+      "attribution_required": "true",
+      "author": "Teamestrogen.com",
+      "category": "bottom",
+      "credit": "http://www.teamestrogen.com/prodSB_2576.html",
+      "file": "images/18_bottom_trousers.jpg",
+      "id": "18_bottom_trousers",
+      "kind": "trousers",
+      "licence": "CC BY 3.0",
+      "licence_url": "https://creativecommons.org/licenses/by/3.0",
+      "original_size": [
+        650,
+        650
+      ],
+      "source_page": "https://commons.wikimedia.org/wiki/File:Cycling-knickers-capri-pants.jpg",
+      "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/54/Cycling-knickers-capri-pants.jpg/500px-Cycling-knickers-capri-pants.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "title": "File:Cycling-knickers-capri-pants.jpg"
+    },
+    {
+      "attribution_required": "true",
+      "author": "Fried. Ostermann Co.",
+      "category": "bottom",
+      "credit": "https://finna.fi/Record/lusto.knp-6571?sid=3594939557",
+      "file": "images/19_bottom_trousers.jpg",
+      "id": "19_bottom_trousers",
+      "kind": "trousers",
+      "licence": "CC BY 4.0",
+      "licence_url": "https://creativecommons.org/licenses/by/4.0",
+      "original_size": [
+        368,
+        600
+      ],
+      "source_page": "https://commons.wikimedia.org/wiki/File:Brown_aviator_leather_pants,_Fried._Ostermann_Co.jpg",
+      "thumbnail_url": "https://upload.wikimedia.org/wikipedia/commons/b/b5/Brown_aviator_leather_pants%2C_Fried._Ostermann_Co.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+      "title": "File:Brown aviator leather pants, Fried. Ostermann Co.jpg"
+    },
+    {
+      "attribution_required": "true",
+      "author": "dfgfdd",
+      "category": "shoes",
+      "credit": "dfgsgdg",
+      "file": "images/20_shoes_sneakers.jpg",
+      "id": "20_shoes_sneakers",
+      "kind": "sneakers",
+      "licence": "CC BY-SA 4.0",
+      "licence_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "original_size": [
+        1500,
+        832
+      ],
+      "source_page": "https://commons.wikimedia.org/wiki/File:Campus_BlueWhite.jpg",
+      "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b5/Campus_BlueWhite.jpg/500px-Campus_BlueWhite.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "title": "File:Campus BlueWhite.jpg"
+    },
+    {
+      "attribution_required": "true",
+      "author": "dfgfdd",
+      "category": "shoes",
+      "credit": "dfgsgdg",
+      "file": "images/21_shoes_sneakers.jpg",
+      "id": "21_shoes_sneakers",
+      "kind": "sneakers",
+      "licence": "CC BY-SA 4.0",
+      "licence_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "original_size": [
+        1080,
+        1440
+      ],
+      "source_page": "https://commons.wikimedia.org/wiki/File:Campus_Martin_Running_Shoes.jpg",
+      "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/63/Campus_Martin_Running_Shoes.jpg/500px-Campus_Martin_Running_Shoes.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "title": "File:Campus Martin Running Shoes.jpg"
+    },
+    {
+      "attribution_required": "true",
+      "author": "Petar Milo\u0161evi\u0107",
+      "category": "shoes",
+      "credit": "Own work",
+      "file": "images/22_shoes_sneakers.jpg",
+      "id": "22_shoes_sneakers",
+      "kind": "sneakers",
+      "licence": "CC BY-SA 3.0",
+      "licence_url": "https://creativecommons.org/licenses/by-sa/3.0",
+      "original_size": [
+        874,
+        886
+      ],
+      "source_page": "https://commons.wikimedia.org/wiki/File:New_Balance_custom_574.jpg",
+      "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fc/New_Balance_custom_574.jpg/500px-New_Balance_custom_574.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "title": "File:New Balance custom 574.jpg"
+    },
+    {
+      "attribution_required": "true",
+      "author": "Tiia Monto",
+      "category": "shoes",
+      "credit": "Own work",
+      "file": "images/23_shoes_sneakers.jpg",
+      "id": "23_shoes_sneakers",
+      "kind": "sneakers",
+      "licence": "CC BY-SA 4.0",
+      "licence_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "original_size": [
+        4563,
+        3240
+      ],
+      "source_page": "https://commons.wikimedia.org/wiki/File:ASICS_GEL-Kayano_19.jpg",
+      "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/88/ASICS_GEL-Kayano_19.jpg/500px-ASICS_GEL-Kayano_19.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "title": "File:ASICS GEL-Kayano 19.jpg"
+    },
+    {
+      "attribution_required": "true",
+      "author": "Francisco P\u00e9rez Ibarra",
+      "category": "shoes",
+      "credit": "Own work",
+      "file": "images/24_shoes_sneakers.jpg",
+      "id": "24_shoes_sneakers",
+      "kind": "sneakers",
+      "licence": "CC BY-SA 4.0",
+      "licence_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "original_size": [
+        1000,
+        1000
+      ],
+      "source_page": "https://commons.wikimedia.org/wiki/File:Zapatillas_tortola_1947_nueva_coleccion.jpg",
+      "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a7/Zapatillas_tortola_1947_nueva_coleccion.jpg/500px-Zapatillas_tortola_1947_nueva_coleccion.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "title": "File:Zapatillas tortola 1947 nueva coleccion.jpg"
+    },
+    {
+      "attribution_required": "true",
+      "author": "\u68ee\u5965\u4f38\u4e4b\u4ecb",
+      "category": "shoes",
+      "credit": "Own work",
+      "file": "images/25_shoes_dress-shoes.jpg",
+      "id": "25_shoes_dress-shoes",
+      "kind": "dress-shoes",
+      "licence": "CC BY-SA 4.0",
+      "licence_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "original_size": [
+        1200,
+        695
+      ],
+      "source_page": "https://commons.wikimedia.org/wiki/File:%E3%83%97%E3%83%AC%E3%83%BC%E3%83%B3%E3%83%88%E3%82%A5%E3%83%BB%E3%83%80%E3%83%BC%E3%83%93%E3%83%BC%E3%82%B7%E3%83%A5%E3%83%BC%E3%82%BA.jpg",
+      "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1e/%E3%83%97%E3%83%AC%E3%83%BC%E3%83%B3%E3%83%88%E3%82%A5%E3%83%BB%E3%83%80%E3%83%BC%E3%83%93%E3%83%BC%E3%82%B7%E3%83%A5%E3%83%BC%E3%82%BA.jpg/500px-%E3%83%97%E3%83%AC%E3%83%BC%E3%83%B3%E3%83%88%E3%82%A5%E3%83%BB%E3%83%80%E3%83%BC%E3%83%93%E3%83%BC%E3%82%B7%E3%83%A5%E3%83%BC%E3%82%BA.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "title": "File:\u30d7\u30ec\u30fc\u30f3\u30c8\u30a5\u30fb\u30c0\u30fc\u30d3\u30fc\u30b7\u30e5\u30fc\u30ba.jpg"
+    },
+    {
+      "attribution_required": "true",
+      "author": "Tibald",
+      "category": "dress",
+      "credit": "Own work",
+      "file": "images/26_dress_dress.jpg",
+      "id": "26_dress_dress",
+      "kind": "dress",
+      "licence": "CC BY-SA 3.0",
+      "licence_url": "https://creativecommons.org/licenses/by-sa/3.0",
+      "original_size": [
+        923,
+        1850
+      ],
+      "source_page": "https://commons.wikimedia.org/wiki/File:Satin_Blue_Dress.jpg",
+      "thumbnail_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b8/Satin_Blue_Dress.jpg/500px-Satin_Blue_Dress.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "title": "File:Satin Blue Dress.jpg"
+    }
+  ],
+  "rejected": []
+}
