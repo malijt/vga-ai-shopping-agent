@@ -1,0 +1,33 @@
+{
+  "id": "g5_photo_and_text",
+  "provenance": "HAND-WRITTEN example of the parsed output we expect. NOT recorded from the OpenAI API.",
+  "request": {
+    "text": "same jacket but in olive green, cheaper",
+    "image": "private/product_jacket.jpg",
+    "image_note": "Offline tests send a tiny generated image instead; the live eval needs the real photo from eval/data/ASSETS.md and skips this case without it."
+  },
+  "model_output": {
+    "verdict": "ok",
+    "input_type": "photo_text",
+    "language": "en",
+    "items": [
+      {
+        "category": "outerwear",
+        "colour": "olive green",
+        "style": "bomber jacket",
+        "material": null,
+        "gender": null,
+        "gender_source": "none",
+        "search_keywords": ["olive green bomber jacket", "bomber jacket"]
+      }
+    ],
+    "budget": null,
+    "edits": ["olive green", "cheaper"]
+  },
+  "expect": {
+    "input_type": "photo_text",
+    "budget": null,
+    "edits_contain": ["cheaper"],
+    "items": [{"category": "outerwear", "colour": "olive"}]
+  }
+}

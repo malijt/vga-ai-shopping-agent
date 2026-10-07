@@ -1,0 +1,29 @@
+{
+  "id": "g6_budget_in_text",
+  "provenance": "HAND-WRITTEN example of the parsed output we expect. NOT recorded from the OpenAI API.",
+  "request": {"text": "brown leather loafers, max 600 AED", "image": null},
+  "model_output": {
+    "verdict": "ok",
+    "input_type": "text",
+    "language": "en",
+    "items": [
+      {
+        "category": "shoes",
+        "colour": "brown",
+        "style": "loafers",
+        "material": "leather",
+        "gender": null,
+        "gender_source": "none",
+        "search_keywords": ["brown leather loafers", "leather loafers"]
+      }
+    ],
+    "budget": {"max_price": 600, "currency": "AED"},
+    "edits": []
+  },
+  "expect": {
+    "input_type": "text",
+    "language": "en",
+    "budget": {"max_price": 600, "currency": "AED"},
+    "items": [{"category": "shoes", "colour": "brown", "gender_source": "none"}]
+  }
+}

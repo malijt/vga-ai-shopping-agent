@@ -1,0 +1,29 @@
+{
+  "id": "g4_text_arabic",
+  "provenance": "HAND-WRITTEN example of the parsed output we expect. NOT recorded from the OpenAI API.",
+  "request": {"text": "أريد حذاء رياضي أبيض للنساء", "image": null},
+  "model_output": {
+    "verdict": "ok",
+    "input_type": "text",
+    "language": "ar",
+    "items": [
+      {
+        "category": "shoes",
+        "colour": "white",
+        "style": "sneakers",
+        "material": null,
+        "gender": "women",
+        "gender_source": "explicit",
+        "search_keywords": ["white sneakers", "white trainers"]
+      }
+    ],
+    "budget": null,
+    "edits": []
+  },
+  "expect": {
+    "input_type": "text",
+    "language": "ar",
+    "budget": null,
+    "items": [{"category": "shoes", "colour": "white", "gender": "women", "gender_source": "explicit"}]
+  }
+}
