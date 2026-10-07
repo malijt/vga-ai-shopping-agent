@@ -136,6 +136,26 @@ What the live runs showed:
 - Oh Polly and Club L London are women-only and are configured so.
 - Not exercised live: thumbnail downloads from the Shopify CDN, women's queries at Giordano, paging beyond 10 results.
 
+## Update: Module 2.5 and the ten-store limit (2026-10-08)
+
+Dresses, abayas, kaftans and kurtas came into scope on 2026-10-08, and the six demo stores were chosen before that. A further discovery pass ([dress-store-discovery.md](dress-store-discovery.md)) listed 31 candidates, tested 12 and qualified four, all Shopify `/search/suggest.json` with robots.txt allowing it:
+
+| Store | Sells | Price seen (AED) | Tier hint | Report |
+|---|---|---|---|---|
+| Hanayen | abayas (10 of 10 real abayas for `abaya`), modest dresses | 600-4,500 for abayas | premium | [hanayen.md](hanayen.md) |
+| Maison Arabelle | abayas, kaftans | 790-2,400 | luxury | [maison-arabelle.md](maison-arabelle.md) |
+| Nishat Linen UAE | long dresses, South Asian suits, men's kurtas | 40-239 (sale prices) | budget | [nishat-linen-uae.md](nishat-linen-uae.md) |
+| Signature Studio | designer South Asian sets, kaftans, men's kurta sets | 174-2,753 | mid | [signature-studio.md](signature-studio.md) |
+
+**Decision (user, 2026-10-08): the store limit rises from six to ten.** Six stores cannot serve both menswear and dresses: only three carry menswear, which leaves three for dresses, and three stores at six results each give 18 against a pass rule of 20. The demo keeps the six above and adds these four, each enabled only after its live smoke test passes (plan assumption A25, Modules 12.7-12.10).
+
+Still thin after the change:
+- Only Hanayen and Maison Arabelle sell real abayas, so an abaya search may not reach three stores. No readable AED store sells an everyday abaya below AED 600.
+- `kurta` returns only men's items at Nishat Linen and Signature Studio; women's kurta keywords were not tried.
+- Heels come only from Oh Polly and Club L London. Skinny jeans and satin blouses were not searched anywhere.
+
+Not tested in this pass and worth a look if coverage stays thin: Gul Ahmed UAE (South Asian), Al Boushiya and Elilhaam (evening gowns), Shaira and four other luxury modest-wear stores, Steve Madden Middle East (heels).
+
 ## Not verified
 
 Terms of use for every store. Behaviour from any other network. What a non-member pays at Luxury For You. Pagination and Shopify limits above 10. The UCP/MCP endpoints (never requested). Tier hints for dropped stores (from public descriptions, not observed prices).
