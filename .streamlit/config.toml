@@ -1,0 +1,28 @@
+# The one place the UI's look is decided (plan assumption A12): Streamlit's light theme with a
+# single accent colour, no motion or depth effects, no custom CSS. Run the app from the repository
+# root so Streamlit finds this file:  uv run streamlit run app/main.py
+
+[theme]
+base = "light"
+# The one accent colour. Contrast 5.9:1 against white and 5.4:1 against the grey below, so it is
+# safe for button fills with white text and for link text (WCAG AA needs 4.5:1).
+primaryColor = "#0E6E7E"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F3F4F6"
+textColor = "#1A1A1A"
+
+[client]
+# Never show a stack trace or exception text in the browser (plan 10.1.4). Streamlit 1.65 reads
+# `false` as the deprecated alias of "stacktrace", which would show the trace, so the value
+# is "none": a generic message in the browser, the details only in the server log.
+showErrorDetails = "none"
+# Hide the developer menu (deploy, rerun, clear cache) from shoppers.
+toolbarMode = "viewer"
+
+[server]
+# Largest upload in megabytes. Must equal app.components.input_panel.MAX_PHOTO_MB, which tests check.
+maxUploadSize = 8
+
+[browser]
+# This demo sends nothing to Streamlit's analytics.
+gatherUsageStats = false
