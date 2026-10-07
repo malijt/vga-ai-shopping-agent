@@ -1,0 +1,19 @@
+# Hanayen: a UAE abaya and modest-wear brand on Shopify (single brand, vendor "Hanayen").
+# Data path: Shopify's public predictive search, /search/suggest.json, which robots.txt leaves open.
+# Evidence: docs/store-qualification/hanayen.md. Quirks and what would break this file:
+# docs/store-notes/hanayen.md
+id: hanayen
+name: Hanayen
+country: AE
+currency: AED          # the suggest response has no currency field; AED is store-level (product page JSON-LD)
+search_url_template: "https://hanayen.com/search/suggest.json?q={query}&resources[type]=product&resources[limit]=10"
+allowed_hosts:
+  - hanayen.com         # product links; the apex answered directly, no redirect
+  - cdn.shopify.com     # product images
+extraction:
+  strategies:
+    - name: shopify
+genders:
+  - women               # abayas, under-abaya dresses and sheilas only: 40 of 40 records seen are women's garments
+tier_hint: premium      # outer abayas AED 600-5,550 (median 1,290); the inner dresses and sheilas seen are cheaper
+enabled: false          # the live smoke test passed on 2026-10-08 (tests/stores/hanayen); held until the store set is decided
