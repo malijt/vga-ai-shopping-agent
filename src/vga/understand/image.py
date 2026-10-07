@@ -63,9 +63,14 @@ def prepare_image(data: bytes) -> bytes:
         ) from exc
 
     flat.thumbnail((MAX_EDGE_PX, MAX_EDGE_PX), Image.Resampling.LANCZOS)
+    # Draw the pixels into a new image, which carries none of the source's ``info``. Saving ``flat``
+    # itself is not enough: Pillow's JPEG writer falls back on ``image.info`` for a comment when
+    # none is passed, so a JPEG comment (or a PNG text chunk named "comment") went to OpenAI with
+    # the picture. A fresh image also keeps any field a future Pillow starts to reuse from leaking.
+    pixels = Image.frombytes("RGB", flat.size, flat.tobytes())
     buffer = io.BytesIO()
     # No exif=, icc_profile= or comment= arguments: the encoder writes pixels only.
-    flat.save(buffer, format="JPEG", quality=JPEG_QUALITY, optimize=True)
+    pixels.save(buffer, format="JPEG", quality=JPEG_QUALITY, optimize=True)
     return buffer.getvalue()
 
 
