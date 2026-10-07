@@ -32,7 +32,7 @@ Optional, once: `cp .env.example .env` and fill in what you need (see below), an
 | Command | What it does |
 |---|---|
 | `uv sync` | Install runtime and dev dependencies (not the `ml` group) |
-| `uv sync --group ml` | Also install `torch` and `open_clip` for local image similarity. About 1 GB; only needed with `VGA_IMAGE_RANKER=siglip` |
+| `uv sync --group ml` | Also install `torch` and `open_clip` for local image similarity, the default image ranker. About 1 GB; without it (and the downloaded weights) image ranking falls back to `off` with a warning |
 | `uv run pytest` | Unit, contract and integration tests. Tests marked `live` are skipped |
 | `uv run pytest -m live` | Live store / OpenAI smoke tests. Needs keys, makes real requests, never runs in CI *(later phases add them)* |
 | `uv run ruff check` / `uv run mypy src` | Lint / types |
@@ -49,7 +49,7 @@ Copy `.env.example` to `.env` (it is gitignored). Values from the real environme
 | `OPENAI_API_KEY` | OpenAI key for the Understand step. Needed for real searches only. Read by the OpenAI client, never stored in settings or logs | none |
 | `OPENAI_MODEL` | Dated model snapshot id (ends in `-YYYY-MM-DD`). Aliases are rejected | unset |
 | `VGA_USER_AGENT` | Honest, identifying User-Agent sent to stores; browser strings are rejected | `vga-shopping-agent-demo/0.1 (store search demo)` |
-| `VGA_IMAGE_RANKER` | `siglip` (local model, needs the `ml` group) or `off` | `siglip` in `config/settings.yaml` (`off` if the setting is absent) |
+| `VGA_IMAGE_RANKER` | `siglip` (local model; needs the `ml` group and the downloaded weights, else it falls back to `off` with a warning) or `off` to disable image ranking. Commented out in `.env.example` so a copied `.env` does not override the YAML | `siglip` (set in `config/settings.yaml`) |
 | `VGA_LOG_DIR` | Directory for JSON-lines logs | `logs` |
 | `VGA_LOG_LEVEL` | `DEBUG`, `INFO`, `WARNING` or `ERROR` | `INFO` |
 | `VGA_LOG_PROMPTS` | `1` also logs the text prompt and parsed result, never the photo | `0` |
@@ -66,7 +66,7 @@ The image model settings come from the FashionSigLIP spike (`spikes/siglip/REPOR
 
 `openai_model` (a dated OpenAI snapshot) is deliberately unset until the build decides it. Pinned versions must not change under us, so aliases such as `gpt-5-mini` or `main` are rejected. Changing `openai_model`, or `siglip_revision` (which also means re-running the spike's quality check), needs a re-run of the evaluation set.
 
-Stores are one YAML file each in `config/stores/` and are **off unless `enabled: true`**. A store file may override `rps`, `timeout_s` and `max_response_bytes` for that store, and may set `max_variants` (1 to 3) to send fewer of the keyword variants to it; leaving a field out uses the global setting (or all variants).
+Stores are one YAML file each in `config/stores/` and are **off unless `enabled: true`**. A store file may override `rps`, `timeout_s` and `max_response_bytes` for that store, and may set `max_variants` (1 to 3) to send fewer of the keyword variants to it; leaving a field out uses the global setting (or all variants). A store file may also list `genders` (for example `[women]`, never empty) when the store sells for one gender only: a request for another gender is not sent to it. A store that lists `unisex` sells for everyone, and a store without `genders` is treated as selling for all.
 
 ## How the code is organised
 
