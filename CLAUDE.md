@@ -30,7 +30,7 @@ file as the always-on summary and open the matching doc when you need full depth
 | LLM | OpenAI for every language and vision task; native structured outputs with Pydantic; a **dated model snapshot** pinned in `config/settings.yaml`, never an alias |
 | Image similarity | Local Marqo-FashionSigLIP via `open_clip`, pinned to a Hugging Face revision; `off` as the fallback |
 | Fetching | `httpx` async with an honest, identifying User-Agent. **Never** `curl_cffi`, Scrapling fetchers, proxies, or any browser impersonation |
-| Parsing | `extruct` (JSON-LD), `selectolax`, stdlib `json`, `urllib.robotparser` |
+| Parsing | `extruct` (JSON-LD), `selectolax`, stdlib `json`, `protego` for robots.txt. **Never `urllib.robotparser`:** on Python 3.12 it ignores `*` and `$` and wrongly allows disallowed paths |
 | Contracts / config | Pydantic v2 models in `src/vga/models.py`, YAML settings, env overrides |
 | UI | Streamlit (`app/`), one theme source in `.streamlit/config.toml` |
 | Quality | `pytest`, `pytest-asyncio`, `respx`, Streamlit `AppTest`, `ruff`, `mypy`, `pip-audit`, `gitleaks`, GitHub Actions |

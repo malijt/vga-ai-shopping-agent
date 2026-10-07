@@ -53,7 +53,7 @@
 | LLM | OpenAI SDK, structured outputs with Pydantic, image input; **dated model snapshot pinned in config** | Apache-2.0 | One call for intent; user has an OpenAI key. |
 | Contracts / config | Pydantic v2, PyYAML | MIT | Typed contracts shared by all agents. |
 | HTTP | `httpx` (async) | BSD-3 | Honest client, no evasion. |
-| Parsing | `selectolax`, `extruct`, stdlib `json`, `urllib.robotparser` | MIT / BSD-3 | Fast HTML, JSON-LD, robots per RFC 9309. |
+| Parsing | `selectolax`, `extruct`, stdlib `json`, `protego` | MIT / BSD-3 | Fast HTML, JSON-LD, robots per RFC 9309. **Not `urllib.robotparser`:** on Python 3.12 it ignores `*` and `$` and wrongly allows disallowed paths (verified 2026-10-07 on Noon's and Level Shoes' rules). |
 | Image ranking | `open_clip_torch` + `torch` + Pillow, Marqo-FashionSigLIP **pinned to a Hugging Face revision hash** | MIT / BSD-3 / HPND / Apache-2.0 | Fashion-trained, text and image in one space. |
 | UI | Streamlit | Apache-2.0 | Chips, file upload and sections in one page. |
 | Tests | `pytest`, `pytest-asyncio`, `respx`, Streamlit `AppTest` | MIT / BSD-3 | Fake only the boundaries (HTTP, OpenAI, model weights). |
@@ -422,7 +422,7 @@ Effort key: **S** about 30 min, **M** about 1 h, **L** about 2 h.
 
 | # | Feature | Description | Acceptance Criteria | Effort |
 |---|---|---|---|---|
-| 6.2.1 | robots checker | Fetch and cache per host; `can_fetch(url)` via `urllib.robotparser`; RFC 9309 behaviour (4xx means allowed, 5xx or unreachable means disallowed) | Table-driven tests per status class; a denied URL is never fetched | M |
+| 6.2.1 | robots checker | Fetch and cache per host; `can_fetch(url)` via `protego` (wildcard-aware; the stdlib parser is not on 3.12); the full URL including its query string is checked; RFC 9309 behaviour (4xx means allowed, 5xx or unreachable means disallowed) | Table-driven tests per status class; a denied URL is never fetched; wildcard rules `Disallow: /*/search?`, `/*/search$` and `*/catalogsearch/` are honoured | M |
 
 #### Module 6.3: Store registry
 
@@ -820,6 +820,9 @@ These were considered and left out on purpose. Build one only when its trigger i
 | A11 | At least 4 working stores are required (5 to fill 30 results) and at least 1 luxury-leaning | Derived from the cap of 6 per store |
 | A12 | UI direction: Streamlit's light theme with one accent colour, no motion or depth effects, no emoji as icons | The UI/UX doc asks for this to be an explicit choice. Say so if you want 2-3 palette and type options to pick from |
 | A13 | Text prompts and parsed results may be logged locally for debugging (`VGA_LOG_PROMPTS`), never photos | The GenAI doc asks for prompt logging with privacy safeguards |
+| A14 | An outfit-photo query passes "7 of the top 10" only if **every** garment list reaches 7 (`eval/data/rubric.md`) | The PRD does not say how the rule applies to several lists |
+| A15 | "Top 10" means the 10 best results by overall match score across all price ranges, not by price; missing places count as not good | Results are shown grouped by price range, so there is no single displayed top 10 |
+| A16 | A request with nothing to shop for (nonsense, only price words, an injection with no garment, a handbag, a dress) ends with a plain message, not a search (`eval/data/edge_cases.yaml`) | The PRD's fallback covers model failure only |
 
 ## 12. Best-Practices Verification
 
