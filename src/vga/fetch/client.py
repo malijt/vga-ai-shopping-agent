@@ -19,7 +19,7 @@ The client holds no store knowledge beyond what a ``StoreConfig`` says about hos
 import asyncio
 import http.cookiejar
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from urllib.parse import urljoin, urlsplit
 
 import httpx
@@ -53,6 +53,9 @@ log = get_logger(__name__)
 MAX_REDIRECTS = 3
 ACCEPT_PAGE = "application/json, text/html;q=0.9, text/plain;q=0.8, */*;q=0.5"
 ACCEPT_IMAGE = "image/*"
+IMAGE_TIMEOUT_S = 4.0
+"""A thumbnail, or the robots.txt of an image host, that takes longer is not worth waiting for
+(plan 8.3.1)."""
 
 
 @dataclass(frozen=True)
@@ -161,14 +164,20 @@ class PoliteClient:
             cooldown_key=store.id,
         )
 
+    @staticmethod
+    def _is_store_host(store: StoreConfig, host: str) -> bool:
+        """True for the store's own domain (its search host and its sub-domains), false for a
+        separate CDN such as ``cdn.shopify.com``."""
+        page_host = normalise_host(urlsplit(store.search_url_template).hostname or "")
+        return registered_domain(host) == registered_domain(page_host)
+
     def image_policy(self, store: StoreConfig, host: str, *, timeout_s: float) -> FetchPolicy:
         """Limits for a thumbnail. A host that belongs to the store itself keeps the store's
-        rate; only a separate image CDN gets the faster ``rps_images_per_host`` (assumption A5)."""
-        page_host = normalise_host(urlsplit(store.search_url_template).hostname or "")
-        is_store_host = registered_domain(host) == registered_domain(page_host)
+        rate; only a separate image CDN gets the faster ``rps_images_per_host`` (assumption A5).
+        A block puts that image host, never the store, in cooldown."""
         rps = (
             store.rps or self.settings.rps_per_store
-            if is_store_host
+            if self._is_store_host(store, host)
             else self.settings.rps_images_per_host
         )
         return FetchPolicy(
@@ -177,6 +186,21 @@ class PoliteClient:
             max_bytes=store.max_response_bytes or self.settings.max_response_bytes,
             cooldown_key=f"host:{host}",
             accept=ACCEPT_IMAGE,
+        )
+
+    def robots_policy(self, store: StoreConfig, host: str) -> FetchPolicy:
+        """Limits for fetching ``host``'s robots.txt. The store's own domain uses the page
+        policy, so a block there blocks the store. Any other host (an image CDN) uses the image
+        rate and timeout and its own cooldown key, so a CDN that refuses us never puts the store
+        in cooldown."""
+        page = self.page_policy(store)
+        if self._is_store_host(store, host):
+            return page
+        return replace(
+            page,
+            rps=self.settings.rps_images_per_host,
+            timeout_s=IMAGE_TIMEOUT_S,
+            cooldown_key=f"host:{host}",
         )
 
     # ------------------------------------------------------------------------------------

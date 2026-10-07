@@ -10,8 +10,9 @@ This is the store-aware layer on top of ``vga.fetch``. What other phases import:
     image = await engine.fetch_image(product)          # bytes | None, for the image ranker
 """
 
+from vga.fetch.client import IMAGE_TIMEOUT_S
 from vga.stores.cache import ResultCache
-from vga.stores.engine import IMAGE_TIMEOUT_S, StoreSearchEngine
+from vga.stores.engine import StoreSearchEngine
 from vga.stores.extractors import (
     ChainOutcome,
     ExtractionChain,

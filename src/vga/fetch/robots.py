@@ -128,7 +128,8 @@ class RobotsChecker:
         """Fetch and parse ``https://<host>/robots.txt``, remember the verdict and return it."""
         url = f"https://{host}/robots.txt"
         try:
-            response = await self._client.fetch(url, store, self._client.page_policy(store))
+            policy = self._client.robots_policy(store, host)
+            response = await self._client.fetch(url, store, policy)
         except (BlockedError, CooldownError):
             raise  # a block (the client started the cooldown) or a store still cooling: not cached
         except FetchError as exc:

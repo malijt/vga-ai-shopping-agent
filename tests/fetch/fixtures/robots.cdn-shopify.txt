@@ -1,0 +1,6 @@
+# Reconstructed from the rules the orchestrator reported for https://cdn.shopify.com/robots.txt on
+# 2026-10-07 (HTTP 200, 80 bytes, User-agent: * with only these two Disallow lines); the real file
+# was not saved.
+User-agent: *
+Disallow: */blog-article-remove-faq-utms-*.js
+Disallow: /wpm/*.js
