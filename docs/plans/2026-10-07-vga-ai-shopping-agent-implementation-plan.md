@@ -2,7 +2,7 @@
 
 > **Generated:** 2026-10-07
 > **Status:** Approved (v2) on 2026-10-07; amended the same day (v3) after the Phase 2 gate failed. The user chose store route A (more Shopify storefronts) for the demo and asked for routes B, C and D to be planned for later: they are Phases 17-19. Verified against `docs/Best Practices/` (section 12). Assumptions A1-A22 stand as written unless changed later.
-> **Progress (2026-10-08):** Waves 1 and 2 are complete and merged into `develop` (Phases 1 to 11). Wave 3 (Phase 13 pipeline and the six Phase 12 store adapters) is running. Nothing has run end to end yet, and the Understand step has not been exercised against the real OpenAI API (no key was available).
+> **Progress (2026-10-08):** Waves 1 and 2 are complete and merged into `develop` (Phases 1 to 11). Phase 12 is complete: all six store adapters passed a live smoke test and are enabled. Phase 13 (pipeline) is running, with one cross-cutting change alongside it (a product-level gender read from store data). Nothing has run end to end yet, and the Understand step has not been exercised against the real OpenAI API (no key was available).
 > **Inputs:** `docs/01-business-requirements.md`, `docs/02-prd.md`, `docs/03-proposed-ideas.md` (all v0.2), `comprehensive_doc.md`, open-source research from 2026-10-07 (section 2), `docs/Best Practices/*.md`, `CLAUDE.md`
 > **Rule for this document:** it is a plan. No code is written until you approve it.
 

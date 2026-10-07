@@ -84,7 +84,7 @@ Chosen by the orchestrator for the widest cover of gender, category and price. T
 | Store | Sells | Categories seen | Price seen (AED) | Tier hint | Report |
 |---|---|---|---|---|---|
 | Giordano UAE | men, unisex (women's not seen in results) | tops, outerwear, bottoms, shoes | 39.50-199.50 | budget | [giordano-uae.md](giordano-uae.md) |
-| Nautica UAE | men (women's accessories only) | tops, outerwear, bottoms | 59-239 | mid | [nautica-uae.md](nautica-uae.md) |
+| Nautica UAE | men and women (corrected on 2026-10-08: a live "women dress" search returned women's shirts, trousers and tops; the first pass had seen only women's accessories) | tops, outerwear, bottoms | 59-239 | mid | [nautica-uae.md](nautica-uae.md) |
 | Sacoor Brothers UAE | men, some women | tops, outerwear (blazers), shoes | 195-1,495 | premium | [sacoor-brothers-uae.md](sacoor-brothers-uae.md) |
 | Oh Polly UAE | women | outerwear, shoes | 170-970 | mid | [oh-polly.md](oh-polly.md) |
 | Club L London UAE | women | outerwear, shoes, 1 top (dresses dominate and are filtered out) | 199-1,499 | premium | [club-l-london.md](club-l-london.md) |
@@ -114,6 +114,27 @@ These were generic queries, not the acceptance queries themselves.
 - Sacoor's `type` and Nautica's `tags` carry gender and category; titles mostly do too.
 - Giordano, Nautica and The Bear House were entirely on sale when tested, so the prices seen are sale prices.
 - All six new stores' robots.txt files carry the same comment telling AI agents to prefer the store's UCP/MCP endpoint. It was recorded as data and not acted on. It is the subject of Phase 17.
+
+## Live adapter results (Phase 12, 2026-10-08)
+
+All six demo stores passed a live smoke test through the project's own engine (robots.txt first, honest User-Agent, 1 request/s) and are enabled. Every response was HTTP 200; no block, challenge or robots denial. Details are in `docs/store-notes/<store>.md`.
+
+| Store | Queries | Products kept per query | Seconds per query | Requests used (cap 10) |
+|---|---|---|---|---|
+| Sacoor Brothers UAE | men shirt, black blazer, shoes | 8, 8, 9 | 1.0-1.4 | 7 |
+| Giordano UAE | men shirt, jacket, shoes | 4, 6, 4 | 1.0-1.4 | 4 |
+| Nautica UAE | men shirt, jacket, trousers | 10, 10, 8 | 0.8-1.5 | 9 |
+| Oh Polly UAE | blazer, jacket, heels | 10, 10, 10 | 1.0-1.5 | 8 |
+| Club L London UAE | blazer, jacket, heels | 10, 10, 10 | 0.8-2.0 | 8 |
+| Maison D'Vie | blazer, shirt, trousers | 10, 10, 10 | 1.0-1.4 | 4 |
+
+What the live runs showed:
+
+- Shopify returns at most 10 records per search, and repeated titles collapse, so a store yields 4 to 10 products per keyword. Giordano yields the fewest.
+- Short garment keywords ("blazer") returned cleaner results than longer ones ("black blazer") at Club L London.
+- Sacoor, Nautica and Maison D'Vie sell both men's and women's items and keep the gender in `type` or `tags`, not always in the title.
+- Oh Polly and Club L London are women-only and are configured so.
+- Not exercised live: thumbnail downloads from the Shopify CDN, women's queries at Giordano, paging beyond 10 results.
 
 ## Not verified
 
