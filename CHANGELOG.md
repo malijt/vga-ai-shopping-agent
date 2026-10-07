@@ -10,6 +10,8 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 
 **Decided**
 - **Scope change: dresses are now a fifth category** (dresses, gowns, kaftans, abayas, kurtas and similar). The user supplied five test photos and all five show a dress or ethnic wear, which the original scope excluded. The BRD, PRD, plan (A23, A24) and `CLAUDE.md` are updated; the code change follows. The five photo-based acceptance queries will be rewritten around the supplied photos before any acceptance run.
+- An outfit photo is not compared by image similarity; only a product photo and a photo + text request are. The PRD asks for image similarity "when the request has a product photo" (R8), and a real outfit search spent 18.5 s on it and hit the 30 s limit. Being implemented (plan A26).
+- A store is searched only for the categories it sells: the four dress and modest-wear stores will be searched for dresses only. A real shoes search returned an abaya from one of them. Being implemented (plan A27).
 - **The store limit rises from six to ten** (user decision). Six stores cannot cover both menswear and dresses: three carry menswear, and the three left for dresses give at most 18 results against the 20 the pass rule needs. The current six stay; Hanayen, Maison Arabelle, Nishat Linen UAE and Signature Studio are added, each enabled only after its live smoke test. The BRD, PRD, plan (A25) and `CLAUDE.md` are updated.
 - The user named eight Kuwaiti designer brands to add (Bazza Alzouman, N.BEE, Montaha Couture, Marzook, Heba Shaikh, Yousef Al-Jasmi, Hamsa, Manal Smaoui). Each is qualified first, like every other store (plan Module 2.6, in progress): only a store an honest client can read is added. Marzook sells handbags and accessories, which are out of scope, so it is not tested.
 - A further store discovery pass (plan Module 2.5) looks for Shopify stores that sell dresses and modest or ethnic wear, because the six demo stores were chosen before dresses were in scope.
@@ -18,6 +20,8 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 - This changelog is maintained from now on (user request).
 
 **Added**
+- **Dresses as a fifth category in the code**: the contract, the ranking (dress, gown, kaftan, abaya, jalabiya, kurta, kandura and similar words are a dress; sheilas, hijabs and scarves are dropped as accessories for every request), the prompt (`understand-v2`), the page label ("Dresses and ethnic wear") and the eval data. Jumpsuits, swimwear and nightwear stay out of scope.
+- The seven photo-based acceptance queries are rewritten around the user's photos, and the other 11 photos are an extra set (`eval/data/extra_queries.yaml`) that does not count toward the pass rule.
 - Store adapters for the four new stores (Modules 12.7-12.10): Hanayen, Maison Arabelle, Nishat Linen UAE and Signature Studio. Each passed a live smoke test through the project's own engine (HTTP 200, 10 products per query, 4 searches per store, no block or challenge) and is enabled. **Ten stores are now enabled.**
 - The Shopify gender reader recognises `menswear` and `womenswear`: Signature Studio marks its men's kurta sets only with a `Menswear` tag.
 - The search pipeline (Phase 13): one entry point connects understanding, store search, ranking, image similarity and the price ranges. It validates the request before any outside call, searches each store in its own task so a slow store cannot discard the others' answers at the 30 s deadline, re-runs from a cache with no new store or OpenAI calls when only the price mix or budget changes, and attaches a plain warning to every fallback. `uv run python -m vga.search --text "..."` runs it from the command line. 241 tests, all with fakes at the boundaries; not yet run against real stores or the real model at merge time.
@@ -29,6 +33,8 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 - Acceptance harness (Phase 11): runs the 10 frozen queries, checks the BRD pass rule, exports a labelling sheet, and can record a live run and replay it offline.
 
 **Fixed**
+- Trousers titled "khakis" no longer pass a request for another category ("khaki" as a colour still does).
+- A children's item (boys, girls, kids, baby, toddler, infant, junior) is dropped when the shopper states men or women.
 - Default tests no longer read the developer's real `.env` or see real credentials: one shared fixture hides the file and removes every `OPENAI_*` and `VGA_*` variable for any test not marked `live`. With the user's `.env` in place the suite went from 62 failures and 50 errors to 5,595 passed. Regression tests reproduce the failure against a hostile `.env`.
 - A variable the shell sets to empty no longer blocks the same variable in `.env`.
 
@@ -39,6 +45,13 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 - `httpx2`, which the Understand tests import directly, is now a declared test dependency. `app` and `eval` imports sort as first-party.
 
 **Found**
+- **Prompt `understand-v2` on real calls: 24 of 24 checks passed**, none skipped, including the user's photos for the first time. The gown photo was read as a burgundy floor-length gown, the outfit photo as two garments (a black maxi dress and black heels), and "dark green" was applied to the gown. Typical answer 3.1 s, worst 5.9 s.
+- **First real photo searches (ten stores, image similarity on real data).**
+  - Gown photo: 30 results from 7 stores, every price range full. It took 29.5 s from a cold start, of which 10.4 s was loading the image model once and about 11 s fetching and comparing 40 thumbnails. With the model already loaded, as on the running page, that is about 19 s.
+  - Outfit photo (black dress and heels), model already loaded: 24 results from 6 stores, but it hit the 30 s limit during image comparison and returned what it had, with a plain warning. The deadline handling worked as designed.
+- Three problems from those runs, being fixed: products the photo was compared with ranked below ones it was not compared with; an abaya with no garment word in its title appeared under shoes; outfit searches cannot fit image comparison into 30 s.
+- Not fixed, left for tuning with labels: because an inferred gender is not applied until the shopper confirms it (product rule 8), a women's outfit photo also returns men's shoes; and weak matches (text score under 0.3) still fill thin price ranges.
+- A title with no recognised garment word is kept for every request. Most Signature Studio titles are designer and collection names, so they depend on the store-level category rule above.
 - What the four new stores' data looks like: Hanayen's `kaftan` search also returns sheilas (scarves) and under-abaya inner dresses; Maison Arabelle's compare-at price is sometimes at or below the price, so it is never read; Nishat Linen's titles are codes with the colour only in the description, and every price is a 50% sale price, so its budget band will rise when the sale ends; `kurta` returns only men's items at Nishat Linen and Signature Studio.
 - Maison Arabelle's robots.txt carries a content-use line: `ai-train=yes, search=yes, ai-retrieval=yes, ai-personalization=no`. The demo searches and links to the store's pages and builds no shopper profile, which is inside what the store allows. It should be re-read in the terms check before real users.
 - **First real end-to-end searches (real OpenAI, real stores, three text queries, one run each).** All three completed with no error, no warning and no store block.
