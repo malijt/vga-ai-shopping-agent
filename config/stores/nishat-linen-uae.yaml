@@ -21,4 +21,4 @@ extraction:
         gender_fields: [type, tags]
 # genders is left unset on purpose: the store sells women's wear and men's kurtas (10 of 40 records seen).
 tier_hint: budget      # AED 39.50-239 seen, almost all at 50% off; women's long dresses AED 59.50-164.50
-enabled: false         # the live smoke test passed on 2026-10-08 (tests/stores/nishat-linen-uae); held until the store set is decided
+enabled: true          # the live smoke test passed on 2026-10-08 (tests/stores/nishat-linen-uae); enabled when the user raised the store limit to ten (plan A25)

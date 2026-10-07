@@ -16,4 +16,4 @@ extraction:
 genders:
   - women               # kaftans, abayas and dresses only: 40 of 40 records in the qualification pass
 tier_hint: luxury       # AED 790-2,400 seen; abayas 1,200-2,400, kaftans 790-2,400
-enabled: false          # the live smoke test passed on 2026-10-08 (tests/stores/maison-arabelle); held until the store set is decided
+enabled: true           # the live smoke test passed on 2026-10-08 (tests/stores/maison-arabelle); enabled when the user raised the store limit to ten (plan A25)

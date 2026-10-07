@@ -21,11 +21,11 @@ file as the always-on summary and open the matching doc when you need full depth
   branch: `develop`.
 - **Stores (decided 2026-10-07):** store qualification found that no large GCC retailer can be read
   by an honest client (see [`docs/store-qualification/SUMMARY.md`](./docs/store-qualification/SUMMARY.md)).
-  The demo therefore searches Shopify storefronts through `/search/suggest.json`. Six are enabled:
-  Giordano UAE, Nautica UAE, Sacoor Brothers UAE, Oh Polly UAE, Club L London UAE and Maison D'Vie.
-  On 2026-10-08 the user raised the limit from six to **ten** so that dresses and modest wear can be
-  covered; the four additions (Hanayen, Maison Arabelle, Nishat Linen UAE, Signature Studio) are
-  enabled one by one as each passes its live smoke test. Three more readable stores are in reserve. Reaching big retailers is
+  The demo therefore searches Shopify storefronts through `/search/suggest.json`. Ten are enabled:
+  Giordano UAE, Nautica UAE, Sacoor Brothers UAE, Oh Polly UAE, Club L London UAE, Maison D'Vie and,
+  since the user raised the limit from six on 2026-10-08 to cover dresses and modest wear, Hanayen,
+  Maison Arabelle, Nishat Linen UAE and Signature Studio. A store is enabled only after a live smoke
+  test through the project's own engine. Three more readable stores are in reserve. Reaching big retailers is
   planned as later Phases 17-19 (agent endpoints, store APIs/headless with a terms sign-off, a
   category + sitemap index). Do not start those without the user's go-ahead.
 - **What it is not (yet):** not multi-tenant, no accounts, no billing or credits, no database, no
