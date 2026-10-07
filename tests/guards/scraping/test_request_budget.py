@@ -1,0 +1,282 @@
+"""Plan 14.1.2, request budget and rate (BRD Rule 2: about one request a second per store).
+
+The real pipeline and the real store engine, counting what reaches the fake stores:
+
+- *Budget*: a store is sent robots.txt once plus one request per keyword variant, never more, for a
+  single garment and for an outfit of four.
+- *Rate*: the fake-clock time of every request to a store, robots.txt included, is at least one
+  second after the one before, however many garments and searches are running at once.
+- *Cache*: the same search again inside the cache window sends nothing; robots.txt is read once.
+
+The rate tests fail when the rate limiter is bypassed, and the cache tests fail when the result
+cache or the robots.txt cache is bypassed (the hand-back of this module shows both mutation runs).
+"""
+
+import asyncio
+
+from tests.factories import make_item_intent, make_search_request
+from tests.fakes import FakeClock
+from tests.guards.scraping.support import (
+    MIN_GAP_S,
+    GuardPipelines,
+    GuardWorld,
+    gaps,
+    understanding,
+    understanding_by_words,
+)
+from tests.pipeline.builders import BLAZER, OUTFIT, SHIRT, outfit_understander, photo_search
+from tests.pipeline.world import store_for
+from vga.models import StoreConfig
+from vga.pipeline.planning import MAX_OUTFIT_KEYWORDS
+from vga.settings import Settings
+
+STORES = ("alpha", "beta")
+THREE_VARIANTS = make_item_intent(
+    search_keywords=["black blazer", "oversized blazer", "tailored jacket"]
+)
+
+
+def robots_requests(world: GuardWorld, host: str) -> int:
+    return sum(1 for request in world.calls_to(host) if request.url.path == "/robots.txt")
+
+
+# --------------------------------------------------------------------------------------------
+# Budget: robots.txt plus the keyword variants
+# --------------------------------------------------------------------------------------------
+
+
+async def test_one_garment_costs_each_store_robots_txt_plus_one_request_per_keyword_variant(
+    world: GuardWorld, two_stores: list[StoreConfig], build: GuardPipelines, settings: Settings
+) -> None:
+    pipeline = build(understander=understanding(THREE_VARIANTS))
+
+    await pipeline.run(make_search_request(text="black blazer"), settings)
+
+    budget = 1 + len(THREE_VARIANTS.search_keywords)
+    for store_id in STORES:
+        assert world.requests_to(f"{store_id}.example") <= budget
+        assert len(world.queries(store_id)) <= len(THREE_VARIANTS.search_keywords)
+    assert world.stray == []
+
+
+async def test_robots_txt_is_fetched_once_per_store_however_many_variants_follow(
+    world: GuardWorld, two_stores: list[StoreConfig], build: GuardPipelines, settings: Settings
+) -> None:
+    pipeline = build(understander=understanding(THREE_VARIANTS))
+
+    await pipeline.run(make_search_request(text="black blazer"), settings)
+
+    for store_id in STORES:
+        assert robots_requests(world, f"{store_id}.example") == 1
+
+
+async def test_a_store_limited_to_one_variant_is_sent_only_that_one(
+    world: GuardWorld, build: GuardPipelines, settings: Settings
+) -> None:
+    world.add(store_for("alpha", max_variants=1))
+    world.add(store_for("beta"))
+    pipeline = build(understander=understanding(THREE_VARIANTS))
+
+    await pipeline.run(make_search_request(text="black blazer"), settings)
+
+    assert len(world.queries("alpha")) == 1
+    assert world.requests_to("alpha.example") <= 2
+    assert world.requests_to("beta.example") <= 4
+
+
+async def test_an_outfit_costs_each_store_robots_txt_plus_two_variants_per_garment_at_most(
+    world: GuardWorld,
+    two_stores: list[StoreConfig],
+    build: GuardPipelines,
+    settings: Settings,
+    photo: bytes,
+) -> None:
+    pipeline = build(understander=outfit_understander())
+
+    await pipeline.run(make_search_request(image=photo, text=None), settings)
+
+    budget = 1 + len(OUTFIT) * MAX_OUTFIT_KEYWORDS
+    assert all(len(item.search_keywords) > MAX_OUTFIT_KEYWORDS for item in OUTFIT)
+    for store_id in STORES:
+        assert world.requests_to(f"{store_id}.example") <= budget
+        assert robots_requests(world, f"{store_id}.example") == 1
+    assert world.stray == []
+
+
+async def test_at_most_ten_thumbnails_are_fetched_for_any_one_store(
+    world: GuardWorld, build: GuardPipelines, settings: Settings, photo: bytes
+) -> None:
+    many = {"blazer": tuple(range(100, 1500, 100))}  # fourteen blazers in each store
+    world.add(store_for("alpha"), prices=many)
+    world.add(store_for("beta"), prices=many)
+    pipeline = build(understander=photo_search(), thumbnails=True)
+
+    await pipeline.run(make_search_request(image=photo, text="black oversized blazer"), settings)
+
+    for store_id in STORES:
+        fetched = world.thumbnails_of(store_id)
+        assert 0 < len(fetched) <= 10
+    assert world.stray == []
+
+
+# --------------------------------------------------------------------------------------------
+# Rate: never faster than one request a second to one store
+# --------------------------------------------------------------------------------------------
+
+
+async def test_no_store_is_sent_requests_faster_than_one_a_second(
+    world: GuardWorld, two_stores: list[StoreConfig], build: GuardPipelines, settings: Settings
+) -> None:
+    pipeline = build(understander=understanding(THREE_VARIANTS))
+
+    await pipeline.run(make_search_request(text="black blazer"), settings)
+
+    for store_id in STORES:
+        times = world.request_times(store_id)
+        assert len(times) == 4  # robots.txt and three variants: a real sequence to space
+        assert all(gap >= MIN_GAP_S for gap in gaps(times))
+
+
+async def test_an_outfit_of_four_garments_still_keeps_one_second_between_requests_to_a_store(
+    world: GuardWorld,
+    two_stores: list[StoreConfig],
+    build: GuardPipelines,
+    settings: Settings,
+    photo: bytes,
+) -> None:
+    pipeline = build(understander=outfit_understander())
+
+    await pipeline.run(make_search_request(image=photo, text=None), settings)
+
+    for store_id in STORES:
+        times = world.request_times(store_id)
+        assert len(times) == 1 + len(OUTFIT) * MAX_OUTFIT_KEYWORDS
+        assert all(gap >= MIN_GAP_S for gap in gaps(times))
+
+
+async def test_two_searches_running_at_the_same_time_share_one_second_spacing(
+    world: GuardWorld, two_stores: list[StoreConfig], build: GuardPipelines, settings: Settings
+) -> None:
+    pipeline = build(understander=understanding_by_words({"blazer": BLAZER, "shirt": SHIRT}))
+
+    await asyncio.gather(
+        pipeline.run(make_search_request(text="black oversized blazer"), settings),
+        pipeline.run(make_search_request(text="white cotton shirt"), settings),
+    )
+
+    for store_id in STORES:
+        times = world.request_times(store_id)
+        assert len(times) == 1 + 2 * 2
+        assert all(gap >= MIN_GAP_S for gap in gaps(times))
+
+
+async def test_a_crawl_delay_in_robots_txt_slows_that_store_down_and_only_that_store(
+    world: GuardWorld, build: GuardPipelines, settings: Settings
+) -> None:
+    world.add(store_for("alpha"), robots="User-agent: *\nCrawl-delay: 5\nDisallow:\n")
+    world.add(store_for("beta"))
+    pipeline = build(understander=understanding(THREE_VARIANTS))
+
+    await pipeline.run(make_search_request(text="black blazer"), settings)
+
+    alpha_searches = world.sites["alpha"].times
+    beta_searches = world.sites["beta"].times
+    assert len(alpha_searches) == 3
+    assert all(gap >= 5.0 - 1e-9 for gap in gaps(alpha_searches))
+    assert all(gap < 5.0 for gap in gaps(beta_searches))
+
+
+async def test_thumbnails_are_fetched_from_an_image_host_no_faster_than_five_a_second(
+    world: GuardWorld,
+    two_stores: list[StoreConfig],
+    build: GuardPipelines,
+    settings: Settings,
+    photo: bytes,
+) -> None:
+    pipeline = build(understander=photo_search(), thumbnails=True)
+
+    await pipeline.run(make_search_request(image=photo, text="black oversized blazer"), settings)
+
+    assert len(world.cdn_times) > 10  # robots.txt and the thumbnails of both stores
+    assert all(gap >= 1 / settings.rps_images_per_host - 1e-9 for gap in gaps(world.cdn_times))
+
+
+# --------------------------------------------------------------------------------------------
+# Cache: asking again does not ask the store again
+# --------------------------------------------------------------------------------------------
+
+
+async def test_the_same_search_again_inside_the_cache_window_sends_no_request_at_all(
+    world: GuardWorld,
+    two_stores: list[StoreConfig],
+    build: GuardPipelines,
+    settings: Settings,
+    clock: FakeClock,
+) -> None:
+    pipeline = build(understander=understanding(BLAZER))
+    first = await pipeline.run(make_search_request(text="black oversized blazer"), settings)
+    sent_before = world.all_requests()
+    clock.advance(settings.store_cache_ttl_s / 2)
+
+    second = await pipeline.run(make_search_request(text="black oversized blazer"), settings)
+
+    assert world.all_requests() == sent_before
+    assert all(report.from_cache for report in second.stores_used)
+    assert second.result_count == first.result_count
+
+
+async def test_a_different_search_does_not_fetch_a_stores_robots_txt_again(
+    world: GuardWorld, two_stores: list[StoreConfig], build: GuardPipelines, settings: Settings
+) -> None:
+    pipeline = build(understander=understanding_by_words({"blazer": BLAZER, "shirt": SHIRT}))
+    await pipeline.run(make_search_request(text="black oversized blazer"), settings)
+
+    await pipeline.run(make_search_request(text="white cotton shirt"), settings)
+
+    for store_id in STORES:
+        assert robots_requests(world, f"{store_id}.example") == 1
+        assert len(world.queries(store_id)) == 4  # two variants for each of the two garments
+
+
+async def test_after_the_cache_expires_a_store_is_asked_again_but_robots_txt_is_not(
+    world: GuardWorld,
+    two_stores: list[StoreConfig],
+    build: GuardPipelines,
+    settings: Settings,
+    clock: FakeClock,
+) -> None:
+    pipeline = build(understander=understanding(BLAZER))
+    await pipeline.run(make_search_request(text="black oversized blazer"), settings)
+    clock.advance(settings.store_cache_ttl_s + 1)
+
+    await pipeline.run(make_search_request(text="black oversized blazer"), settings)
+
+    for store_id in STORES:
+        assert len(world.queries(store_id)) == 4  # fresh answers, not stale ones for ever
+        assert robots_requests(world, f"{store_id}.example") == 1  # its own 24 hour cache
+
+
+# --------------------------------------------------------------------------------------------
+# Who is asking
+# --------------------------------------------------------------------------------------------
+
+
+async def test_every_request_carries_the_honest_user_agent_and_no_cookie_or_identity(
+    world: GuardWorld,
+    two_stores: list[StoreConfig],
+    build: GuardPipelines,
+    settings: Settings,
+    photo: bytes,
+) -> None:
+    pipeline = build(understander=photo_search(), thumbnails=True)
+
+    await pipeline.run(make_search_request(image=photo, text="black oversized blazer"), settings)
+
+    sent = world.every_request()
+    assert len(sent) > 10
+    for request in sent:
+        assert request.headers["user-agent"] == settings.user_agent
+        names = {name.lower() for name in request.headers}
+        assert not names & {"cookie", "authorization", "referer", "proxy-authorization"}
+        assert all("@" not in value for value in request.headers.values())  # no e-mail address
+    assert not any(token in settings.user_agent for token in ("Mozilla", "Chrome", "Safari"))
