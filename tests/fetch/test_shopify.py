@@ -135,7 +135,7 @@ def records_of(body: str, **options: object) -> list[dict[str, object]]:
     return [dict(r) for r in ShopifyExtractor().extract(body, shopify_store(), strategy)]
 
 
-def test_a_record_carries_the_five_fields_the_normaliser_needs() -> None:
+def test_a_record_carries_the_six_fields_the_normaliser_needs() -> None:
     [record] = records_of(suggest_body(shopify_product(1)))
 
     assert record == {
@@ -144,6 +144,7 @@ def test_a_record_carries_the_five_fields_the_normaliser_needs() -> None:
         "image_url": "https://cdn.shopify.com/s/files/1/0001/0002/files/blazer-1.jpg?v=1&width=400",
         "product_url": "/products/blazer-1",
         "in_stock": True,
+        "gender": None,  # the default product has type "Coats & Jackets" and the tag "tag"
     }
 
 
