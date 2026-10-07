@@ -35,7 +35,7 @@ file as the always-on summary and open the matching doc when you need full depth
 | Layer | Choice |
 |---|---|
 | Language / env | Python 3.12 via `uv` (system Python is 3.14; do not use it), `uv.lock` committed |
-| LLM | OpenAI for every language and vision task; native structured outputs with Pydantic; a **dated model snapshot** pinned in `config/settings.yaml`, never an alias |
+| LLM | OpenAI for every language and vision task; native structured outputs with Pydantic. Model: **`gpt-6-luna`** (chosen by the user on 2026-10-08; OpenAI lists no dated variant, so the versioned name is the snapshot). Pinned in `config/settings.yaml`: a dated snapshot or a verified undated snapshot id, never an alias such as `-latest` |
 | Image similarity | Local Marqo-FashionSigLIP via `open_clip`, pinned to a Hugging Face revision with `snapshot_download` + `local-dir:` (the `hf-hub:` scheme cannot pin); a low-weight nudge, never a filter; `off` as the fallback |
 | Fetching | `httpx` async with an honest, identifying User-Agent. **Never** `curl_cffi`, Scrapling fetchers, proxies, or any browser impersonation |
 | Parsing | `selectolax` (use `selectolax.lexbor`), stdlib `json`, `protego` for robots.txt; `extruct` (JSON-LD) only from Phase 19. **Never `urllib.robotparser`:** on Python 3.12 it ignores `*` and `$` and wrongly allows disallowed paths |
@@ -103,6 +103,10 @@ docs/adr/             decision records    docs/store-notes/, docs/store-qualific
   is its own PR that updates every user.
 - When a task touches a domain, consult that domain's doc in `docs/Best Practices/` and apply it by
   default.
+- **Maintain [`CHANGELOG.md`](./CHANGELOG.md).** Every change merged into `develop` adds an entry
+  under today's date (Added / Changed / Fixed / Decided / Found), in the same commit or the merge.
+  "Found" records facts learned from real runs. Prompt and model changes also go in
+  `src/vga/understand/prompts/CHANGELOG.md` with their eval result.
 - A significant decision gets an ADR in `docs/adr/`. A deliberate departure from a best-practice
   rule is recorded in the plan (section 12.3), not left silent.
 - Keep documentation and this file current. An outdated doc is worse than none.
