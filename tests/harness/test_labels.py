@@ -66,8 +66,84 @@ class TestExport:
             header = next(csv.reader(handle))
         rows = read_rows(tmp_path / "labels.csv")
 
-        assert header == ["query_id", "group", "rank", "title", "store", "url", "label"]
+        assert header == [
+            "query_id",
+            "photo",
+            "group",
+            "rank",
+            "title",
+            "price",
+            "store",
+            "price_range",
+            "url",
+            "label",
+        ]
         assert all(row["label"] == "" for row in rows)
+
+    def test_each_row_has_what_a_person_needs_to_judge_the_product(self, tmp_path: Path) -> None:
+        group = make_group(Category.DRESSES, counts=(3, 3, 2, 2))
+        photo_run = QueryRun(
+            make_query("q01_product_gown", "product_photo"), make_response([group]), None, 1.0, 1.0
+        )
+        export_label_sheet([photo_run], tmp_path / "labels.csv")
+
+        by_title = {row["title"]: row for row in read_rows(tmp_path / "labels.csv")}
+
+        first = by_title["Dresses item 1"]
+        assert first["photo"] == "dress_burgundy_gown.png"  # the file name, not the whole path
+        assert first["price"] == "100 AED"
+        assert first["price_range"] == "Budget"
+        assert first["store"] == "Alpha Store"
+        assert first["url"] == "https://www.alpha-store.example/p/dresses-0-1"
+        assert by_title["Dresses item 7"]["price_range"] == "Premium"
+        assert by_title["Dresses item 10"]["price_range"] == "Luxury"
+        assert {row["price_range"] for row in by_title.values()} == {
+            "Budget",
+            "Mid-range",
+            "Premium",
+            "Luxury",
+        }
+
+    def test_a_text_only_query_has_an_empty_photo_cell(self, tmp_path: Path) -> None:
+        export_label_sheet(
+            [run_of("q06_text", make_group(Category.OUTERWEAR))], tmp_path / "labels.csv"
+        )
+
+        assert {row["photo"] for row in read_rows(tmp_path / "labels.csv")} == {""}
+
+    def test_a_price_with_cents_keeps_them(self, tmp_path: Path) -> None:
+        group = make_group(Category.OUTERWEAR, counts=(1, 0, 0, 0))
+        priced = group.tiers[0].results[0].product.model_copy(update={"price": 349.5})
+        group.tiers[0].results[0] = group.tiers[0].results[0].model_copy(update={"product": priced})
+        group.tiers[0] = group.tiers[0].model_copy(update={"price_min": 349.5, "price_max": 349.5})
+
+        export_label_sheet([run_of("q06_text", group)], tmp_path / "labels.csv")
+
+        assert read_rows(tmp_path / "labels.csv")[0]["price"] == "349.50 AED"
+
+    def test_an_outfit_has_one_block_of_rows_per_garment_each_with_the_same_photo(
+        self, tmp_path: Path
+    ) -> None:
+        # Assumption A20: an outfit is judged garment by garment, so rows are grouped by garment.
+        outfit = QueryRun(
+            make_query("q05_outfit_dress_heels", "outfit_photo"),
+            make_response(
+                [
+                    make_group(Category.DRESSES, counts=(3, 3, 2, 2)),
+                    make_group(Category.SHOES, counts=(3, 3, 2, 2), item_index=1),
+                ]
+            ),
+            None,
+            1.0,
+            1.0,
+        )
+        export_label_sheet([outfit], tmp_path / "labels.csv")
+
+        rows = read_rows(tmp_path / "labels.csv")
+
+        assert [row["group"] for row in rows] == ["dresses"] * 10 + ["shoes"] * 10
+        assert {row["photo"] for row in rows} == {"dress_burgundy_gown.png"}
+        assert [int(row["rank"]) for row in rows] == list(range(1, 11)) * 2
 
     def test_every_group_gets_its_top_ten_and_a_short_group_gets_what_it_has(
         self, tmp_path: Path
