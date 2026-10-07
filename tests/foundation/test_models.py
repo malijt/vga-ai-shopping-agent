@@ -714,6 +714,53 @@ class TestResultModels:
 
         assert round_trip(scored) == scored
 
+    def test_a_scored_product_has_no_base_price_unless_one_is_set(self) -> None:
+        assert make_scored_product().base_price is None
+
+    @pytest.mark.parametrize("bad", [0, -1.0])
+    def test_base_price_must_be_positive(self, bad: float) -> None:
+        with pytest.raises(ValidationError):
+            make_scored_product(base_price=bad)
+
+    def test_base_price_survives_a_json_round_trip(self) -> None:
+        kwd = make_product(1, price=245.0, currency="KWD")
+        scored = make_scored_product(kwd, base_price=2920.4, tier=Tier.LUXURY)
+
+        assert round_trip(scored) == scored
+        assert round_trip(scored).base_price == 2920.4
+
+    def test_a_range_span_is_in_the_base_currency_for_a_converted_product(self) -> None:
+        # KWD 245.000 at 11.92 is AED 2,920.40: the span is measured on that figure, not on 245.
+        kwd = make_product(1, price=245.0, currency="KWD")
+        scored = make_scored_product(kwd, base_price=2920.4, tier=Tier.LUXURY)
+
+        tier = TierResult(
+            name=Tier.LUXURY,
+            price_min=2920.4,
+            price_max=2920.4,
+            currency="AED",
+            target_count=1,
+            count=1,
+            results=[scored],
+        )
+
+        assert tier.results[0].base_price == 2920.4
+
+    def test_a_converted_products_base_price_must_lie_inside_the_span(self) -> None:
+        kwd = make_product(1, price=245.0, currency="KWD")
+        scored = make_scored_product(kwd, base_price=2920.4, tier=Tier.LUXURY)
+
+        with pytest.raises(ValidationError, match="outside the span"):
+            TierResult(
+                name=Tier.LUXURY,
+                price_min=200.0,
+                price_max=300.0,  # would cover the dinar figure 245, but not the dirham one
+                currency="AED",
+                target_count=1,
+                count=1,
+                results=[scored],
+            )
+
     def test_tier_result_always_carries_span_count_target_and_flags(self) -> None:
         tier = make_tier_result(
             Tier.MID_RANGE, make_products(3), target_count=4, flags=[Flag.FEW_OPTIONS]
