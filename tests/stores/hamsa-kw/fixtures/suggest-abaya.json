@@ -1,0 +1,367 @@
+{
+ "resources": {
+  "results": {
+   "products": [
+    {
+     "available": true,
+     "body": "<p>S-20-005</p>\n<p>Abaya with Pocket</p>",
+     "compare_at_price_max": "385.000",
+     "compare_at_price_min": "385.000",
+     "featured_image": {
+      "alt": null,
+      "aspect_ratio": 0.666,
+      "height": 1600,
+      "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-005-2.jpg?v=1596723938",
+      "width": 1066
+     },
+     "handle": "fire-works-abaya",
+     "id": 4667433025617,
+     "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-005-2.jpg?v=1596723938",
+     "price": "20.000",
+     "price_max": "80.000",
+     "price_min": "20.000",
+     "tags": [
+      "ABAYA"
+     ],
+     "title": "Fire Works Abaya",
+     "type": "ABAYA",
+     "url": "/products/fire-works-abaya?_pos=1&_psq=abaya&_psid=ac439cbf0&_ss=e&variant=32521524314193",
+     "variants": [
+      {
+       "available": true,
+       "compare_at_price": "385.000",
+       "featured_image": {
+        "alt": "Fire Works Abaya",
+        "aspect_ratio": 0.666,
+        "height": 1600,
+        "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-005-2.jpg?v=1596723938",
+        "width": 1066
+       },
+       "id": 32521524314193,
+       "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-005-2.jpg?v=1596723938",
+       "price": "80.000",
+       "title": "Black-Gold / Free Size / Abaya",
+       "url": "/products/fire-works-abaya?variant=32521524314193&_pos=1&_psq=abaya&_psid=ac439cbf0&_ss=e"
+      }
+     ],
+     "vendor": "Hamsakw"
+    },
+    {
+     "available": true,
+     "body": "<p>S-20-001       -  Abaya</p>\n<p>Scarf-20-001 -  Head Scarf</p>",
+     "compare_at_price_max": "350.000",
+     "compare_at_price_min": "95.000",
+     "featured_image": {
+      "alt": null,
+      "aspect_ratio": 0.666,
+      "height": 1600,
+      "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-001-1.jpg?v=1596448650",
+      "width": 1066
+     },
+     "handle": "stardust-abaya",
+     "id": 4665397215313,
+     "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-001-1.jpg?v=1596448650",
+     "price": "35.000",
+     "price_max": "95.000",
+     "price_min": "35.000",
+     "tags": [
+      "ABAYA"
+     ],
+     "title": "Stardust Abaya",
+     "type": "ABAYA",
+     "url": "/products/stardust-abaya?_pos=2&_psq=abaya&_psid=ac439cbf0&_ss=e&variant=32511409422417",
+     "variants": [
+      {
+       "available": true,
+       "compare_at_price": "350.000",
+       "featured_image": {
+        "alt": "Stardust Abaya",
+        "aspect_ratio": 0.666,
+        "height": 1600,
+        "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-001-1.jpg?v=1596448650",
+        "width": 1066
+       },
+       "id": 32511409422417,
+       "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-001-1.jpg?v=1596448650",
+       "price": "95.000",
+       "title": "Abaya / Black-Silver / Free Size",
+       "url": "/products/stardust-abaya?variant=32511409422417&_pos=2&_psq=abaya&_psid=ac439cbf0&_ss=e"
+      }
+     ],
+     "vendor": "Hamsakw"
+    },
+    {
+     "available": true,
+     "body": "<p>S-20-004</p>\n<p>Abaya</p>\n<p>By Order ( 5 days )</p>",
+     "compare_at_price_max": "435.000",
+     "compare_at_price_min": "95.000",
+     "featured_image": {
+      "alt": null,
+      "aspect_ratio": 0.666,
+      "height": 1600,
+      "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-004-2.jpg?v=1612020006",
+      "width": 1066
+     },
+     "handle": "collage-abaya",
+     "id": 4667440070737,
+     "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-004-2.jpg?v=1612020006",
+     "price": "35.000",
+     "price_max": "130.000",
+     "price_min": "35.000",
+     "tags": [
+      "ABAYA"
+     ],
+     "title": "Collage Abaya",
+     "type": "ABAYA",
+     "url": "/products/collage-abaya?_pos=3&_psq=abaya&_psid=ac439cbf0&_ss=e&variant=32521566650449",
+     "variants": [
+      {
+       "available": true,
+       "compare_at_price": "435.000",
+       "featured_image": {
+        "alt": "Collage Abaya",
+        "aspect_ratio": 0.666,
+        "height": 1600,
+        "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-004-2.jpg?v=1612020006",
+        "width": 1066
+       },
+       "id": 32521566650449,
+       "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-004-2.jpg?v=1612020006",
+       "price": "130.000",
+       "title": "Black-Gold / Free Size / Abaya",
+       "url": "/products/collage-abaya?variant=32521566650449&_pos=3&_psq=abaya&_psid=ac439cbf0&_ss=e"
+      }
+     ],
+     "vendor": "Hamsakw"
+    },
+    {
+     "available": true,
+     "body": "<p>S-20-006</p>\n<p>Abaya with Pocket</p>",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Shooting Star Abaya",
+      "aspect_ratio": 0.666,
+      "height": 1600,
+      "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-006-1.jpg?v=1596724839",
+      "width": 1066
+     },
+     "handle": "shooting-star-abaya",
+     "id": 4667437318225,
+     "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-006-1.jpg?v=1596724839",
+     "price": "95.000",
+     "price_max": "365.000",
+     "price_min": "95.000",
+     "tags": [
+      "ABAYA"
+     ],
+     "title": "Shooting Star Abaya",
+     "type": "ABAYA",
+     "url": "/products/shooting-star-abaya?_pos=4&_psq=abaya&_psid=ac439cbf0&_ss=e&variant=32521548234833",
+     "variants": [
+      {
+       "available": true,
+       "compare_at_price": null,
+       "featured_image": {
+        "alt": null,
+        "aspect_ratio": null,
+        "height": null,
+        "url": null,
+        "width": null
+       },
+       "id": 32521548234833,
+       "image": null,
+       "price": "365.000",
+       "title": "Black-Gold / Free Size / Abaya",
+       "url": "/products/shooting-star-abaya?variant=32521548234833&_pos=4&_psq=abaya&_psid=ac439cbf0&_ss=e"
+      }
+     ],
+     "vendor": "Hamsakw"
+    },
+    {
+     "available": true,
+     "body": "<div style=\"text-align: center;\">W-22-029-Abaya -Size 1 &amp; Size 2</div>\n<div style=\"text-align: center;\"></div>\n<div style=\"text-align: center;\"></div>\n<div style=\"text-align: center;\"><span style=\"text-decoration: underline;\"><strong></strong></span></div>",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Duma Abaya",
+      "aspect_ratio": 0.667,
+      "height": 5472,
+      "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/W-22-029_2_a45b57c9-c835-4bab-b2b1-7e71b5a2c5b2.jpg?v=1641296242",
+      "width": 3648
+     },
+     "handle": "duma-abaya",
+     "id": 6756228530257,
+     "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/W-22-029_2_a45b57c9-c835-4bab-b2b1-7e71b5a2c5b2.jpg?v=1641296242",
+     "price": "135.000",
+     "price_max": "135.000",
+     "price_min": "135.000",
+     "tags": [
+      "ABAYA",
+      "WINTER 22"
+     ],
+     "title": "Duma Abaya",
+     "type": "ABAYA",
+     "url": "/products/duma-abaya?_pos=5&_psq=abaya&_psid=ac439cbf0&_ss=e",
+     "variants": [],
+     "vendor": "Hamsakw"
+    },
+    {
+     "available": true,
+     "body": "<p>S-20-007</p>\n<p>By Order ( 5 Days )</p>",
+     "compare_at_price_max": "230.000",
+     "compare_at_price_min": "45.000",
+     "featured_image": {
+      "alt": null,
+      "aspect_ratio": 0.666,
+      "height": 1600,
+      "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-007-1.jpg?v=1596446591",
+      "width": 1066
+     },
+     "handle": "tonal-abaya",
+     "id": 4665386565713,
+     "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-007-1.jpg?v=1596446591",
+     "price": "20.000",
+     "price_max": "95.000",
+     "price_min": "20.000",
+     "tags": [
+      "ABAYA"
+     ],
+     "title": "Tonal Abaya/Scarf",
+     "type": "ABAYA",
+     "url": "/products/tonal-abaya?_pos=6&_psq=abaya&_psid=ac439cbf0&_ss=e&variant=32511356928081",
+     "variants": [
+      {
+       "available": true,
+       "compare_at_price": "185.000",
+       "featured_image": {
+        "alt": "Tonal Abaya/Scarf",
+        "aspect_ratio": 0.666,
+        "height": 1600,
+        "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-007-1.jpg?v=1596446591",
+        "width": 1066
+       },
+       "id": 32511356928081,
+       "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-007-1.jpg?v=1596446591",
+       "price": "75.000",
+       "title": "Abaya / Black / Free Size",
+       "url": "/products/tonal-abaya?variant=32511356928081&_pos=6&_psq=abaya&_psid=ac439cbf0&_ss=e"
+      }
+     ],
+     "vendor": "Hamsakw"
+    },
+    {
+     "available": true,
+     "body": "<div style=\"text-align: center;\">W-24-004L</div>\n<div style=\"text-align: center;\">Sizes : Small , Medium  , Large</div>\n<div style=\"text-align: center;\">Colors : Black ,Royal Blue , Maroon , Emerald Green</div>\n<div style=\"text-align: center;\"></div>\n<div style=\"text-align: center;\">Delivery 3 Days<",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Long Palm Tree Velvet Abaya",
+      "aspect_ratio": 0.659,
+      "height": 4149,
+      "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/files/W-24-004L-JACKET_7.jpg?v=1704612391",
+      "width": 2735
+     },
+     "handle": "long-palm-tree-velvet-abaya",
+     "id": 8985008406845,
+     "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/files/W-24-004L-JACKET_7.jpg?v=1704612391",
+     "price": "148.000",
+     "price_max": "148.000",
+     "price_min": "148.000",
+     "tags": [
+      "FW CASUAL 24"
+     ],
+     "title": "Long Palm Tree Velvet Abaya",
+     "type": "ABAYA",
+     "url": "/products/long-palm-tree-velvet-abaya?_pos=7&_psq=abaya&_psid=ac439cbf0&_ss=e",
+     "variants": [],
+     "vendor": "Hamsa by Sharifa AlGhanim"
+    },
+    {
+     "available": true,
+     "body": "<p>S-20-002  - Abaya</p>",
+     "compare_at_price_max": "365.000",
+     "compare_at_price_min": "365.000",
+     "featured_image": {
+      "alt": "Star Dust Coat",
+      "aspect_ratio": 0.666,
+      "height": 1600,
+      "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-002-1.jpg?v=1596464779",
+      "width": 1066
+     },
+     "handle": "star-dust-coat",
+     "id": 4665587105873,
+     "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-002-1.jpg?v=1596464779",
+     "price": "75.000",
+     "price_max": "75.000",
+     "price_min": "75.000",
+     "tags": [
+      "ABAYA"
+     ],
+     "title": "Star Dust Coat",
+     "type": "ABAYA",
+     "url": "/products/star-dust-coat?_pos=8&_psq=abaya&_psid=ac439cbf0&_ss=e",
+     "variants": [],
+     "vendor": "Hamsakw"
+    },
+    {
+     "available": true,
+     "body": "<div style=\"text-align: center;\">W-24-048</div>\n<div style=\"text-align: center;\">Sizes : Free Size</div>\n<div style=\"text-align: center;\"> Note : By Order Delivery 1 Week</div>",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Heyah Abaya",
+      "aspect_ratio": 0.659,
+      "height": 4221,
+      "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/files/W-24-048-VELVETABAYA_3.jpg?v=1704613714",
+      "width": 2782
+     },
+     "handle": "heyah-abaya",
+     "id": 8986458489149,
+     "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/files/W-24-048-VELVETABAYA_3.jpg?v=1704613714",
+     "price": "185.000",
+     "price_max": "185.000",
+     "price_min": "185.000",
+     "tags": [
+      "FW CASUAL 24"
+     ],
+     "title": "Heyah Abaya",
+     "type": "ABAYA",
+     "url": "/products/heyah-abaya?_pos=9&_psq=abaya&_psid=ac439cbf0&_ss=e",
+     "variants": [],
+     "vendor": "Hamsa by Sharifa AlGhanim"
+    },
+    {
+     "available": true,
+     "body": "<div style=\"text-align: center;\">W-22-029-Abaya -Size 1 &amp; Size 2</div>\n<div style=\"text-align: center;\">W-22-037-Blouse with Belt -Size 1 &amp; Size 2</div>\n<div style=\"text-align: center;\">W-22-015L-Pants -Size 0 , Size 1 &amp; Size 2</div>\n<div style=\"text-align: center;\"><strong>﻿By Order Del",
+     "compare_at_price_max": "217.000",
+     "compare_at_price_min": "217.000",
+     "featured_image": {
+      "alt": "Duma Abaya Set",
+      "aspect_ratio": 0.667,
+      "height": 5472,
+      "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/W-22-029_2.jpg?v=1635862187",
+      "width": 3648
+     },
+     "handle": "w-22-029",
+     "id": 6690994356305,
+     "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/W-22-029_2.jpg?v=1635862187",
+     "price": "212.000",
+     "price_max": "212.000",
+     "price_min": "212.000",
+     "tags": [
+      "ABAYA",
+      "Blouse",
+      "Pant",
+      "WINTER 22"
+     ],
+     "title": "Duma Abaya Set",
+     "type": "ABAYA",
+     "url": "/products/w-22-029?_pos=10&_psq=abaya&_psid=ac439cbf0&_ss=e",
+     "variants": [],
+     "vendor": "Hamsakw"
+    }
+   ]
+  }
+ }
+}

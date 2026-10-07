@@ -64,7 +64,9 @@ extraction:
         image_width: 400     # default 400; a positive whole number, or null to keep the URL
         gender_fields: [type, tags]   # default; which fields say who a product is for, first
                                       # one that names a gender wins; [] turns the reading off
-rps: 1                   # optional overrides: rps, timeout_s, max_response_bytes, max_variants
+        max_price_spread: 1.5   # default off; drop a record whose highest variant price is more
+                                # than this many times its lowest (price is the lowest variant)
+rps: 1                  # optional overrides: rps, timeout_s, max_response_bytes, max_variants
 tier_hint: mid_range
 enabled: false           # true only after the live smoke test passes
 """
@@ -80,6 +82,7 @@ def test_a_hand_written_shopify_store_file_loads_as_documented(tmp_path: Path) -
         "name_field": "vendor",
         "image_width": 400,
         "gender_fields": ["type", "tags"],
+        "max_price_spread": 1.5,
     }
     assert store.enabled is False
     assert "resources[type]=product" in store.search_url_template

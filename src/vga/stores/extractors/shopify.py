@@ -18,6 +18,7 @@ Options (all optional)::
       name_field: title      # or "vendor"
       image_width: 400       # a positive whole number, or null for "leave the image URL alone"
       gender_fields: [type, tags]   # which fields say who a product is for; [] turns it off
+      max_price_spread: 1.0         # off unless set; see below
 
 ``name_field`` says which response field holds the readable product name. It is ``title`` for
 nearly every store; The Bear House puts a style code in ``title`` ("BOALI") and the real name in
@@ -47,24 +48,46 @@ Titles often say nothing ("Nelson Pant - Black"). The rule, applied to ``Product
   contradicts itself, and the product's gender is ``None`` (unknown). A product whose listed fields
   name nothing is ``None`` too. ``None`` is not a verdict: the ranker then falls back to the title.
 
+``max_price_spread`` (default **off**) is for a store whose cheapest variant is not the garment.
+Shopify's ``price`` is the *lowest* price among a product's variants, and ``price_min`` and
+``price_max`` are the lowest and the highest. Hamsa sells a head scarf as a cheap variant of the
+same product as the abaya it matches: on 5 of 10 abaya records ``price`` was KWD 20 to 95 while the
+abaya itself cost KWD 75 to 365, so reading ``price`` would show an abaya in the wrong price range
+and could pass it as within a budget it is not. With the option set to a number of at least 1, a
+record is kept only when ``price_max`` is at most that many times ``price_min`` (``1`` keeps only
+products whose variants all cost the same; ``1.25`` tolerates a surcharge on one size). Any other
+record is dropped, and so is one whose ``price_min`` or ``price_max`` cannot be read: the search
+response alone cannot say which variant is the garment, and a missing product is better than a
+wrong price. A dropped record has its ``price`` emptied here, so validation counts it as
+``missing_price``, and this module logs the real reason.
+
+Why not take the highest price instead? It is right only if the dearest variant is the garment. At
+Hamsa it was for four of the five records, but "Tonal Abaya/Scarf" had a KWD 75 abaya variant and a
+KWD 95 maximum (probably a set), so the maximum would have shown a price the abaya does not have.
+
 ``fields`` is not used: the mapping is fixed.
 """
 
 import json
+import math
 import re
+from decimal import Decimal, InvalidOperation
 from typing import Any
 from urllib.parse import urlsplit
 
+from vga.log import get_logger
 from vga.models import Gender, StoreConfig, StrategyConfig
 from vga.stores.extractors.base import ExtractionError
 from vga.stores.normalise import RawRecord
+
+log = get_logger(__name__)
 
 NAME_FIELDS = ("title", "vendor")
 DEFAULT_IMAGE_WIDTH = 400
 GENDER_FIELDS = ("type", "tags")
 """The record fields ``gender_fields`` may name."""
 DEFAULT_GENDER_FIELDS = GENDER_FIELDS
-OPTIONS = ("name_field", "image_width", "gender_fields")
+OPTIONS = ("name_field", "image_width", "gender_fields", "max_price_spread")
 
 _LETTERS = re.compile(r"[^\W\d_]+")
 """A run of letters. Apostrophes (straight or curly), hyphens, slashes, commas, digits and
@@ -104,11 +127,13 @@ class ShopifyExtractor:
             raise ValueError(msg)
         _image_width(strategy)
         _gender_fields(strategy)
+        _max_price_spread(strategy)
 
     def extract(self, body: str, store: StoreConfig, strategy: StrategyConfig) -> list[RawRecord]:
         name_field = str(strategy.options.get("name_field", "title"))
         image_width = _image_width(strategy)
         gender_fields = _gender_fields(strategy)
+        max_spread = _max_price_spread(strategy)
         try:
             data = json.loads(body)
         except ValueError as exc:
@@ -123,7 +148,7 @@ class ShopifyExtractor:
             msg = "resources.results.products is not a list"
             raise ExtractionError(msg)
         return [
-            self._record(item, name_field, image_width, gender_fields)
+            self._record(item, store, name_field, image_width, gender_fields, max_spread)
             for item in products
             if isinstance(item, dict)
         ]
@@ -131,18 +156,34 @@ class ShopifyExtractor:
     @staticmethod
     def _record(
         item: dict[str, Any],
+        store: StoreConfig,
         name_field: str,
         image_width: int | None,
         gender_fields: tuple[str, ...],
+        max_spread: Decimal | None,
     ) -> RawRecord:
         featured = item.get("featured_image")
         image = item.get("image") or (featured.get("url") if isinstance(featured, dict) else None)
         handle = item.get("handle")
         link = item.get("url") or (f"/products/{handle}" if handle else None)
         available = item.get("available")
+        price = item.get("price")
+        if max_spread is not None and not _within_spread(item, max_spread):
+            log.info(
+                "record has no single trustworthy price; dropped",
+                extra={
+                    "store": store.id,
+                    "title": str(item.get(name_field))[:80],
+                    "price": str(price)[:20],
+                    "price_min": str(item.get("price_min"))[:20],
+                    "price_max": str(item.get("price_max"))[:20],
+                    "max_price_spread": str(max_spread),
+                },
+            )
+            price = None  # validation then drops the record as missing_price
         return {
             "title": item.get(name_field),
-            "price": item.get("price"),
+            "price": price,
             "image_url": _with_width(image, image_width),
             "product_url": _without_tracking(link),
             "in_stock": available if isinstance(available, bool) else None,
@@ -200,6 +241,47 @@ def _gender_fields(strategy: StrategyConfig) -> tuple[str, ...]:
         msg = f"options.gender_fields names a field more than once: {value!r}"
         raise ValueError(msg)
     return tuple(value)
+
+
+def _max_price_spread(strategy: StrategyConfig) -> Decimal | None:
+    """The ``max_price_spread`` option: ``None`` (off) when absent, else a number of at least 1.
+    Raises ``ValueError`` for anything else. Returned as a ``Decimal`` so the comparison with the
+    store's decimal prices has no floating-point noise."""
+    if "max_price_spread" not in strategy.options:
+        return None
+    value = strategy.options["max_price_spread"]
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, int | float)
+        or (isinstance(value, float) and not math.isfinite(value))
+        or value < 1
+    ):
+        msg = f"options.max_price_spread must be a number of at least 1, got {value!r}"
+        raise ValueError(msg)
+    return Decimal(str(value))
+
+
+def _decimal_price(value: object) -> Decimal | None:
+    """A price text such as ``"95.000"`` as a ``Decimal``; ``None`` for anything that is not a
+    positive, finite decimal number written as text."""
+    if not isinstance(value, str):
+        return None
+    try:
+        number = Decimal(value.strip())
+    except InvalidOperation:
+        return None
+    return number if number.is_finite() and number > 0 else None
+
+
+def _within_spread(item: dict[str, Any], max_spread: Decimal) -> bool:
+    """Whether the product's highest variant price is at most ``max_spread`` times its lowest.
+    ``False`` when either figure is missing or unreadable: with no way to check, the record's
+    ``price`` cannot be trusted to be the garment's."""
+    low = _decimal_price(item.get("price_min"))
+    high = _decimal_price(item.get("price_max"))
+    if low is None or high is None:
+        return False
+    return high <= low * max_spread
 
 
 def _cues(value: object) -> set[Gender]:

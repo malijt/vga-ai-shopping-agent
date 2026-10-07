@@ -1,0 +1,307 @@
+{
+ "resources": {
+  "results": {
+   "products": [
+    {
+     "available": true,
+     "body": "<ul>\n<li>Color:<strong> </strong>Black<span></span>\n</li>\n</ul>\n<ul>\n<li>\n<span>Fabric: </span><span>100% Polyester</span>\n</li>\n</ul>",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Slim Cut Crepe Gown With Gathered Tulle Illusion Neckline And Sleeve",
+      "aspect_ratio": 0.667,
+      "height": 6000,
+      "url": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/bazza_260438R.jpg?v=1771762772",
+      "width": 4000
+     },
+     "handle": "slim-cut-crepe-gown-with-gathered-tulle-illusion-neckline-and-sleeve",
+     "id": 15705966772305,
+     "image": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/bazza_260438R.jpg?v=1771762772",
+     "price": "260.000",
+     "price_max": "260.000",
+     "price_min": "260.000",
+     "tags": [
+      "full sleeves",
+      "PF26",
+      "skinny gown",
+      "tulle sleeve"
+     ],
+     "title": "Slim Cut Crepe Gown With Gathered Tulle Illusion Neckline And Sleeve",
+     "type": "Dresses",
+     "url": "/products/slim-cut-crepe-gown-with-gathered-tulle-illusion-neckline-and-sleeve?_pos=1&_psq=gown&_psid=c54349b8e&_ss=e",
+     "variants": [],
+     "vendor": "Bazza Alzouman"
+    },
+    {
+     "available": true,
+     "body": "<p dir=\"ltr\"><span>Strapless gown with sculpted bodice with a cascading side organza drape that adds fluidity and dimension.</span></p>\n<p dir=\"ltr\"><span>Color: Cream</span></p>\n<p dir=\"ltr\"><span>Fabric: 100% Crepe</span></p>",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Strapless Gown With Side Organza Ruched Drape",
+      "aspect_ratio": 0.667,
+      "height": 5040,
+      "url": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/BAZZA1114R.jpg?v=1752563110",
+      "width": 3360
+     },
+     "handle": "strapless-gown-with-side-organza-ruched-drape",
+     "id": 7789946863697,
+     "image": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/BAZZA1114R.jpg?v=1752563110",
+     "price": "245.000",
+     "price_max": "245.000",
+     "price_min": "245.000",
+     "tags": [
+      "drape gown",
+      "PS26",
+      "skinny gown",
+      "strapless"
+     ],
+     "title": "Strapless Gown With Side Organza Ruched Drape",
+     "type": "Dresses",
+     "url": "/products/strapless-gown-with-side-organza-ruched-drape?_pos=2&_psq=gown&_psid=c54349b8e&_ss=e",
+     "variants": [],
+     "vendor": "Bazza Alzouman"
+    },
+    {
+     "available": true,
+     "body": "<ul>\n<li>Color:<strong> </strong>Mint<span></span>\n</li>\n</ul>\n<ul>\n<li>\n<span>Fabric: </span><span>100% Polyester</span>\n</li>\n</ul>",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Off-Shoulder Crepe Gown With Wrap Skirt",
+      "aspect_ratio": 0.667,
+      "height": 5997,
+      "url": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/BAZZA00831.jpg?v=1773481745",
+      "width": 4000
+     },
+     "handle": "off-shoulder-crepe-gown-with-wrap-skirt",
+     "id": 15725509083217,
+     "image": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/BAZZA00831.jpg?v=1773481745",
+     "price": "250.000",
+     "price_max": "250.000",
+     "price_min": "250.000",
+     "tags": [
+      "AW26",
+      "drape gown",
+      "Off-shoulder",
+      "skinny gown"
+     ],
+     "title": "Off-Shoulder Crepe Gown With Wrap Skirt",
+     "type": "Dresses",
+     "url": "/products/off-shoulder-crepe-gown-with-wrap-skirt?_pos=3&_psq=gown&_psid=c54349b8e&_ss=e",
+     "variants": [],
+     "vendor": "Bazza Alzouman"
+    },
+    {
+     "available": true,
+     "body": "<ul>\n<li>Color:<strong> </strong>Pink<span></span>\n</li>\n</ul>\n<ul>\n<li>\n<span>Fabric: </span><span>100% Polyester</span>\n</li>\n</ul>",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "One Shoulder Crepe Gown With Gathered Tulle At Neck",
+      "aspect_ratio": 0.667,
+      "height": 5997,
+      "url": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/BAZZA03491.jpg?v=1773485143",
+      "width": 4000
+     },
+     "handle": "one-shoulder-crepe-gown-with-gathered-tulle-at-neck-1",
+     "id": 15725519044689,
+     "image": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/BAZZA03491.jpg?v=1773485143",
+     "price": "235.000",
+     "price_max": "235.000",
+     "price_min": "235.000",
+     "tags": [
+      "AW26",
+      "Off-shoulder",
+      "one-shoulder",
+      "skinny gown"
+     ],
+     "title": "One Shoulder Crepe Gown With Gathered Tulle At Neck",
+     "type": "Dresses",
+     "url": "/products/one-shoulder-crepe-gown-with-gathered-tulle-at-neck-1?_pos=4&_psq=gown&_psid=c54349b8e&_ss=e",
+     "variants": [],
+     "vendor": "Bazza Alzouman"
+    },
+    {
+     "available": true,
+     "body": "<p dir=\"ltr\"><span>Plum A-line wrap gown with long sleeves and a collar.</span></p>\n<p dir=\"ltr\"><span>Color: Plum</span></p>\n<p dir=\"ltr\"><span>Fabric: 100% Crepe</span></p>",
+     "compare_at_price_max": "295.000",
+     "compare_at_price_min": "295.000",
+     "featured_image": {
+      "alt": "Long Sleeve Collared Wrap A Line Gown",
+      "aspect_ratio": 0.667,
+      "height": 1470,
+      "url": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/4vG_NKJA.png?v=1731570668",
+      "width": 980
+     },
+     "handle": "long-sleeve-collared-wrap-a-line-gown",
+     "id": 7691055956049,
+     "image": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/4vG_NKJA.png?v=1731570668",
+     "price": "206.000",
+     "price_max": "206.000",
+     "price_min": "206.000",
+     "tags": [
+      "a-line gown",
+      "full sleeves",
+      "maxi gown",
+      "PS25",
+      "sale"
+     ],
+     "title": "Long Sleeve Collared Wrap A Line Gown",
+     "type": "Gown",
+     "url": "/products/long-sleeve-collared-wrap-a-line-gown?_pos=5&_psq=gown&_psid=c54349b8e&_ss=e",
+     "variants": [],
+     "vendor": "Bazza Alzouman"
+    },
+    {
+     "available": true,
+     "body": "<ul>\n<li>Color:<strong> </strong>Off-White/Nude<span></span>\n</li>\n</ul>\n<ul>\n<li>\n<span>Fabric: </span><span>100% Polyester</span>\n</li>\n</ul>",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Strapless Gown With Organza Side Trains",
+      "aspect_ratio": 0.667,
+      "height": 6000,
+      "url": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/bazza260959R.jpg?v=1771830087",
+      "width": 4000
+     },
+     "handle": "strapless-gown-with-organza-side-trains",
+     "id": 15706439352401,
+     "image": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/bazza260959R.jpg?v=1771830087",
+     "price": "290.000",
+     "price_max": "290.000",
+     "price_min": "290.000",
+     "tags": [
+      "flowy dress",
+      "PF26",
+      "skinny gown",
+      "tulle gloves"
+     ],
+     "title": "Strapless Gown With Organza Side Trains",
+     "type": "Dresses",
+     "url": "/products/strapless-gown-with-organza-side-trains?_pos=6&_psq=gown&_psid=c54349b8e&_ss=e",
+     "variants": [],
+     "vendor": "Bazza Alzouman"
+    },
+    {
+     "available": true,
+     "body": "<ul>\n<li>Color:<strong> </strong>Black<span></span>\n</li>\n</ul>\n<ul>\n<li>\n<span>Fabric: </span><span>100% Polyester</span>\n</li>\n</ul>",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Off-Shoulder Crepe Gown With Gathered Organza Sleeve",
+      "aspect_ratio": 0.667,
+      "height": 5997,
+      "url": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/BAZZA02442.jpg?v=1773485943",
+      "width": 4000
+     },
+     "handle": "off-shoulder-crepe-gown-with-gathered-organza-sleeve",
+     "id": 15725523796049,
+     "image": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/BAZZA02442.jpg?v=1773485943",
+     "price": "255.000",
+     "price_max": "255.000",
+     "price_min": "255.000",
+     "tags": [
+      "AW26",
+      "Off-shoulder",
+      "skinny gown"
+     ],
+     "title": "Off-Shoulder Crepe Gown With Gathered Organza Sleeve",
+     "type": "Dresses",
+     "url": "/products/off-shoulder-crepe-gown-with-gathered-organza-sleeve?_pos=7&_psq=gown&_psid=c54349b8e&_ss=e",
+     "variants": [],
+     "vendor": "Bazza Alzouman"
+    },
+    {
+     "available": true,
+     "body": "<p dir=\"ltr\"><span>Strapless black gown featuring a soft white tulle drape that cascades from the neckline.</span></p>\n<p dir=\"ltr\"><span>Color: Black/White</span></p>\n<p dir=\"ltr\"><span>Fabric: 100% Crepe</span></p>",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Strapless Crepe Gown with Tulle Drape",
+      "aspect_ratio": 0.8,
+      "height": 5160,
+      "url": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/26_80ced1c2-3910-4dc3-a52e-6c5b26e2d740.jpg?v=1742639342",
+      "width": 4128
+     },
+     "handle": "strapless-crepe-gown-with-tulle-drape",
+     "id": 7724050153553,
+     "image": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/26_80ced1c2-3910-4dc3-a52e-6c5b26e2d740.jpg?v=1742639342",
+     "price": "245.000",
+     "price_max": "245.000",
+     "price_min": "245.000",
+     "tags": [
+      "PF25",
+      "skinny gown",
+      "strap sleeves"
+     ],
+     "title": "Strapless Crepe Gown with Tulle Drape",
+     "type": "Dresses",
+     "url": "/products/strapless-crepe-gown-with-tulle-drape?_pos=8&_psq=gown&_psid=c54349b8e&_ss=e",
+     "variants": [],
+     "vendor": "Bazza Alzouman"
+    },
+    {
+     "available": true,
+     "body": "<p dir=\"ltr\"><span>Sleeveless cream gown featuring a fitted design with a layered organza train and a matching ruffled organza cape. </span></p>\n<p dir=\"ltr\"><span>Color: Cream</span></p>\n<p dir=\"ltr\"><span>Fabric: 100% Crepe</span></p>",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Sleeveless Gown With Organza Train And Ruffled Organza Cape",
+      "aspect_ratio": 0.667,
+      "height": 4937,
+      "url": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/BAZZA1460R.jpg?v=1752564905",
+      "width": 3291
+     },
+     "handle": "sleeveless-gown-with-organza-train-and-ruffled-organza-cape",
+     "id": 7806378836049,
+     "image": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/BAZZA1460R.jpg?v=1752564905",
+     "price": "255.000",
+     "price_max": "255.000",
+     "price_min": "255.000",
+     "tags": [
+      "cape sleeves",
+      "drape gown",
+      "PS26",
+      "skinny gown",
+      "strapless"
+     ],
+     "title": "Sleeveless Gown With Organza Train And Ruffled Organza Cape",
+     "type": "Dresses",
+     "url": "/products/sleeveless-gown-with-organza-train-and-ruffled-organza-cape?_pos=9&_psq=gown&_psid=c54349b8e&_ss=e",
+     "variants": [],
+     "vendor": "Bazza Alzouman"
+    },
+    {
+     "available": true,
+     "body": "<p dir=\"ltr\"><span>Sleeveless beige gown featuring a voluminous gathered collar and structured square train.</span></p>\n<p dir=\"ltr\"><span>Color: Beige</span></p>\n<p dir=\"ltr\"><span>Fabric: 100% Crepe</span></p>",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Sleeveless Balloon Collar Gown With Square Train",
+      "aspect_ratio": 0.8,
+      "height": 5160,
+      "url": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/25_62695fdf-eca4-45c2-b060-cfaabbb12c02.jpg?v=1738570604",
+      "width": 4128
+     },
+     "handle": "sleeveless-baloon-collar-gown-with-square-train",
+     "id": 7724050907217,
+     "image": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/25_62695fdf-eca4-45c2-b060-cfaabbb12c02.jpg?v=1738570604",
+     "price": "225.000",
+     "price_max": "225.000",
+     "price_min": "225.000",
+     "tags": [
+      "ball gown",
+      "PF25",
+      "Short Sleeves"
+     ],
+     "title": "Sleeveless Balloon Collar Gown With Square Train",
+     "type": "Dresses",
+     "url": "/products/sleeveless-baloon-collar-gown-with-square-train?_pos=10&_psq=gown&_psid=c54349b8e&_ss=e",
+     "variants": [],
+     "vendor": "Bazza Alzouman"
+    }
+   ]
+  }
+ }
+}
