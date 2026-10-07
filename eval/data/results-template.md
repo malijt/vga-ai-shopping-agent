@@ -21,15 +21,15 @@ count or flagged "few options". Fill each cell with the number or `n/N`.
 
 | Query | Results | Stores | Seconds | Links ok | good@10 | Price ranges ok |
 |---|---|---|---|---|---|---|
-| q01_product_jacket | | | | | | |
-| q02_product_sneakers | | | | | | |
-| q03_product_jeans | | | | | | |
-| q04_outfit_casual | | | | | | |
-| q05_outfit_layered | | | | | | |
+| q01_product_gown | | | | | | |
+| q02_product_abaya | | | | | | |
+| q03_product_skinny_jeans | | | | | | |
+| q04_outfit_palazzo_top | | | | | | |
+| q05_outfit_dress_heels | | | | | | |
 | q06_text_blazer_budget | | | | | | |
 | q07_text_arabic_shirt | | | | | | |
 | q08_text_wide_leg_jeans | | | | | | |
-| q09_photo_text_jacket_brown | | | | | | |
+| q09_photo_text_gown_green | | | | | | |
 | q10_photo_text_jeans_black | | | | | | |
 
 How to fill the columns:
@@ -63,3 +63,7 @@ ranks that were wrong, the saved model output, or the price span and counts of t
 
 Anything that changed since the previous run (model, prompt version, store set, settings), and any
 change to the queries or rubric with the reason.
+
+If the 11 extra photos of `extra_queries.yaml` (ids `x01` to `x11`) were run, report them here as a
+small table with the same columns as above. They are **not** part of the 10 queries and never count
+towards the 7 of 10 pass rule.

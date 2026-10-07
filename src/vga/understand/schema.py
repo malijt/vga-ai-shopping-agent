@@ -32,7 +32,7 @@ class ReadingItem(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    category: Category = Field(description="Exactly one of the four categories.")
+    category: Category = Field(description="Exactly one of the five categories.")
     colour: str | None = Field(description="Plain English colour such as 'dark brown', or null.")
     style: str = Field(
         description="The garment type with its cut or key feature, in English: 'oversized blazer'."

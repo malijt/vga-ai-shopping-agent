@@ -36,6 +36,28 @@ def test_the_current_entry_names_the_model_pinned_in_the_settings() -> None:
     assert f"`{pinned}`" in model_line.group(0)
 
 
+def test_the_newest_entry_is_first_and_belongs_to_the_current_prompt_version() -> None:
+    text = CHANGELOG.read_text(encoding="utf-8")
+
+    first = re.search(r"^## (\S+): ", text, re.M)
+
+    assert first
+    assert first.group(1) == PROMPT_VERSION
+
+
+def test_a_prompt_version_that_has_not_been_run_live_says_pending_and_claims_no_result() -> None:
+    text = CHANGELOG.read_text(encoding="utf-8")
+    heading = re.search(rf"^## {re.escape(PROMPT_VERSION)}: ", text, re.M)
+    assert heading
+    entry = text[heading.start() :].split("\n## ")[0]
+    score = re.search(r"\*\*Eval score[^\n]*", entry)
+    assert score
+
+    if "NOT RUN" in score.group(0):
+        assert "pending" in score.group(0), "say who runs it and when"
+        assert not re.search(r"\b\d+ ?/ ?\d+\b", score.group(0)), "no result may be claimed"
+
+
 def test_the_current_entry_records_a_real_score_or_says_plainly_that_there_is_none() -> None:
     text = CHANGELOG.read_text(encoding="utf-8")
     heading = re.search(rf"^## {re.escape(PROMPT_VERSION)}: ", text, re.M)

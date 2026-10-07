@@ -72,6 +72,22 @@ def test_a_category_or_gender_without_a_word_reads_as_its_own_name_instead_of_cr
     assert "shoes" in messages.no_store_for_gender(Category.SHOES, Gender.MEN)
 
 
+def test_every_category_has_its_own_shopper_word() -> None:
+    # A category with no word reads as its enum value ("dresses") instead of failing; that is a
+    # fallback, so each real category should have a word of its own.
+    assert set(messages._CATEGORY_WORDS) == set(Category)
+
+
+def test_dresses_read_as_dresses_and_ethnic_wear_in_the_warnings() -> None:
+    assert messages.category_word(Category.DRESSES) == "dresses and ethnic wear"
+    assert messages.nothing_found_for(Category.DRESSES) == (
+        "We found nothing that matched for dresses and ethnic wear."
+    )
+    assert "look for dresses and ethnic wear" in messages.no_store_for_gender(
+        Category.DRESSES, Gender.MEN
+    )
+
+
 def test_every_message_function_is_covered_by_the_scan_above() -> None:
     functions = {name for name, value in vars(messages).items() if inspect.isfunction(value)}
 

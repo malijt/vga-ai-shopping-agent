@@ -75,6 +75,43 @@ def test_the_wrong_category_and_out_of_scope_and_out_of_stock_are_dropped() -> N
     assert titles(scored) == ["Black Oversized Blazer"]
 
 
+def test_a_dress_request_keeps_abayas_and_kaftans_and_drops_the_rest() -> None:
+    request = make_item_intent(
+        category=Category.DRESSES, colour="black", style="abaya", search_keywords=["black abaya"]
+    )
+    products = [
+        product("Neda Plain Abaya Front Open with Buttons", 1),
+        product("Embroidered Black Abaya Dress Design", 2),
+        product("JALILA GREEN FLORAL KAFTAN", 3),
+        product("Black Cotton Shirt", 4),
+        product("Black Chiffon Sheila - Custom Size", 5),
+        product("Black Oversized Blazer", 6),
+    ]
+
+    scored = prefilter_and_score(request, products, None, SETTINGS)
+
+    assert set(titles(scored)) == {
+        "Neda Plain Abaya Front Open with Buttons",
+        "Embroidered Black Abaya Dress Design",
+        "JALILA GREEN FLORAL KAFTAN",
+    }
+    assert all(entry.product.category is Category.DRESSES for entry in scored)
+
+
+def test_a_dress_request_ranks_the_requested_garment_above_another_dress_shape() -> None:
+    request = make_item_intent(
+        category=Category.DRESSES, colour="black", style="abaya", search_keywords=["black abaya"]
+    )
+    products = [
+        product("Black Satin Midi Dress", 1),
+        product("Black Open Front Abaya", 2),
+    ]
+
+    scored = prefilter_and_score(request, products, None, SETTINGS)
+
+    assert titles(scored) == ["Black Open Front Abaya", "Black Satin Midi Dress"]
+
+
 def test_unknown_stock_and_unknown_category_are_kept() -> None:
     products = [
         product("Black Oversized Blazer", 1, in_stock=None),

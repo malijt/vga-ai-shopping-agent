@@ -98,13 +98,26 @@ def test_more_than_four_items_is_a_problem() -> None:
     assert problems == ["items: at most 4 items are allowed"]
 
 
-@pytest.mark.parametrize("bad", ["handbags", "dresses", "", None, 7, "TOPS "])
-def test_a_category_outside_the_four_names_its_field_and_not_its_value(bad: Any) -> None:
+@pytest.mark.parametrize("bad", ["handbags", "dress", "abayas", "", None, 7, "TOPS "])
+def test_a_category_outside_the_five_names_its_field_and_not_its_value(bad: Any) -> None:
     reading = make_reading(items=[make_reading_item(), make_reading_item(category=bad)])
 
     problems = _problems(reading)
 
-    assert problems == ["items[1].category: must be one of tops, outerwear, bottoms, shoes"]
+    assert problems == [
+        "items[1].category: must be one of tops, outerwear, bottoms, shoes, dresses"
+    ]
+
+
+def test_dresses_is_a_valid_category() -> None:
+    reading = make_reading(
+        items=[make_reading_item(category="dresses", search_keywords=["abaya", "black abaya"])]
+    )
+
+    [item] = _validate(reading, text="a black abaya").items
+
+    assert item.category is Category.DRESSES
+    assert item.search_keywords == ["abaya", "black abaya"]
 
 
 def test_every_problem_is_listed_not_just_the_first() -> None:

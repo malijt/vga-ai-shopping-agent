@@ -129,7 +129,7 @@ class TestMock:
     def test_it_says_what_it_did_and_that_nothing_is_decided_yet(self, cli: Cli) -> None:
         cli.run("--mock")
 
-        assert "q01_product_jacket: 21 results in 5.5 s" in cli.printed
+        assert "q01_product_gown: 21 results in 5.5 s" in cli.printed
         assert "10 of 10 queries answered" in cli.printed
         assert "Labelling sheet:" in cli.printed
         assert "Verdict: PENDING" in cli.printed
@@ -205,7 +205,7 @@ class TestLabellingThroughTheCommandLine:
         cli.run("--rescore", str(run_dir), "--labels", str(run_dir / LABELS_FILE))
 
         text = (run_dir / REPORT_FILE).read_text(encoding="utf-8")
-        assert "| q01_product_jacket | 12 / 9 | 4 | 5.5 | 21/21 | 10 / 9 | yes |" in text
+        assert "| q01_product_gown | 12 / 9 | 4 | 5.5 | 21/21 | 10 / 9 | yes |" in text
 
     def test_rescoring_changes_only_the_report_never_the_run_or_the_sheet(self, cli: Cli) -> None:
         run_dir = self.labelled(cli, good_queries=7)
@@ -389,7 +389,7 @@ class TestSafety:
         code = cli.run("--record", str(cli.root / "rec"), wiring=wiring_over(live))
 
         assert code == 2
-        assert "eval/data/assets/private/product_jacket.jpg" in cli.errors
+        assert "eval/data/assets/private/dress_burgundy_gown.png" in cli.errors
         assert "eval/data/ASSETS.md" in cli.errors
         assert live.calls() == (0, 0, 0, 0)
         assert not (cli.root / "rec").exists()
@@ -548,7 +548,7 @@ class TestRecordThenReplayThroughTheCommandLine:
         cli.run("--record", str(cli.root / "rec"), wiring=wiring_over(LiveParts(), fetch))
 
         text = (cli.root / "eval" / "results" / "run-1" / REPORT_FILE).read_text(encoding="utf-8")
-        assert "| q01_product_jacket | Links ok | store |" in text
+        assert "| q01_product_gown | Links ok | store |" in text
         assert "HTTP 404, not 200" in text
 
     def test_a_live_runs_folder_is_never_overwritten(self, cli: Cli) -> None:
@@ -600,29 +600,29 @@ class TestRecordThenReplayThroughTheCommandLine:
         self.record(cli, LiveParts())
         manifest = cli.root / "rec" / "manifest.json"
         data = json.loads(manifest.read_text(encoding="utf-8"))
-        del data["queries"]["q03_product_jeans"]
+        del data["queries"]["q03_product_skinny_jeans"]
         manifest.write_text(json.dumps(data), encoding="utf-8")
 
         code = cli.run("--replay", str(cli.root / "rec"), wiring=wiring_over(LiveParts()))
 
         assert code == 0
-        assert "q03_product_jeans: FAILED" in cli.printed
+        assert "q03_product_skinny_jeans: FAILED" in cli.printed
         assert "9 of 10 queries answered" in cli.printed
         text = (cli.root / "eval" / "results" / "replay" / REPORT_FILE).read_text(encoding="utf-8")
-        assert "could not serve q03_product_jeans from the recording" in text
-        assert "| q03_product_jeans | Results | store |" in text
+        assert "could not serve q03_product_skinny_jeans from the recording" in text
+        assert "| q03_product_skinny_jeans | Results | store |" in text
 
     def test_a_replay_without_a_recorded_duration_cannot_pass_the_time_rule(self, cli: Cli) -> None:
         self.record(cli, LiveParts())
         manifest = cli.root / "rec" / "manifest.json"
         data = json.loads(manifest.read_text(encoding="utf-8"))
-        del data["queries"]["q01_product_jacket"]["live_duration_ms"]
+        del data["queries"]["q01_product_gown"]["live_duration_ms"]
         manifest.write_text(json.dumps(data), encoding="utf-8")
 
         cli.run("--replay", str(cli.root / "rec"), wiring=wiring_over(LiveParts()))
 
         text = (cli.root / "eval" / "results" / "replay" / REPORT_FILE).read_text(encoding="utf-8")
-        assert "| q01_product_jacket | 8 | 2 | not recorded |" in text
+        assert "| q01_product_gown | 8 | 2 | not recorded |" in text
 
     def test_a_replay_report_opens_with_a_banner(self, cli: Cli) -> None:
         self.record(cli, LiveParts())

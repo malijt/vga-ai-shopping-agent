@@ -56,6 +56,33 @@ class TestChipsAreShown:
         assert results_at.selectbox(key="chip_0_gender") is not None
         assert results_at.selectbox(key="chip_1_gender") is not None
 
+    def test_the_category_chip_offers_all_five_categories_dresses_last(
+        self, results_at: AppTest
+    ) -> None:
+        offered = results_at.selectbox(key="chip_0_category").options
+
+        assert offered == [
+            "Tops",
+            "Outerwear",
+            "Bottoms",
+            "Shoes",
+            "Dresses and ethnic wear",
+        ]
+
+    def test_a_detected_dress_is_shown_with_the_dresses_label(
+        self, at: AppTest, install_pipeline: InstallPipeline
+    ) -> None:
+        understood = make_understand_result(
+            items=[make_item_intent(category=Category.DRESSES, search_keywords=["abaya"])]
+        )
+        install_pipeline(SAMPLE.model_copy(update={"understood": understood}))
+        at.run()
+
+        search(at)
+
+        assert at.selectbox(key="chip_0_category").value is Category.DRESSES
+        assert at.selectbox(key="chip_0_category").options[-1] == "Dresses and ethnic wear"
+
     def test_every_chip_has_a_visible_label(self, results_at: AppTest) -> None:
         labels = [widget.label for widget in results_at.selectbox]
         labels += [widget.label for widget in results_at.text_input]
@@ -145,6 +172,17 @@ class TestApply:
                 ItemEdit(index=1, category=Category.BOTTOMS, gender=Gender.WOMEN),
             ],
             budget=Budget(max_price=300.0, currency="AED"),
+        )
+
+    def test_changing_a_category_to_dresses_sends_that_edit(
+        self, results_at: AppTest, pipeline: FakePipeline
+    ) -> None:
+        results_at.selectbox(key="chip_1_category").set_value(Category.DRESSES).run()
+
+        results_at.button(key=APPLY).click().run()
+
+        assert last_chips(pipeline) == ChipEdits(
+            items=[ItemEdit(index=1, category=Category.DRESSES)]
         )
 
     def test_clearing_the_budget_box_removes_the_budget(

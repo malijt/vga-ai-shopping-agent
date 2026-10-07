@@ -41,6 +41,7 @@ def test_without_a_colour_or_material_there_is_one_variant() -> None:
         (Category.OUTERWEAR, "jacket"),
         (Category.BOTTOMS, "pants"),
         (Category.SHOES, "shoes"),
+        (Category.DRESSES, "dress"),
     ],
 )
 def test_an_item_without_a_style_falls_back_to_a_noun_for_its_category(
@@ -49,6 +50,16 @@ def test_an_item_without_a_style_falls_back_to_a_noun_for_its_category(
     item = make_item_intent(category=category, colour="navy", style=None)
 
     assert rebuild_keywords(item) == [f"navy {noun}", noun]
+
+
+def test_a_chip_edit_to_the_colour_of_an_abaya_keeps_the_garments_own_word() -> None:
+    # The keywords are rebuilt from colour and style with no model call, so "abaya" must survive
+    # in the style: a store that sells abayas finds nothing for "dress".
+    item = make_item_intent(
+        category=Category.DRESSES, colour="burgundy", style="open front abaya", material=None
+    )
+
+    assert rebuild_keywords(item) == ["burgundy open front abaya", "open front abaya"]
 
 
 def test_a_word_repeated_across_colour_and_style_appears_once() -> None:

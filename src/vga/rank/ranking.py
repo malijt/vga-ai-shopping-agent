@@ -34,10 +34,10 @@ def prefilter_and_score(
 ) -> list[ScoredProduct]:
     """Filter ``products`` for ``item`` and score what is left on text and price.
 
-    - Dropped: out of stock (``in_stock is False``), a garment outside the four categories, the
-      wrong category, and a title that clearly states the other gender when the request's gender
-      is explicit. Never dropped: over budget (flagged ``over_budget`` instead), unknown stock,
-      unknown category (kept without a category bonus).
+    - Dropped: out of stock (``in_stock is False``), a garment outside the five categories, the
+      wrong category, and, when the request's gender is explicit, a children's product and one
+      that clearly states the other gender. Never dropped: over budget (flagged ``over_budget``
+      instead), unknown stock, unknown category (kept without a category bonus).
     - ``scores.image`` is ``None``; ``scores.total`` combines text and price with the image weight
       left out. Nothing is removed for a low score yet, because the image score may still lift it.
     - ``product.category`` is filled with the inferred category when there is one.

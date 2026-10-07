@@ -1,13 +1,13 @@
 """Plain-language messages for the shopper when there is nothing to search for (plan A16).
 
-Every message says what to do next and names the four categories the demo covers, so a shopper who
+Every message says what to do next and names the five categories the demo covers, so a shopper who
 asked for a handbag learns the limit instead of getting a wrong result or a silent failure.
 """
 
 from vga.errors import InvalidInputError, LlmError
 from vga.understand.schema import Verdict
 
-COVERED = "tops, outerwear, bottoms and shoes"
+COVERED = "tops, outerwear, bottoms, shoes, and dresses or ethnic wear (such as abayas and kurtas)"
 
 _MESSAGES: dict[Verdict, str] = {
     Verdict.NO_GARMENT: (

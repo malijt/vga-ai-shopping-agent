@@ -26,13 +26,15 @@ from vga.rank.category import OUT_OF_SCOPE, TitleKind
 SAMPLES = Path(__file__).resolve().parents[2] / "docs" / "store-qualification" / "samples"
 FIXTURE_RESPONSE = Path(__file__).resolve().parents[1] / "fixtures" / "response_sample.json"
 
-TOPS, OUTERWEAR, BOTTOMS, SHOES = (
+TOPS, OUTERWEAR, BOTTOMS, SHOES, DRESSES = (
     Category.TOPS,
     Category.OUTERWEAR,
     Category.BOTTOMS,
     Category.SHOES,
+    Category.DRESSES,
 )
 OOS = OUT_OF_SCOPE
+EN_DASH = chr(0x2013)  # Hanayen writes "Sheila - Custom Size" with a real en dash
 
 # (title, expected, where the title comes from)
 REAL_TITLES: list[tuple[str, TitleKind, str]] = [
@@ -40,7 +42,7 @@ REAL_TITLES: list[tuple[str, TitleKind, str]] = [
     ("Feathered Satin Heeled Mule in Black", SHOES, "oh-polly/suggest-shoes.json"),
     ("Embellished Satin Heeled Mule in Black", SHOES, "oh-polly/suggest-shoes.json"),
     ("Embellished Satin Heeled Mule in Fuchsia Pink", SHOES, "oh-polly/suggest-shoes.json"),
-    ("Single-Breasted Blazer Mini Dress in Black", OOS, "oh-polly/suggest-black-blazer.json"),
+    ("Single-Breasted Blazer Mini Dress in Black", DRESSES, "oh-polly/suggest-black-blazer.json"),
     ("Oversized Single-Breasted Blazer in Soft Lilac", OUTERWEAR, "oh-polly/..blazer.json"),
     ("Structured Double-Breasted Blazer in Burgundy", OUTERWEAR, "oh-polly/..blazer.json"),
     ("Oversized Single-Breasted Blazer in White", OUTERWEAR, "oh-polly/..blazer.json"),
@@ -66,17 +68,17 @@ REAL_TITLES: list[tuple[str, TitleKind, str]] = [
     ),
     (
         "Carlin | Black Plunge-Neck Tailored Mini Dress With Button Detailing",
-        OOS,
+        DRESSES,
         "club-l-london/suggest-black-blazer.json",
     ),
     (
         "Angel | Black Plunge-Neck Tailored Mini Dress With Gold-Detailing",
-        OOS,
+        DRESSES,
         "club-l-london/suggest-black-blazer.json",
     ),
     (
         "Friya | Black Velvet Sweetheart-Neck Tailored Mini Dress",
-        OOS,
+        DRESSES,
         "club-l-london/suggest-black-blazer.json",
     ),
     (
@@ -110,6 +112,36 @@ REAL_TITLES: list[tuple[str, TitleKind, str]] = [
         "luxury-for-you/search-black-blazer.html",
     ),
     ('BLAZER "DELILAH"', OUTERWEAR, "luxury-for-you/product-jsonld.json"),
+    # Dresses, abayas, kaftans, kurtas and sheilas, from the stores found for the fifth category
+    # (docs/store-qualification/dress-store-discovery.md).
+    (
+        "Neda Plain Abaya Front Open with Buttons",
+        DRESSES,
+        "hanayen/suggest-abaya.json",
+    ),
+    ("Asymmetric Modern Crystalized Abaya", DRESSES, "hanayen/suggest-abaya.json"),
+    ("Off-White Under Abaya Dress In Satin", DRESSES, "hanayen/suggest-dress.json"),
+    ("Embroidered Black Abaya Dress Design", DRESSES, "hanayen/suggest-dress.json"),
+    ("Kaftan Style Under Abaya", DRESSES, "hanayen/suggest-kaftan.json"),
+    ("GIGI BURGUNDY ABAYA", DRESSES, "maison-arabelle/suggest-abaya.json"),
+    ("JALILA GREEN FLORAL KAFTAN", DRESSES, "maison-arabelle/suggest-kaftan.json"),
+    ("ZAHRA GOLD DRESS WITH CAPE", DRESSES, "maison-arabelle/suggest-dress.json"),
+    ("Printed Dress - AS26-92", DRESSES, "nishat-linen-uae/suggest-dress.json"),
+    ("Printed Kaftan - FW24-45", DRESSES, "nishat-linen-uae/suggest-kaftan.json"),
+    ("2 Piece - Embroidered Gown - FE26-128", DRESSES, "nishat-linen-uae/suggest-abaya.json"),
+    ("Embroidered Kurta - NQ26-008", DRESSES, "nishat-linen-uae/suggest-kurta.json"),
+    ("ZAH STUDIO - Vela Kaftan & Izaar", DRESSES, "signature-studio/suggest-kaftan.json"),
+    ("Black Chiffon Sheila " + EN_DASH + " Custom Size", OOS, "hanayen/suggest-kaftan.json"),
+    # "suit" is a South Asian suit at Nishat Linen and a men's suit at Sacoor Brothers; the
+    # lexicon leaves the word out, so both stay uncategorised (kept, no category bonus).
+    ("2 Piece - Embroidered Suit - FE26-130", None, "nishat-linen-uae/suggest-abaya.json"),
+    (
+        "Single Breasted Black Suit In Wool Blend",
+        None,
+        "sacoor-brothers-uae/suggest-black-blazer.json",
+    ),
+    # A kurta sold with trousers is a set, not a pair of trousers.
+    ("KUNZUL CHANNAR - Light blue kurta trouser", None, "signature-studio/suggest-kurta.json"),
 ]
 
 FIXTURE_TITLES: list[tuple[str, TitleKind]] = [
@@ -163,6 +195,14 @@ HAND_WRITTEN: list[tuple[str, TitleKind]] = [
     ("Faux Leather Leggings", BOTTOMS),
     ("Boot Cut Jeans", BOTTOMS),
     ("Dress Pants", BOTTOMS),
+    # "khakis" is the plural noun for trousers; "khaki" alone is a colour
+    ("Men Loose Straight Cotton Poplin Khakis", BOTTOMS),
+    ("Men's Relaxed Stretch Twill Cargo Khakis", BOTTOMS),
+    ("Slim Fit Khakis in Stone", BOTTOMS),
+    ("Khaki Chinos", BOTTOMS),
+    ("Khaki Bomber Jacket", OUTERWEAR),
+    ("Khaki Linen Shirt", TOPS),
+    ("Khaki", None),
     # shoes
     ("Leather Chelsea Boots", SHOES),
     ("White Leather Low-Top Sneakers", SHOES),
@@ -172,22 +212,41 @@ HAND_WRITTEN: list[tuple[str, TitleKind]] = [
     ("Ballet Flats", SHOES),
     ("Suede Ankle Boots", SHOES),
     ("Dress Shoes", SHOES),
-    # a garment or accessory outside the four categories
-    ("Satin Midi Dress", OOS),
+    # dresses and ethnic wear
+    ("Satin Midi Dress", DRESSES),
+    ("Floral Maxi Dress", DRESSES),
+    ("Evening Gown", DRESSES),
+    ("Black Abaya", DRESSES),
+    ("Shirt Dress", DRESSES),
+    ("Sweater Dress", DRESSES),
+    ("Blazer Dress", DRESSES),
+    ("Floral Print Kaftan", DRESSES),
+    ("Moroccan Jalabiya", DRESSES),
+    ("Open Front Abayas", DRESSES),
+    ("White Cotton Kurta Set", DRESSES),
+    ("Embroidered Kurti", DRESSES),
+    ("Embroidered Lehenga Choli", DRESSES),
+    ("Men's Kandura", DRESSES),
+    ("Two-Piece Embroidered Gown", DRESSES),
+    ("Co-ord Set Dress", DRESSES),
+    ("Dresses", DRESSES),
+    # a garment or accessory outside the five categories
     ("Linen Jumpsuit", OOS),
     ("Leather Tote Bag", OOS),
     ("Chain Belt", OOS),
     ("Wool Beanie Hat", OOS),
     ("Silk Scarf", OOS),
     ("Gold Hoop Earrings", OOS),
-    ("Floral Maxi Dress", OOS),
-    ("Evening Gown", OOS),
-    ("Black Abaya", OOS),
-    ("Shirt Dress", OOS),
-    ("Sweater Dress", OOS),
-    ("Blazer Dress", OOS),
+    ("Black Chiffon Sheila", OOS),
+    ("Satin Hijab", OOS),
+    ("Embroidered Dupatta", OOS),
     ("Bikini Top", OOS),
     ("Cotton Pyjama Set", OOS),
+    ("Cotton Nightdress", OOS),
+    ("Satin Night Dress", OOS),
+    ("Satin Dressing Gown", OOS),
+    ("Terry Bathrobe", OOS),
+    ("Swim Dress", OOS),
     ("Aviator Sunglasses", OOS),
     ("Shoe Bag", OOS),
     ("Boxer Shorts", OOS),
@@ -195,6 +254,9 @@ HAND_WRITTEN: list[tuple[str, TitleKind]] = [
     ("Boot Polish", OOS),
     # ambiguous, a set, or no garment named: no category
     ("Two-Piece Suit Set", None),
+    ("Embroidered Three Piece Suit", None),
+    ("Kurta and Trousers Set", None),
+    ("Abaya and Sheila", None),
     ("Co-ord Set in Linen", None),
     ("Linen Blazer and Trousers Set", None),
     ("Shirt & Trousers", None),
@@ -234,7 +296,7 @@ def test_the_labelled_set_is_big_enough_and_at_least_90_percent_correct() -> Non
 def test_the_set_covers_every_outcome_and_all_three_sources() -> None:
     expected = {e for _, e in ALL_CASES}
 
-    assert expected == {TOPS, OUTERWEAR, BOTTOMS, SHOES, OOS, None}
+    assert expected == {TOPS, OUTERWEAR, BOTTOMS, SHOES, DRESSES, OOS, None}
     assert len(REAL_TITLES) >= 20
     assert len(HAND_WRITTEN) >= 40
 
@@ -278,13 +340,15 @@ def test_fixture_titles_are_in_the_bundled_sample_response() -> None:
 @pytest.mark.parametrize(
     ("title", "expected"),
     [
-        pytest.param("Blazer Mini Dress", OOS, id="the last garment noun wins: a dress"),
+        pytest.param("Blazer Mini Dress", DRESSES, id="the last garment noun wins: a dress"),
         pytest.param("Dress Shirt", TOPS, id="the last garment noun wins: a shirt"),
+        pytest.param("Dress Pants", BOTTOMS, id="'dress' before another noun is only a modifier"),
+        pytest.param("Dress Shoes", SHOES, id="'dress' before shoes is only a modifier"),
         pytest.param("Blazer Jacket", OUTERWEAR, id="two nouns of one category"),
         pytest.param("Heels With Diamante Brooches", SHOES, id="detail after 'with' is ignored"),
         pytest.param("Jacket in Black Wool", OUTERWEAR, id="detail after 'in' is ignored"),
         pytest.param("Sneakers for Men", SHOES, id="detail after 'for' is ignored"),
-        pytest.param("Short Sleeve Dress", OOS, id="'short' alone is not shorts"),
+        pytest.param("Short Sleeve Dress", DRESSES, id="'short' alone is not shorts"),
         pytest.param("SHIRTS", TOPS, id="upper case and plural"),
         pytest.param("   ", None, id="blank"),
         pytest.param("", None, id="empty"),
@@ -301,9 +365,115 @@ def test_a_swimwear_or_sleepwear_word_makes_the_title_out_of_scope_anywhere() ->
     assert classify_title("Pyjama Shirt") == OOS
 
 
-def test_infer_category_returns_none_for_out_of_scope_titles() -> None:
-    assert infer_category("Satin Midi Dress") is None
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Cotton Nightdress",
+        "Night Dress",
+        "Night-Gown in Satin",
+        "Sleep Dress",
+        "Satin Dressing Gown",
+        "Swim Dress",
+        "Terry Bathrobe",
+    ],
+)
+def test_nightwear_swimwear_and_robes_stay_out_of_scope_even_when_they_name_a_dress(
+    title: str,
+) -> None:
+    # Dresses and gowns are a category now, so these are the titles that must not leak into it.
+    assert classify_title(title) == OOS
+
+
+@pytest.mark.parametrize("title", ["Linen Jumpsuit", "Cotton Playsuit", "Denim Romper"])
+def test_a_jumpsuit_playsuit_or_romper_is_not_a_dress(title: str) -> None:
+    # The BRD lists dresses, gowns, kaftans, abayas, kurtas "and similar one-piece or ethnic
+    # garments". A jumpsuit has legs, so it is not similar to those and stays out of scope.
+    assert classify_title(title) == OOS
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Black Chiffon Sheila",
+        "Chiffon Shayla Scarf",
+        "Satin Hijab",
+        "Silk Headscarf",
+        "Embroidered Dupatta",
+        "Cotton Niqab",
+        "Red Ghutra",
+    ],
+)
+def test_head_coverings_and_scarves_are_accessories_not_dresses(title: str) -> None:
+    assert classify_title(title) == OOS
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Abaya with Sheila",
+        "Embroidered Abaya with Matching Hijab",
+        "Kaftan Dress in Black",
+        "Gown for Women",
+    ],
+)
+def test_a_dress_with_an_accessory_named_after_a_cut_word_is_still_a_dress(title: str) -> None:
+    assert classify_title(title) == DRESSES
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "2 Piece - Embroidered Gown",
+        "Three Piece Kaftan Set",
+        "Kurta Set",
+        "Abaya Set",
+        "Co-ord Dress Set",
+    ],
+)
+def test_a_set_named_after_a_dress_is_still_dresses(title: str) -> None:
+    # A two-piece gown or a kurta set is one outfit in the dresses category; for the other four
+    # categories a set has no single category and gets none.
+    assert classify_title(title) == DRESSES
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Linen Shirt and Trousers Set",
+        "Two-Piece Skirt Set",
+        "Co-ord Set with Blazer",
+    ],
+)
+def test_sets_of_the_other_categories_still_have_no_category(title: str) -> None:
+    assert classify_title(title) is None
+
+
+@pytest.mark.parametrize(
+    "title", ["Light Blue Kurta Trouser", "Cotton Kurta Pants", "Kameez Trousers", "Kurta Shirt"]
+)
+def test_a_kurta_sold_with_trousers_is_a_set_not_a_pair_of_trousers(title: str) -> None:
+    # Signature Studio sells "kurta trouser" sets. Read by the last-noun rule they would be
+    # bottoms and would be offered to a shopper who asked for trousers.
+    assert classify_title(title) is None
+
+
+def test_a_kurta_with_trousers_after_a_cut_word_is_a_kurta() -> None:
+    assert classify_title("Embroidered Kurti with Palazzo") == DRESSES
+
+
+def test_a_word_that_means_a_south_asian_suit_here_and_a_mens_suit_there_is_left_alone() -> None:
+    """Known hard case, recorded and not solved: "suit" is a three-piece embroidered outfit at
+    Nishat Linen UAE and a tailored men's suit at Sacoor Brothers. Nothing in a title tells the
+    two apart, so neither gets a category: both are kept for any request, without a category bonus.
+    (A women-only request still drops the men's suit through the store's own gender data.)"""
+    assert classify_title("2 Piece - Embroidered Suit - FE26-130") is None
+    assert classify_title("Single Breasted Black Suit In Wool Blend") is None
+
+
+def test_infer_category_returns_none_only_for_out_of_scope_titles() -> None:
+    assert infer_category("Satin Midi Dress") is DRESSES
     assert infer_category("Leather Tote Bag") is None
+    assert infer_category("Black Chiffon Sheila") is None
 
 
 @pytest.mark.parametrize(
@@ -325,8 +495,9 @@ def test_breadcrumb_is_used_only_when_the_title_says_nothing(
 
 def test_the_stores_own_label_loses_to_the_title() -> None:
     # Oh Polly files "Single-Breasted Blazer Mini Dress" under "Coats & Jackets".
-    assert resolve_category("Single-Breasted Blazer Mini Dress in Black", OUTERWEAR) == OOS
+    assert resolve_category("Single-Breasted Blazer Mini Dress in Black", OUTERWEAR) == DRESSES
     assert resolve_category("Tailored Shirt", OUTERWEAR) == TOPS
+    assert resolve_category("Black Chiffon Sheila", DRESSES) == OOS
 
 
 def test_the_stores_own_label_is_used_when_the_title_names_no_garment() -> None:

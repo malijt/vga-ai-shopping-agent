@@ -171,14 +171,24 @@ class TestItemIntentAndUnderstandResult:
 
         assert round_trip(result) == result
 
-    @pytest.mark.parametrize("category", ["accessories", "bag", "Shirts", ""])
-    def test_category_outside_the_four_is_rejected(self, category: str) -> None:
+    @pytest.mark.parametrize("category", ["accessories", "bag", "Shirts", "dress", ""])
+    def test_category_outside_the_five_is_rejected(self, category: str) -> None:
         with pytest.raises(ValidationError):
             make_item_intent(category=category)
 
-    @pytest.mark.parametrize("category", ["tops", "outerwear", "bottoms", "shoes"])
-    def test_the_four_categories_are_accepted(self, category: str) -> None:
+    @pytest.mark.parametrize("category", ["tops", "outerwear", "bottoms", "shoes", "dresses"])
+    def test_the_five_categories_are_accepted(self, category: str) -> None:
         assert make_item_intent(category=category).category == Category(category)
+
+    def test_dresses_is_the_fifth_category_and_follows_the_original_four(self) -> None:
+        # The order is the order the UI lists them in, so adding dresses must not reorder the rest.
+        assert [category.value for category in Category] == [
+            "tops",
+            "outerwear",
+            "bottoms",
+            "shoes",
+            "dresses",
+        ]
 
     @pytest.mark.parametrize("count", [0, 4])
     def test_keywords_must_be_one_to_three(self, count: int) -> None:
