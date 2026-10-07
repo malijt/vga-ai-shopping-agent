@@ -10,6 +10,9 @@ file as the always-on summary and open the matching doc when you need full depth
   OpenAI call understands the request, the app searches 4-6 GCC fashion stores' own search pages
   live, ranks the products, and shows the top 30 split into Budget / Mid-range / Premium / Luxury.
   Every result links to the store's own product page.
+- **Categories (five):** tops, outerwear, bottoms, shoes and, since 2026-10-08, **dresses** (dresses,
+  gowns, kaftans, abayas, kurtas and similar one-piece or ethnic garments). Accessories stay out
+  of scope.
 - **Status (2026-10-07):** the implementation plan
   [`docs/plans/2026-10-07-vga-ai-shopping-agent-implementation-plan.md`](./docs/plans/2026-10-07-vga-ai-shopping-agent-implementation-plan.md)
   is approved (v3). Waves 1 and 2 (Phases 1 to 11) are merged; Wave 3 (pipeline and store adapters)

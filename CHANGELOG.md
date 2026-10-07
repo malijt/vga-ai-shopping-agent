@@ -9,6 +9,8 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 ### 2026-10-08
 
 **Decided**
+- **Scope change: dresses are now a fifth category** (dresses, gowns, kaftans, abayas, kurtas and similar). The user supplied five test photos and all five show a dress or ethnic wear, which the original scope excluded. The BRD, PRD, plan (A23, A24) and `CLAUDE.md` are updated; the code change follows. The five photo-based acceptance queries will be rewritten around the supplied photos before any acceptance run.
+- A further store discovery pass (plan Module 2.5) looks for Shopify stores that sell dresses and modest or ethnic wear, because the six demo stores were chosen before dresses were in scope.
 - OpenAI model: `gpt-6-luna`, chosen by the user. It replaces the earlier pin `gpt-5-mini-2025-08-07`. The switch and the first real run of the Understand step are in progress.
 - This changelog is maintained from now on (user request).
 

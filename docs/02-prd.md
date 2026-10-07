@@ -25,7 +25,7 @@ photo and/or text
 | Input | What happens |
 |---|---|
 | Product photo | LLM describes the item; search by keywords; rank by image similarity too |
-| Outfit photo | LLM lists each garment (top, outerwear, bottoms, shoes); one search per garment; results grouped by garment |
+| Outfit photo | LLM lists each garment (top, outerwear, bottoms, shoes, dress); one search per garment; results grouped by garment. A dress worn with shoes is two garments |
 | Text | LLM turns it (English or Arabic) into English search keywords and filters |
 | Photo + text | Photo gives the look; text gives filters and changes ("dark brown", "cheaper", "under 300 AED") |
 

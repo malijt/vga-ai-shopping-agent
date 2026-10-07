@@ -356,6 +356,15 @@ Effort key: **S** about 30 min, **M** about 1 h, **L** about 2 h.
 | 2.4.3 | Coverage table | Per GO store: men / women, which of the four categories returned results, price range seen, tier hint | Table shows whether the men's acceptance queries (q06, q07) can reach 3 stores | S |
 | 2.4.4 | Updated summary | Orchestrator updates `SUMMARY.md` with the new gate count | Gate restated: at least 4 GO, at least 1 luxury-leaning | S |
 
+#### Module 2.5: Stores for dresses and modest or ethnic wear (added with scope change A23)
+**Purpose:** the six demo stores were chosen before dresses were in scope. Find Shopify storefronts in the UAE that sell dresses, kaftans, abayas, kurtas and similar, so the best six for the new scope can be chosen. Same request rules as the rest of Phase 2.
+
+| # | Feature | Description | Acceptance Criteria | Effort |
+|---|---|---|---|---|
+| 2.5.1 | Candidate list | UAE (or GCC) fashion storefronts on Shopify, priced in AED, that sell dresses and modest or ethnic wear; multi-brand preferred | At least 10 candidates with how each was identified as Shopify | M |
+| 2.5.2 | Qualify the best | robots.txt allows `/search/suggest.json`; queries `dress`, `kaftan`, `abaya`, `kurta` return product data | Full reports and samples for every GO store, at most 4 | L |
+| 2.5.3 | Coverage for the user's photos | For each GO store and each of the six current stores (from saved responses): can it answer an evening gown, a floral kaftan dress, an embroidered ethnic set, a black dress, a white kurta set? | A table the orchestrator can use to choose the six | S |
+
 ---
 
 ### Phase 3: Image-Similarity Spike `INDEPENDENT`
@@ -922,6 +931,8 @@ These were considered and left out on purpose. Build one only when its trigger i
 | A20 | For an outfit photo, "at least 20 results" applies to the whole query, and every garment must have at least 1 result; price ranges and the top-10 rule are checked per garment | A2 gives each garment 12 results, so 20 per garment could never pass |
 | A21 | A thin price range borrows only from the range next to it and otherwise shows fewer results | A header such as "Budget · 45-1,600 AED" would mislead; the PRD says to return fewer instead of padding |
 | A22 | The budget is set in one place, the budget chip (or in the request text); the sidebar has only the price-mix presets. The request box is a single line | Two budget boxes could disagree; Streamlit's multi-line box lost the first click on the search button |
+| A23 | **Scope change (user, 2026-10-08): dresses are a fifth category.** It covers dresses, gowns, kaftans, abayas, kurtas and similar one-piece or ethnic garments. The five photo-based acceptance queries are rewritten around the five photos the user supplied (three dress photos, two outfit photos of a dress with shoes); the three text queries stay. Edge case e13 (a dress) changes from "not covered" to a valid request, and a new out-of-scope case replaces it | Every photo the user supplied shows a dress or ethnic wear. No acceptance run had happened yet, so no result was seen before the queries changed |
+| A24 | Ethnic wear (kurta, lehenga, embroidered sets) is in scope as a request, but the six stores are Western brands and may return nothing for it. A further Shopify discovery pass (Module 2.5) looks for stores that sell dresses, kaftans, abayas and kurtas | The user's photos include a kurta set and an embroidered ethnic set |
 | A19 | The demo searches six stores: Giordano UAE, Nautica UAE, Sacoor Brothers UAE, Oh Polly UAE, Club L London UAE, Maison D'Vie. The Bear House UAE, Good Times and Luxury For You are readable but held in reserve | The BRD caps the demo at 6 stores and lets the team pick the ones that work. The six were chosen for the widest cover of gender, category and price; say if you want a different six |
 
 ## 12. Best-Practices Verification

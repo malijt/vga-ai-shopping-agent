@@ -19,7 +19,7 @@ A shopper in the GCC. Text can be English or Arabic.
 ## In scope
 
 - Inputs: product photo, outfit photo, text, photo + text ("like this but dark brown, under 300 AED").
-- Categories: tops, outerwear, bottoms, shoes.
+- Categories: tops, outerwear, bottoms, shoes, **and dresses** (dresses, gowns, kaftans, abayas, kurtas and similar one-piece or ethnic garments). Dresses were added on 2026-10-08 by the business: every test photo it supplied shows a dress or ethnic wear.
 - 4-6 GCC stores, **UAE sites first**.
 - Top 30 results, with price in the store's currency and a link to the store's product page.
 - **Final list split by price into 4 ranges: Budget, Mid-range, Premium, Luxury, with a percentage mix** (for example 25 / 25 / 25 / 25, or value-first 40 / 30 / 20 / 10). The mix is a setting.
