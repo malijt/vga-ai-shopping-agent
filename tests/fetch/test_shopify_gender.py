@@ -16,13 +16,18 @@ from typing import Any
 
 import pytest
 
-from tests.factories import make_store_config
-from tests.fetch.conftest import FIXTURES, shopify_product, shopify_store, suggest_body
-from vga.models import ExtractionConfig, Gender, StoreConfig, StrategyConfig
-from vga.stores.extractors import ExtractionChain, ShopifyExtractor, default_registry
+from tests.fetch.conftest import (
+    GENDER_FIXTURES,
+    gender_fixture_text,
+    gender_products,
+    shopify_product,
+    shopify_store,
+    suggest_body,
+)
+from vga.models import Gender, StrategyConfig
+from vga.stores.extractors import ShopifyExtractor
 from vga.stores.extractors.shopify import DEFAULT_GENDER_FIELDS, GENDER_FIELDS
 
-GENDER_FIXTURES = FIXTURES / "gender"
 MEN, WOMEN, UNISEX = Gender.MEN, Gender.WOMEN, Gender.UNISEX
 LETTER = {"M": MEN, "W": WOMEN, "U": UNISEX, ".": None}
 CURLY = chr(0x2019)  # the curly apostrophe some stores type (Giordano writes Men + this + s)
@@ -80,8 +85,7 @@ falls back to the title for a ``None`` gender, and these two stores' files set `
 (or are single-brand) for the rest."""
 
 
-def saved(store_id: str, name: str) -> str:
-    return (GENDER_FIXTURES / store_id / name).read_text(encoding="utf-8")
+saved = gender_fixture_text
 
 
 def test_every_saved_response_is_in_the_table() -> None:
@@ -152,53 +156,26 @@ def test_reading_only_the_tags_would_call_those_women_men() -> None:
 # --- The genders reach the validated Product -------------------------------------------------
 
 
-def sacoor_store() -> StoreConfig:
-    return make_store_config(
-        id="sacoor-brothers-uae",
-        name="Sacoor Brothers UAE",
-        search_url_template=(
-            "https://ae.sacoorbrothers.com/search/suggest.json?q={query}"
-            "&resources[type]=product&resources[limit]=10"
-        ),
-        allowed_hosts=["ae.sacoorbrothers.com", "cdn.shopify.com"],
-        extraction=ExtractionConfig(strategies=[StrategyConfig(name="shopify")]),
-    )
-
-
 def test_the_validated_products_carry_the_gender() -> None:
-    body = saved("sacoor-brothers-uae", "suggest-black-blazer.json")
-
-    outcome = ExtractionChain(default_registry()).run(
-        body, sacoor_store(), "https://ae.sacoorbrothers.com/search/suggest.json?q=black%20blazer"
-    )
+    name = "suggest-black-blazer.json"
+    products = gender_products("sacoor-brothers-uae", name)
 
     # Sacoor lists a velvet tuxedo blazer and a "pied poule" blazer twice; validation keeps the
     # first of each, so 8 of the 10 products survive, and each keeps its own gender.
-    assert len(outcome.products) == 8
-    assert Counter(p.gender for p in outcome.products) == {MEN: 5, WOMEN: 3}
-    raw = json.loads(body)["resources"]["results"]["products"]
+    assert len(products) == 8
+    assert Counter(p.gender for p in products) == {MEN: 5, WOMEN: 3}
+    raw = json.loads(saved("sacoor-brothers-uae", name))["resources"]["results"]["products"]
     women_titles = {p["title"] for p in raw if "/ Woman /" in p["type"]}
     assert len(women_titles) == 3
-    for product in outcome.products:
+    for product in products:
         assert product.gender is (WOMEN if product.title in women_titles else MEN)
 
 
 def test_with_gender_fields_empty_no_product_gets_a_gender() -> None:
-    body = saved("sacoor-brothers-uae", "suggest-black-blazer.json")
-    store = sacoor_store().model_copy(
-        update={
-            "extraction": ExtractionConfig(
-                strategies=[StrategyConfig(name="shopify", options={"gender_fields": []})]
-            )
-        }
-    )
+    products = gender_products("sacoor-brothers-uae", "suggest-black-blazer.json", gender_fields=[])
 
-    outcome = ExtractionChain(default_registry()).run(
-        body, store, "https://ae.sacoorbrothers.com/search/suggest.json?q=black%20blazer"
-    )
-
-    assert outcome.products
-    assert {p.gender for p in outcome.products} == {None}
+    assert len(products) == 8
+    assert {p.gender for p in products} == {None}
 
 
 # --------------------------------------------------------------------------------------------

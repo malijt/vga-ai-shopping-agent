@@ -14,8 +14,9 @@ from tests.factories import make_settings, make_store_config
 from tests.fakes import FakeClock
 from vga.fetch.client import PoliteClient
 from vga.fetch.robots import RobotsChecker
-from vga.models import ExtractionConfig, StoreConfig, StrategyConfig
+from vga.models import ExtractionConfig, Product, StoreConfig, StrategyConfig
 from vga.settings import Settings
+from vga.stores.extractors import ExtractionChain, default_registry
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -140,3 +141,44 @@ def suggest_body(*products: dict[str, Any]) -> str:
 
 def json_response(body: str) -> httpx.Response:
     return text_response(body, content_type="application/json; charset=utf-8")
+
+
+# --------------------------------------------------------------------------------------------
+# The six stores' saved responses (fixtures/gender/<store id>/<name>.json)
+# --------------------------------------------------------------------------------------------
+
+GENDER_FIXTURES = FIXTURES / "gender"
+GENDER_STORES = {
+    "sacoor-brothers-uae": ("Sacoor Brothers UAE", "ae.sacoorbrothers.com"),
+    "nautica-uae": ("Nautica UAE", "nautica-ae.com"),
+    "maison-dvie": ("Maison D'Vie", "maisondvie.com"),
+    "giordano-uae": ("Giordano UAE", "giordano.ae"),
+    "oh-polly": ("Oh Polly", "ohpolly.ae"),
+    "club-l-london": ("Club L London", "www.clubllondon.ae"),
+}
+"""Store id to (display name, host): what a store's file says, for the tests that replay a saved
+response without loading the store file."""
+
+
+def gender_fixture_text(store_id: str, name: str) -> str:
+    return (GENDER_FIXTURES / store_id / name).read_text(encoding="utf-8")
+
+
+def gender_products(store_id: str, name: str, **options: object) -> list[Product]:
+    """The validated products a store's saved response gives: the real extraction chain with a
+    ``shopify`` strategy (``options`` are its options), so ``Product.gender`` is whatever the
+    extractor reads."""
+    display_name, host = GENDER_STORES[store_id]
+    store = make_store_config(
+        id=store_id,
+        name=display_name,
+        search_url_template=f"https://{host}{SUGGEST_PATH}",
+        allowed_hosts=[host, "cdn.shopify.com"],
+        extraction=ExtractionConfig(
+            strategies=[StrategyConfig(name="shopify", options=dict(options))]
+        ),
+    )
+    outcome = ExtractionChain(default_registry()).run(
+        gender_fixture_text(store_id, name), store, f"https://{host}/search/suggest.json?q=x"
+    )
+    return outcome.products
