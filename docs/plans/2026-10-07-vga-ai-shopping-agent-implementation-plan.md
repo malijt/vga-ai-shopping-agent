@@ -198,7 +198,7 @@ Phases 17-19 are not in the wave schedule. They start after the demo, each on th
 |---|---|---|---|---|---|---|---|---|
 | **1** (done) | P1 Foundation + Contracts | P2.1 Qualify 6thStreet, Namshi | P2.2 Qualify Noon, Splash/Max/Centrepoint, Level Shoes | P2.3 Qualify Ounass, Styli, + discover alternatives | P3 SigLIP spike | P4 Acceptance + edge set | none | none |
 | **2** (after Wave 1 merged) | P5 Understand | P6 Fetch + Extract | P7 Text + Price rank | P8 Image ranker | P9 Tier shaper | P10 UI (fixtures) | P11 Harness | P2.4 Shopify store discovery |
-| **3** (after P5-P9 and P2.4 merged) | P13 Pipeline | P12.1 Oh Polly UAE | P12.2 Club L London UAE | P12.3 Luxury For You | P12.4 Shopify store from 2.4 | P12.5 Shopify store from 2.4 | none | none |
+| **3** (after P5-P9 and P2.4 merged) | P13 Pipeline | P12.1 Giordano UAE | P12.2 Nautica UAE | P12.3 Sacoor Brothers UAE | P12.4 Oh Polly UAE | P12.5 Club L London UAE | P12.6 Maison D'Vie | none |
 | **4** (after P13 merged) | P14.1 Scraping + host guards | P14.2 Photo privacy audit | P14.3 Injection + untrusted-content tests | P15.1 UI wiring | P15.2 Chips + outfit view | none | none | none |
 | **5** | P16.1 Acceptance run #1 | P16.2 Docs | none | none | none | none | none | none |
 | **6** | P16.3 Tuning + final run | none | none | none | none | none | none | none |
@@ -315,6 +315,7 @@ Effort key: **S** about 30 min, **M** about 1 h, **L** about 2 h.
 **Milestone:** `docs/store-qualification/SUMMARY.md` with a go/no-go per store. Gate: **at least 4 go (target 5), including at least 1 luxury-leaning**; otherwise escalate to the user (risk R1).
 **Gate result (2026-10-07): FAILED.** 34 sites checked, 3 readable (Oh Polly UAE, Club L London UAE, and Luxury For You conditionally). Every large GCC retailer is blocked, disallows search in robots.txt, or serves no data. See [`SUMMARY.md`](../store-qualification/SUMMARY.md).
 **Decision (user, 2026-10-07):** take the easiest route, A: more Shopify storefronts (Module 2.4 below). Routes B, C and D are planned as Phases 17, 18 and 19 for later. Phases 6 and 12 proceed with the `shopify` and `css` strategies.
+**Gate result after Module 2.4: PASSED.** Six more Shopify storefronts are readable: 9 readable stores in total, 2 luxury-leaning. The demo uses six of them (the BRD's maximum, assumption A19): Giordano UAE, Nautica UAE, Sacoor Brothers UAE, Oh Polly UAE, Club L London UAE and Maison D'Vie. All six use the `shopify` strategy.
 **Estimated Effort:** L (research against live sites, 3 agents)
 
 **Rules for every qualification agent:** identifying `User-Agent`; read `robots.txt` first and honour it; 1 request/s; on the first CAPTCHA, login wall, 403/429 or JS challenge, stop and record "drop". Never bypass. Must run from the user's network if this machine cannot reach the site.
@@ -634,7 +635,7 @@ Build only the strategies a qualified store needs (YAGNI). `SUMMARY.md` says tha
 
 ### Phase 12: Store Adapters `DEPENDENT(Phase 2, Phase 6)`
 
-**Goal:** one config entry per qualified store. One module per store: Oh Polly UAE and Club L London UAE (`shopify`), Luxury For You (`css`, with `timeout_s: 15`, `max_response_bytes` of about 3 MB and `max_variants: 1`, assumption A18), plus the Shopify stores Module 2.4 finds.
+**Goal:** one config entry per store in the demo set (assumption A19), one module per store, all `shopify`: 12.1 Giordano UAE, 12.2 Nautica UAE, 12.3 Sacoor Brothers UAE, 12.4 Oh Polly UAE, 12.5 Club L London UAE, 12.6 Maison D'Vie. Each config sets `genders` from what its report observed, `currency: AED`, `tier_hint`, and `allowed_hosts` (the store host plus `cdn.shopify.com`). Reserves with no adapter yet: The Bear House UAE, Good Times, Luxury For You (`css`; if enabled it needs `timeout_s: 15`, about 3 MB `max_response_bytes` and `max_variants: 1`, assumption A18).
 **Milestone:** each store returns at least 10 valid products for 3 sample queries within 6 s, live, and passes its fixture test offline.
 **Estimated Effort:** M per store
 
@@ -855,9 +856,9 @@ The user chose route A for the demo and asked for the other three routes to be p
 | R17 | Prompt injection through user text or text inside a photo | M | L | Instructions separated from data, schema + output validation, tests in 14.3; no LLM ever reads store content |
 | R18 | Malicious or wrong links and server-side requests driven by store content | M | L | https only, `allowed_hosts` on every fetch and every shown link, private addresses refused, tests in 14.1.3 |
 | R19 | Streamlit keeps uploaded files in memory for the session | L | H | Rotate the uploader key after the first run (15.1.2); audit test |
-| R20 | The readable stores are small, mostly women-only boutiques. The men's acceptance queries (q06, q07) may not reach 3 stores, so the demo can fail its own pass rule even when everything works | H | H | Module 2.4 favours stores with menswear; the coverage table (2.4.3) shows the shortfall before the acceptance run; the verdict reports it honestly. Phases 17-19 are the real fix |
+| R20 | The readable stores are brand boutiques, not large retailers, so some test queries have thin cover. After Module 2.4: a men's shirt reaches 4 stores, but a men's blazer (q06) is sold by one store only, and women's bottoms (q08) and women's sneakers look thin. The demo can fail its own pass rule on those queries even when everything works | H | H | The coverage table in `docs/store-qualification/SUMMARY.md` shows each shortfall before the acceptance run; reserve stores can be added in tuning; the verdict reports failures honestly. Phases 17-19 are the real fix |
 | R21 | On a Linux GPU machine `torch` pulls 16 NVIDIA CUDA packages whose licences are proprietary and still marked "needs review" in `docs/licences.md` (Rule 5) | M | L (the demo runs on a Mac, where they are not installed) | Review NVIDIA's terms, or use CPU-only torch wheels, before any Linux GPU deployment |
-| R22 | Luxury For You's 7-15 s pages use half the 30 s budget and its price is ambiguous | M | H | One variant, 15 s timeout (A18), list price shown (A17); drop the store if it breaks the deadline in the acceptance run |
+| R22 | Luxury For You's 7-15 s pages use half the 30 s budget and its price is ambiguous | M | Avoided for now | Held in reserve (A19); if enabled later: one variant, 15 s timeout (A18), list price shown (A17) |
 | R23 | The CI workflow and the gitleaks hook have never run (nothing is pushed; no gitleaks binary locally) | M | M | Watch the first CI run after the first push; protect `main` with the required checks |
 
 ## 9. Test Strategy and Accepted Gaps
@@ -916,8 +917,9 @@ These were considered and left out on purpose. Build one only when its trigger i
 | A14 | An outfit-photo query passes "7 of the top 10" only if **every** garment list reaches 7 (`eval/data/rubric.md`) | The PRD does not say how the rule applies to several lists |
 | A15 | "Top 10" means the 10 best results by overall match score across all price ranges, not by price; missing places count as not good | Results are shown grouped by price range, so there is no single displayed top 10 |
 | A16 | A request with nothing to shop for (nonsense, only price words, an injection with no garment, a handbag, a dress) ends with a plain message, not a search (`eval/data/edge_cases.yaml`) | The PRD's fallback covers model failure only |
-| A17 | For Luxury For You the app shows the higher, struck-through list price, not the lower padlocked "member" price | What a non-member pays is unverified; the list price never understates the cost |
-| A18 | Luxury For You gets a 15 s timeout, one keyword variant and a 3 MB response cap | Its pages took 7-15 s and 2.7 MB; under the PRD's 6 s timeout (R5) the only luxury store would always be skipped |
+| A17 | If Luxury For You is ever enabled, the app shows the higher, struck-through list price, not the lower padlocked "member" price | What a non-member pays is unverified; the list price never understates the cost |
+| A18 | If Luxury For You is ever enabled, it gets a 15 s timeout, one keyword variant and a 3 MB response cap | Its pages took 7-15 s and 2.7 MB; under the PRD's 6 s timeout (R5) it would always be skipped |
+| A19 | The demo searches six stores: Giordano UAE, Nautica UAE, Sacoor Brothers UAE, Oh Polly UAE, Club L London UAE, Maison D'Vie. The Bear House UAE, Good Times and Luxury For You are readable but held in reserve | The BRD caps the demo at 6 stores and lets the team pick the ones that work. The six were chosen for the widest cover of gender, category and price; say if you want a different six |
 
 ## 12. Best-Practices Verification
 

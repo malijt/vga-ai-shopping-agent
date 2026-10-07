@@ -2,11 +2,16 @@
 
 Date: 2026-10-07 · Written by the orchestrator from the 12 reports in this folder and the candidate list in the Module 2.3 hand-back. All checks ran from one machine with the honest client `vga-shopping-agent-demo/0.1 (store-qualification research)`, robots.txt first, at most 1 request/s, stopping at the first block.
 
-## Gate result: FAILED
+## Gate result: PASSED after the second pass
 
-The plan requires **at least 4 readable stores (target 5), including at least 1 luxury-leaning**. Result: **3 readable, of which 2 are firm and 1 is conditional.** The luxury requirement is met only by the conditional one.
+The plan requires **at least 4 readable stores (target 5), including at least 1 luxury-leaning**.
 
-34 sites were checked. 3 can be read by an honest client.
+- **First pass (Modules 2.1-2.3): failed.** 34 sites checked, 3 readable, none of them a large GCC retailer. The user then chose route A: more Shopify storefronts.
+- **Second pass (Module 2.4): passed.** 8 more Shopify storefronts tested, 6 readable. Total: **9 readable stores (8 firm, 1 conditional), 2 of them luxury-leaning.** See "Update: Module 2.4" at the end of this file and [shopify-discovery.md](shopify-discovery.md).
+
+The rest of this section records the first pass, which is why the route changed.
+
+34 sites were checked in the first pass. 3 can be read by an honest client.
 
 | Outcome | Count | Sites |
 |---|---|---|
@@ -67,6 +72,48 @@ Recommendation: **A now, and research B alongside it**, so the demo can run toda
 - robots.txt: use `protego`, check the full URL with its query string, and read a malformed rule (a value that starts with neither `/` nor `*`) as if it began with `*`. Reject an HTML page served in place of robots.txt.
 - A store can change domain (6thStreet now redirects to `aivi.com`): a cross-domain redirect must stop the request, as the allow-list already requires.
 - Rank by category, not by the store's own order: store search pads results with off-category items.
+
+## Update: Module 2.4 (Shopify discovery, 2026-10-07)
+
+Eight more candidates were tested with the same rules; six are readable, all through Shopify's `/search/suggest.json`, all priced in AED. Two were dropped because robots.txt disallows `/search`. Fifteen further candidates were listed but not tested (the pass stopped at six).
+
+### The demo store set (6, the BRD's maximum)
+
+Chosen by the orchestrator for the widest cover of gender, category and price. The BRD lets the team pick the stores that work.
+
+| Store | Sells | Categories seen | Price seen (AED) | Tier hint | Report |
+|---|---|---|---|---|---|
+| Giordano UAE | men, unisex (women's not seen in results) | tops, outerwear, bottoms, shoes | 39.50-199.50 | budget | [giordano-uae.md](giordano-uae.md) |
+| Nautica UAE | men (women's accessories only) | tops, outerwear, bottoms | 59-239 | mid | [nautica-uae.md](nautica-uae.md) |
+| Sacoor Brothers UAE | men, some women | tops, outerwear (blazers), shoes | 195-1,495 | premium | [sacoor-brothers-uae.md](sacoor-brothers-uae.md) |
+| Oh Polly UAE | women | outerwear, shoes | 170-970 | mid | [oh-polly.md](oh-polly.md) |
+| Club L London UAE | women | outerwear, shoes, 1 top (dresses dominate and are filtered out) | 199-1,499 | premium | [club-l-london.md](club-l-london.md) |
+| Maison D'Vie | women; men's shirts and T-shirts | tops, outerwear, bottoms | 490-4,430 | luxury | [maison-dvie.md](maison-dvie.md) |
+
+### Readable but held in reserve
+
+| Store | Why not in the six | Report |
+|---|---|---|
+| The Bear House UAE | Menswear at budget prices, no shoes; a fourth men's store was traded for a second women's store. First choice if a men's query falls short | [bear-house-uae.md](bear-house-uae.md) |
+| Good Times | Streetwear, mostly T-shirts | [good-times.md](good-times.md) |
+| Luxury For You | The only store with men's and women's luxury across categories, but each page took 7-15 s and its price is ambiguous. Needs the `css` extractor | [luxury-for-you.md](luxury-for-you.md) |
+
+### What the coverage table says about the test queries
+
+- A men's shirt under AED 200 (like q07): four readable stores return one. The 3-store rule looks reachable.
+- A men's blazer under AED 400 (like q06): only Sacoor Brothers returned men's blazers, at AED 695-795, over the budget. Other stores return men's jackets, which are the same category (outerwear), so "20 results from 3 stores" may still be met. But "7 good matches in the top 10" probably is not: the rubric treats a different garment type as a miss, and the cap of 6 results per store means at most 6 real blazers can be shown. Expect q06 to fail on match quality, and report it honestly.
+- Women's bottoms (like q08, wide-leg jeans): only Maison D'Vie showed women's bottoms. Not tested directly. A likely gap.
+- Shoes: Giordano and Sacoor (men, unisex), Oh Polly and Club L (women's heels and boots). Sneakers for women are a likely gap.
+
+These were generic queries, not the acceptance queries themselves.
+
+### Notes for Phases 6 and 12 from this pass
+
+- The Bear House keeps a style code in `title` and the product name in `vendor`: the `shopify` extractor needs a per-store name field.
+- Giordano repeats one title under several handles: collapse same title and price within a store.
+- Sacoor's `type` and Nautica's `tags` carry gender and category; titles mostly do too.
+- Giordano, Nautica and The Bear House were entirely on sale when tested, so the prices seen are sale prices.
+- All six new stores' robots.txt files carry the same comment telling AI agents to prefer the store's UCP/MCP endpoint. It was recorded as data and not acted on. It is the subject of Phase 17.
 
 ## Not verified
 

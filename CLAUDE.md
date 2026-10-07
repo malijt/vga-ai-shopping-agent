@@ -16,7 +16,9 @@ file as the always-on summary and open the matching doc when you need full depth
   phases and waves. Integration branch: `develop`.
 - **Stores (decided 2026-10-07):** store qualification found that no large GCC retailer can be read
   by an honest client (see [`docs/store-qualification/SUMMARY.md`](./docs/store-qualification/SUMMARY.md)).
-  The demo therefore uses small Shopify storefronts plus Luxury For You. Reaching big retailers is
+  The demo therefore searches six Shopify storefronts through `/search/suggest.json`: Giordano UAE,
+  Nautica UAE, Sacoor Brothers UAE, Oh Polly UAE, Club L London UAE and Maison D'Vie (six is the
+  BRD's maximum; three more readable stores are held in reserve). Reaching big retailers is
   planned as later Phases 17-19 (agent endpoints, store APIs/headless with a terms sign-off, a
   category + sitemap index). Do not start those without the user's go-ahead.
 - **What it is not (yet):** not multi-tenant, no accounts, no billing or credits, no database, no
