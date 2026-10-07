@@ -1,0 +1,20 @@
+# Reconstructed from the rules quoted in docs/store-qualification/noon.md (the real file was not
+# saved). Only the lines the report quotes verbatim are here, plus the agent groups it names.
+User-agent: *
+Disallow: /_svc/
+Disallow: /_vs/
+Disallow: /_serverFn/
+Disallow: /*/search$
+Disallow: /*/search?
+Disallow: /*/search/
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: BadBot
+Disallow: /
+
+Sitemap: https://www.noon.com/sitemap-index.xml

@@ -30,7 +30,7 @@ from protego import Protego
 from vga.fetch.allowlist import check_url
 from vga.fetch.blocking import looks_like_html
 from vga.fetch.client import PoliteClient
-from vga.fetch.errors import BlockedError, FetchError, RobotsDeniedError
+from vga.fetch.errors import BlockedError, CooldownError, FetchError, RobotsDeniedError
 from vga.log import get_logger
 from vga.models import StoreConfig
 
@@ -129,8 +129,8 @@ class RobotsChecker:
         url = f"https://{host}/robots.txt"
         try:
             response = await self._client.fetch(url, store, self._client.page_policy(store))
-        except BlockedError:
-            raise  # the client already started the cooldown; nothing is cached
+        except (BlockedError, CooldownError):
+            raise  # a block (the client started the cooldown) or a store still cooling: not cached
         except FetchError as exc:
             return self._unusable(host, f"robots.txt could not be read ({exc.code})")
 
