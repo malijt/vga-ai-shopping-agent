@@ -15,19 +15,19 @@ file as the always-on summary and open the matching doc when you need full depth
   of scope.
 - **Status (2026-10-07):** the implementation plan
   [`docs/plans/2026-10-07-vga-ai-shopping-agent-implementation-plan.md`](./docs/plans/2026-10-07-vga-ai-shopping-agent-implementation-plan.md)
-  is approved (v3). Phases 1 to 13 and 15 are merged, ten stores are enabled, and real end-to-end
-  searches ran on 2026-10-08. In progress: Phase 14 (guards), currency support and three dinar
-  stores, ranking fixes from the real runs, and the acceptance harness's real wiring. **Build only what the plan specifies**, in its phases and waves. Integration
+  is approved (v3). Phases 1 to 15 are merged, thirteen stores are enabled, and real end-to-end
+  searches ran on 2026-10-08. Next: Phase 16 (the recorded acceptance run, labelling, tuning, final
+  docs and the verdict). **Build only what the plan specifies**, in its phases and waves. Integration
   branch: `develop`.
 - **Stores (decided 2026-10-07):** store qualification found that no large GCC retailer can be read
   by an honest client (see [`docs/store-qualification/SUMMARY.md`](./docs/store-qualification/SUMMARY.md)).
-  The demo therefore searches Shopify storefronts through `/search/suggest.json`. Ten are enabled:
+  The demo therefore searches Shopify storefronts through `/search/suggest.json`. Thirteen are enabled:
   Giordano UAE, Nautica UAE, Sacoor Brothers UAE, Oh Polly UAE, Club L London UAE, Maison D'Vie and,
   since the user raised the limit from six on 2026-10-08 to cover dresses and modest wear, Hanayen,
   Maison Arabelle, Nishat Linen UAE and Signature Studio. A store is enabled only after a live smoke
   test through the project's own engine. Three more readable stores are in reserve.
-- **Second currency (decided by the user 2026-10-08):** three Kuwaiti designer stores (Bazza Alzouman,
-  Hamsa, Manal Smaoui) are being added. They price in KWD. A result shows the store's own price plus
+- **Second currency (decided by the user 2026-10-08, ADR 0006):** three Kuwaiti designer stores
+  (Bazza Alzouman, Hamsa, Manal Smaoui) are enabled too. They price in KWD. A result shows the store's own price plus
   an approximate AED figure from a fixed rate in `config/settings.yaml`; price ranges and budgets use
   the AED figure. There is no live exchange-rate call. Reaching big retailers is
   planned as later Phases 17-19 (agent endpoints, store APIs/headless with a terms sign-off, a
