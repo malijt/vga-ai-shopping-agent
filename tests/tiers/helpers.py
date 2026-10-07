@@ -18,6 +18,7 @@ from vga.models import (
     Tier,
     TierResult,
 )
+from vga.money import to_base
 from vga.settings import Settings
 from vga.tiers.shaper import ShapeResult
 
@@ -132,8 +133,12 @@ def assert_invariants(
     assert max(store_loads(result).values(), default=0) <= settings.max_per_store
 
     has_luxury_store = any(s.enabled and s.tier_hint is Tier.LUXURY for s in stores)
+    # The budget is applied in the base currency, converted when it is in another one; a budget
+    # whose currency has no rate is not applied at all.
     ceiling = (
-        budget.max_price if budget is not None and budget.currency == result.currency else None
+        to_base(budget.max_price, budget.currency, settings)
+        if budget is not None and result.currency is not None
+        else None
     )
     for tier in tiers:
         assert tier.count == len(tier.results) <= tier.target_count
@@ -151,8 +156,16 @@ def assert_invariants(
             assert any(scored.product == o.product and scored.scores == o.scores for o in originals)
             assert scored.scores.total >= settings.min_match_score
             assert scored.tier is tier.name
-            assert scored.product.currency == result.currency
-            over = ceiling is not None and scored.product.price > ceiling
+            # Every shown product has a base-currency figure: its own price when it is priced in
+            # the base currency (then ``base_price`` is None), otherwise ``base_price``.
+            converted = scored.product.currency != settings.base_currency
+            assert (scored.base_price is not None) == converted
+            base = scored.base_price if scored.base_price is not None else scored.product.price
+            assert result.currency == settings.base_currency
+            assert tier.price_min is not None
+            assert tier.price_max is not None
+            assert tier.price_min <= base <= tier.price_max
+            over = ceiling is not None and base > ceiling
             assert (Flag.OVER_BUDGET in scored.flags) == over
             if ceiling is not None and tier.name in (Tier.BUDGET, Tier.MID_RANGE):
-                assert scored.product.price <= ceiling
+                assert base <= ceiling
