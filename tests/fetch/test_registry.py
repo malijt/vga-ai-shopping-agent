@@ -45,6 +45,37 @@ def write(folder: Path, name: str, data: object) -> Path:
     return path
 
 
+HAND_WRITTEN_SHOPIFY_FILE = """\
+# config/stores/the-bear-house.yaml - the shape Phase 12 writes for a Shopify store
+id: the-bear-house
+name: The Bear House
+country: AE
+currency: AED          # the suggest response has no currency; this is the one used
+search_url_template: "https://thebearhouse.ae/search/suggest.json?q={query}&resources[type]=product&resources[limit]=10"
+allowed_hosts:
+  - thebearhouse.ae
+  - cdn.shopify.com
+extraction:
+  strategies:
+    - name: shopify
+      options:
+        name_field: vendor   # style code in `title`, readable name in `vendor`
+tier_hint: mid_range
+enabled: false           # true only after the live smoke test passes
+"""
+
+
+def test_a_hand_written_shopify_store_file_loads_as_documented(tmp_path: Path) -> None:
+    write(tmp_path, "the-bear-house.yaml", HAND_WRITTEN_SHOPIFY_FILE)
+
+    [store] = load_store_configs(tmp_path)
+
+    assert store.id == "the-bear-house"
+    assert store.extraction.strategies[0].options == {"name_field": "vendor"}
+    assert store.enabled is False
+    assert "resources[type]=product" in store.search_url_template
+
+
 def test_a_missing_directory_gives_no_stores(tmp_path: Path) -> None:
     assert load_store_configs(tmp_path / "does-not-exist") == []
 

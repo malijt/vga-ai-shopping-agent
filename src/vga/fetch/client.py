@@ -192,30 +192,27 @@ class PoliteClient:
         host = check_url(url, store.allowed_hosts)
         first_domain = registered_domain(host)
         current = url
-        for hop in range(MAX_REDIRECTS + 1):
+        for _ in range(MAX_REDIRECTS + 1):
             host = check_url(current, store.allowed_hosts)
-            self._raise_if_cooling(policy.cooldown_key, store.id)
+            self._raise_if_cooling(policy.cooldown_key)
             await self.limiter.acquire(host, policy.rps)
             # Another task may have been turned away while this one waited for its slot.
-            self._raise_if_cooling(policy.cooldown_key, store.id)
+            self._raise_if_cooling(policy.cooldown_key)
             raw = await self._send(current, policy, store.id)
 
             if raw.status in BLOCKING_STATUSES:
                 raise self._blocked(policy, store.id, current, f"HTTP {raw.status}")
             if raw.status in REDIRECT_STATUSES and raw.location:
                 current = self._next_hop(current, raw.location, first_domain, policy, store.id)
-                if hop == MAX_REDIRECTS:
-                    raise TooManyRedirectsError(
-                        detail=f"more than {MAX_REDIRECTS} redirects, last target {current[:200]}"
-                    )
                 continue
             marker = find_challenge_marker(raw.body, raw.content_type)
             if marker:
                 raise self._blocked(policy, store.id, current, f"challenge page ({marker!r})")
             return FetchResponse(current, raw.status, raw.content_type, raw.body, raw.charset)
+        # The last response was yet another redirect: it is not followed.
         raise TooManyRedirectsError(
-            detail=f"more than {MAX_REDIRECTS} redirects"
-        )  # pragma: no cover
+            detail=f"more than {MAX_REDIRECTS} redirects, the next target was {current[:200]}"
+        )
 
     def _next_hop(
         self, current: str, location: str, first_domain: str, policy: FetchPolicy, store_id: str
@@ -238,7 +235,7 @@ class PoliteClient:
             raise self._blocked(policy, store_id, target, "login wall (redirect to a login page)")
         return target
 
-    def _raise_if_cooling(self, key: str, store_id: str) -> None:
+    def _raise_if_cooling(self, key: str) -> None:
         remaining = self.cooldowns.remaining(key)
         if remaining > 0:
             raise CooldownError(detail=f"{key} is in cooldown for another {remaining:.0f} s")
