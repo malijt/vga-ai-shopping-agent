@@ -3,6 +3,7 @@
 import builtins
 import gc
 import math
+import socket
 import threading
 from collections.abc import Sequence
 from typing import Any
@@ -23,7 +24,7 @@ from tests.rank_image.support import (
     products_for,
     transparent_png,
 )
-from vga.models import QueryImage
+from vga.models import Product, QueryImage
 from vga.rank.image.siglip import ImageEmbedder, SiglipImageRanker
 
 COS_LO = 0.45
@@ -289,6 +290,42 @@ class TestThumbnailFetching:
 
         assert thumbnails.calls == [product.key]
         assert scores == {product.key: pytest.approx(1.0)}
+
+    async def test_the_ranker_opens_no_connection_of_its_own(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Downloads belong to the injected fetcher (allow-list, rate limit, timeout, size cap).
+        def refuse(*args: object, **kwargs: object) -> None:
+            msg = "the ranker tried to open a connection"
+            raise AssertionError(msg)
+
+        monkeypatch.setattr(socket.socket, "connect", refuse)
+        monkeypatch.setattr(socket.socket, "connect_ex", refuse)
+        products = products_for({"A": 3})
+        ranker = make_ranker(ColourEmbedder(), FakeThumbnails())
+
+        scores = await ranker.score(QueryImage(image=png(RED)), products)
+
+        assert all(score is not None for score in scores.values())
+
+    async def test_a_product_the_fetcher_refuses_has_no_score_and_is_the_only_one(self) -> None:
+        # Stands in for Phase 6's allow-list: an off-list image host comes back as None.
+        allowed, off_list = make_product(1), make_product(2, image_url="https://evil.example/x.png")
+
+        async def allow_listed_fetch(product: Product) -> bytes | None:
+            return png(RED) if "evil" not in str(product.image_url) else None
+
+        ranker = SiglipImageRanker(
+            embedder_provider=ColourEmbedder,
+            fetch_image=allow_listed_fetch,
+            cos_lo=COS_LO,
+            cos_hi=COS_HI,
+        )
+
+        scores = await ranker.score(QueryImage(image=png(RED)), [allowed, off_list])
+
+        assert scores[allowed.key] == pytest.approx(1.0)
+        assert scores[off_list.key] is None
 
     async def test_nothing_is_written_to_disk(self, monkeypatch: pytest.MonkeyPatch) -> None:
         products = products_for({"A": 4})
