@@ -8,11 +8,19 @@ The real pipeline and the real store engine, counting what reaches the fake stor
   second after the one before, however many garments and searches are running at once.
 - *Cache*: the same search again inside the cache window sends nothing; robots.txt is read once.
 
-The rate tests fail when the rate limiter is bypassed, and the cache tests fail when the result
-cache or the robots.txt cache is bypassed (the hand-back of this module shows both mutation runs).
+The rate tests fail when the rate limiter is bypassed, the cache tests fail when the result cache
+or the robots.txt cache is bypassed, and the budget tests fail when the per-garment or per-store
+variant caps are removed (each was checked by breaking that part of ``src/`` for one local run).
+
+The last test reads the shipped ``config/stores/`` files: a store file may not ask for a faster rate
+than the BRD allows, because ``StoreConfig.rps`` accepts up to five requests a second.
 """
 
 import asyncio
+import gzip
+
+import httpx
+import yaml
 
 from tests.factories import make_item_intent, make_search_request
 from tests.fakes import FakeClock
@@ -20,15 +28,19 @@ from tests.guards.scraping.support import (
     MIN_GAP_S,
     GuardPipelines,
     GuardWorld,
+    blazer_products,
+    body_of,
     gaps,
+    reply_json,
     understanding,
     understanding_by_words,
 )
 from tests.pipeline.builders import BLAZER, OUTFIT, SHIRT, outfit_understander, photo_search
 from tests.pipeline.world import store_for
-from vga.models import StoreConfig
+from vga.models import StoreConfig, StoreStatus
 from vga.pipeline.planning import MAX_OUTFIT_KEYWORDS
-from vga.settings import Settings
+from vga.settings import DEFAULT_STORES_DIR, PROJECT_ROOT, Settings
+from vga.stores import StoreRegistry
 
 STORES = ("alpha", "beta")
 THREE_VARIANTS = make_item_intent(
@@ -280,3 +292,89 @@ async def test_every_request_carries_the_honest_user_agent_and_no_cookie_or_iden
         assert not names & {"cookie", "authorization", "referer", "proxy-authorization"}
         assert all("@" not in value for value in request.headers.values())  # no e-mail address
     assert not any(token in settings.user_agent for token in ("Mozilla", "Chrome", "Safari"))
+
+
+async def test_a_cookie_a_store_sets_is_never_sent_back_to_it(
+    world: GuardWorld, build: GuardPipelines, settings: Settings
+) -> None:
+    def with_cookie(response: httpx.Response) -> httpx.Response:
+        response.headers["set-cookie"] = "session=abc123; Path=/; HttpOnly"
+        return response
+
+    search = reply_json(body_of(*blazer_products("alpha")))
+    world.add(
+        store_for("alpha"),
+        robots=lambda _request: with_cookie(httpx.Response(200, text="User-agent: *\nDisallow:\n")),
+        reply=lambda request: with_cookie(search(request)),
+    )
+    pipeline = build(understander=understanding(BLAZER))
+
+    await pipeline.run(make_search_request(text="black oversized blazer"), settings)
+
+    sent = world.calls_to("alpha.example")
+    assert len(sent) == 3  # robots.txt and the two variants: the later ones could carry a cookie
+    assert all("cookie" not in request.headers for request in sent)
+
+
+# --------------------------------------------------------------------------------------------
+# Size: a store cannot make us read without end
+# --------------------------------------------------------------------------------------------
+
+
+async def test_a_response_that_declares_more_than_the_size_cap_is_refused_after_one_request(
+    world: GuardWorld, build: GuardPipelines, settings: Settings
+) -> None:
+    declared = str(settings.max_response_bytes + 1)
+
+    def too_big(_request: httpx.Request) -> httpx.Response:
+        headers = {"content-length": declared, "content-type": "application/json"}
+        return httpx.Response(200, content=b"{}", headers=headers)
+
+    world.add(store_for("alpha"), reply=too_big)
+    world.add(store_for("beta"))
+    pipeline = build(understander=understanding(BLAZER))
+
+    response = await pipeline.run(make_search_request(text="black oversized blazer"), settings)
+
+    assert len(world.queries("alpha")) == 1
+    assert [(r.store_id, r.status) for r in response.stores_skipped] == [
+        ("alpha", StoreStatus.ERROR)
+    ]
+    assert {scored.product.store for scored in response.products} == {"Beta"}
+
+
+async def test_a_compressed_response_that_grows_past_the_size_cap_is_cut_off_after_one_request(
+    world: GuardWorld, build: GuardPipelines, settings: Settings
+) -> None:
+    # A few kilobytes on the wire, twenty times the cap once decompressed.
+    padding = b" " * (settings.max_response_bytes * 20)
+    bomb = gzip.compress(b'{"resources": {"results": {"products": [' + padding + b"]}}}")
+    assert len(bomb) < settings.max_response_bytes // 10
+
+    def explode(_request: httpx.Request) -> httpx.Response:
+        headers = {"content-encoding": "gzip", "content-type": "application/json"}
+        return httpx.Response(200, content=bomb, headers=headers)
+
+    world.add(store_for("alpha"), reply=explode)
+    pipeline = build(understander=understanding(BLAZER))
+
+    response = await pipeline.run(make_search_request(text="black oversized blazer"), settings)
+
+    assert len(world.queries("alpha")) == 1
+    assert [(r.store_id, r.status) for r in response.stores_skipped] == [
+        ("alpha", StoreStatus.ERROR)
+    ]
+
+
+# --------------------------------------------------------------------------------------------
+# The shipped store files
+# --------------------------------------------------------------------------------------------
+
+
+def test_no_shipped_store_file_asks_for_more_than_one_request_a_second() -> None:
+    stores = StoreRegistry.from_directory(DEFAULT_STORES_DIR).stores
+    shipped = yaml.safe_load((PROJECT_ROOT / "config" / "settings.yaml").read_text("utf-8"))
+
+    assert stores  # the shipped stores were found, so the loop below checks something
+    assert shipped["rps_per_store"] <= 1
+    assert [store.id for store in stores if store.rps is not None and store.rps > 1] == []

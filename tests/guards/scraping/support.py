@@ -27,7 +27,7 @@ from typing import Any
 import httpx
 import respx
 
-from tests.factories import make_understand_result
+from tests.factories import make_image_bytes, make_understand_result
 from tests.fakes import FakeClock, FakeUnderstander
 from tests.fetch.conftest import (
     ALLOW_ALL_ROBOTS,
@@ -67,6 +67,8 @@ class GuardWorld(StoreWorld):
         """Fake-clock time of each robots.txt request, by host."""
         self.cdn_times: list[float] = []
         """Fake-clock time of each request to the image CDN (robots.txt and thumbnails)."""
+        self.other_times: dict[str, list[float]] = {}
+        """Fake-clock time of each request to a store's second host (see ``serve_other_host``)."""
         self.stray: list[str] = []
         """Every request that no route expected, in order. Must stay empty in a guard."""
         self._sealed = False
@@ -94,6 +96,48 @@ class GuardWorld(StoreWorld):
                 side_effect=self._search(site, reply),
             )
         return site
+
+    def serve_other_host(
+        self,
+        store_id: str,
+        host: str,
+        *,
+        search: Reply,
+        robots: str | Reply = ALLOW_ALL_ROBOTS,
+    ) -> list[httpx.Request]:
+        """Serve a second host of ``store_id`` (its ``www.`` or apex name, for example) with the
+        same search path. Returns the list that collects each search request that reaches it.
+        Every request to it, robots.txt included, is part of ``request_times(store_id)``."""
+        searches: list[httpx.Request] = []
+
+        def robots_answer(request: httpx.Request) -> httpx.Response:
+            self.other_times.setdefault(store_id, []).append(self.clock.monotonic())
+            return robots(request) if callable(robots) else text_response(robots)
+
+        def search_answer(request: httpx.Request) -> httpx.Response:
+            self.other_times.setdefault(store_id, []).append(self.clock.monotonic())
+            searches.append(request)
+            return search(request)
+
+        self.router.get(f"https://{host}/robots.txt").mock(side_effect=robots_answer)
+        self.router.get(url__startswith=f"https://{host}/search/suggest.json").mock(
+            side_effect=search_answer
+        )
+        return searches
+
+    def serve_images_on(self, host: str, path_prefix: str) -> list[httpx.Request]:
+        """Serve small images under ``https://<host><path_prefix>``; returns the requests."""
+        served: list[httpx.Request] = []
+
+        def image_answer(request: httpx.Request) -> httpx.Response:
+            served.append(request)
+            data = make_image_bytes("PNG", (8, 8), (150, 0, 0))
+            return httpx.Response(200, content=data, headers={"content-type": "image/png"})
+
+        self.router.get(url__startswith=f"https://{host}{path_prefix}").mock(
+            side_effect=image_answer
+        )
+        return served
 
     def serve_cdn_robots(self, robots: str) -> None:
         """Replace the image CDN's robots.txt."""
@@ -158,9 +202,16 @@ class GuardWorld(StoreWorld):
         return [r.url for r in self.calls_to(host) if r.url.path != "/robots.txt"]
 
     def request_times(self, store_id: str) -> list[float]:
-        """When each request to the store (robots.txt and search pages) arrived, oldest first."""
+        """When each request to the store (robots.txt and search pages, on any host it was given
+        with ``serve_other_host``) arrived, oldest first."""
         site = self.sites[store_id]
-        return sorted([*site.times, *self.robots_times.get(site.host, [])])
+        return sorted(
+            [
+                *site.times,
+                *self.robots_times.get(site.host, []),
+                *self.other_times.get(store_id, []),
+            ]
+        )
 
     def thumbnails_of(self, store_id: str) -> list[str]:
         """The thumbnail URLs requested for products of ``store_id`` (its tag is in the path)."""

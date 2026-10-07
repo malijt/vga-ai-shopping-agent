@@ -13,13 +13,15 @@ from urllib.parse import urlsplit
 
 import pytest
 
-from tests.factories import make_product, make_search_request
+from tests.factories import make_item_intent, make_product, make_search_request
 from tests.guards.scraping.support import (
+    MIN_GAP_S,
     GuardPipelines,
     GuardWorld,
     Reply,
     blazer_products,
     body_of,
+    gaps,
     links_shown,
     reply_redirect,
     trap_product,
@@ -81,11 +83,14 @@ REDIRECTS: dict[str, str] = {
     "a_private_address": "https://10.0.0.5/search/suggest.json?q=black",
     "the_metadata_address_over_http": "http://169.254.169.254/latest/meta-data/",
     "a_sibling_host_not_on_the_list": "https://admin.alpha.example/search/suggest.json?q=black",
+    "a_listed_host_of_another_domain": f"https://{CDN_HOST}/search/suggest.json?q=black",
     "a_downgrade_to_http": "http://alpha.example/search/suggest.json?q=black",
     "protocol_relative_other_host": "//evil.example/search/suggest.json?q=black",
     "another_port": "https://alpha.example:8443/search/suggest.json?q=black",
 }
-"""Where a store may try to send us on."""
+"""Where a store may try to send us on. ``a_listed_host_of_another_domain`` is on the store's own
+``allowed_hosts`` (its image CDN) and is still refused: a store may not send a search to another
+registered domain, whether or not that domain is on its list."""
 
 GOOD_PRODUCTS = len(blazer_products("alpha"))
 """How many ordinary blazers each trapped store also sells."""
@@ -225,11 +230,9 @@ async def test_a_search_page_that_redirects_to_another_host_is_not_followed(
     response = await pipeline.run(make_search_request(text="black oversized blazer"), settings)
 
     assert world.stray == []
-    assert {request.url.host for request in world.every_request()} <= {
-        STORE_HOST,
-        "beta.example",
-        CDN_HOST,
-    }
+    # No photo, so no thumbnails: the image host is not part of this run, and the only way a
+    # request could reach it is by following the store's redirect to it.
+    assert {request.url.host for request in world.every_request()} <= {STORE_HOST, "beta.example"}
     assert len(world.queries("alpha")) == 1  # the redirecting request itself, nothing after it
     assert [report.store_id for report in response.stores_skipped] == ["alpha"]
     assert {scored.product.store for scored in response.products} == {"Beta"}
@@ -290,6 +293,56 @@ async def test_a_redirect_loop_on_the_store_is_given_up_after_a_few_hops(
 
     assert len(world.queries("alpha")) == 1 + MAX_REDIRECTS_FOLLOWED
     assert [report.store_id for report in response.stores_skipped] == ["alpha"]
+
+
+async def test_every_hop_of_a_redirect_chain_is_spaced_like_any_other_request(
+    world: GuardWorld, build: GuardPipelines, settings: Settings
+) -> None:
+    looping: Reply = reply_redirect(f"https://{STORE_HOST}/search/suggest.json?q=again")
+    world.add(store_for("alpha"), reply=looping)
+    pipeline = build(understander=understanding(BLAZER))
+
+    await pipeline.run(make_search_request(text="black oversized blazer"), settings)
+
+    times = world.request_times("alpha")
+    assert len(times) == 1 + 1 + MAX_REDIRECTS_FOLLOWED  # robots.txt, the search, its hops
+    assert all(gap >= MIN_GAP_S for gap in gaps(times))
+
+
+# --------------------------------------------------------------------------------------------
+# What the shopper types cannot steer the request
+# --------------------------------------------------------------------------------------------
+
+HOSTILE_KEYWORDS: dict[str, str] = {
+    "an_extra_parameter": "black jacket&resources[limit]=250",
+    "a_fragment_and_a_path": "black jacket#/../../admin",
+    "a_line_break": "black jacket\r\nHost: evil.example",
+    "another_address": "https://evil.example/steal?x=1",
+    "an_escape_sequence": "black%0d%0ajacket%26resources",
+    "a_user_name_and_dots": "x@evil.example/../",
+}
+"""Words that would change the URL if they were pasted into it instead of encoded."""
+
+
+@pytest.mark.parametrize("keyword", HOSTILE_KEYWORDS.values(), ids=list(HOSTILE_KEYWORDS))
+async def test_a_search_keyword_cannot_change_which_url_is_requested(
+    keyword: str, world: GuardWorld, build: GuardPipelines, settings: Settings
+) -> None:
+    world.add(store_for("alpha"))
+    pipeline = build(understander=understanding(make_item_intent(search_keywords=[keyword])))
+
+    await pipeline.run(make_search_request(text="black jacket"), settings)
+
+    searches = world.search_paths(STORE_HOST)
+    assert len(searches) == 1
+    [url] = searches
+    assert (url.scheme, url.host, url.path) == ("https", STORE_HOST, "/search/suggest.json")
+    assert url.fragment == ""
+    assert set(url.params) == {"q", "resources[type]", "resources[limit]"}
+    assert url.params["resources[type]"] == "product"
+    assert url.params["resources[limit]"] == "10"  # not the 250 the keyword asked for
+    assert {request.url.host for request in world.every_request()} == {STORE_HOST}
+    assert world.stray == []
 
 
 # --------------------------------------------------------------------------------------------

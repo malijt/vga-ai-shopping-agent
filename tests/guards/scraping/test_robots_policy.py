@@ -13,12 +13,16 @@ from tests.guards.scraping.support import (
     GuardPipelines,
     GuardWorld,
     Reply,
+    blazer_products,
+    body_of,
     html_response,
+    reply_json,
+    reply_redirect,
     reply_status,
     understanding,
 )
 from tests.pipeline.builders import BLAZER, photo_search
-from tests.pipeline.world import store_for
+from tests.pipeline.world import CDN_HOST, store_for
 from vga.models import StoreStatus
 from vga.pipeline import messages
 from vga.settings import Settings
@@ -202,3 +206,28 @@ async def test_thumbnails_are_requested_when_the_image_host_allows_them(
     await pipeline.run(make_search_request(image=photo, text="black oversized blazer"), settings)
 
     assert world.thumbnails  # the refusal above is the robots.txt's doing, not the set-up's
+
+
+# --------------------------------------------------------------------------------------------
+# A redirect to the store's other host (a strict-xfail gap is in test_findings.py)
+# --------------------------------------------------------------------------------------------
+
+
+async def test_a_redirect_to_another_host_of_the_store_is_followed_where_its_robots_txt_allows_it(
+    world: GuardWorld, build: GuardPipelines, settings: Settings
+) -> None:
+    hosts = ["alpha.example", "www.alpha.example", CDN_HOST]
+    world.add(
+        store_for("alpha", allowed_hosts=hosts),
+        reply=reply_redirect("https://www.alpha.example/search/suggest.json?q=black"),
+    )
+    reached_www = world.serve_other_host(
+        "alpha", "www.alpha.example", search=reply_json(body_of(*blazer_products("alpha")))
+    )
+    pipeline = build(understander=understanding(BLAZER))
+
+    response = await pipeline.run(make_search_request(text="black oversized blazer"), settings)
+
+    assert reached_www  # the redirect inside the store's own domain is an ordinary one
+    assert response.result_count > 0
+    assert world.stray == []
