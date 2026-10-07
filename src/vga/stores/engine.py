@@ -77,7 +77,8 @@ class StoreSearchEngine:
         self.client = PoliteClient(settings, clock=self.clock, transport=transport)
         self.robots = RobotsChecker(self.client)
         self.cache = ResultCache(self.clock, settings.store_cache_ttl_s)
-        self._chain = ExtractionChain(extractors or default_registry())
+        self._extractors = extractors or default_registry()
+        self._chain = ExtractionChain(self._extractors)
 
     async def aclose(self) -> None:
         await self.client.aclose()
@@ -251,10 +252,14 @@ class StoreSearchEngine:
     # ------------------------------------------------------------------------------------
 
     def _skip_reason(self, store: StoreConfig) -> str | None:
+        """Why this store is not searched at all (no request, not even robots.txt), or ``None``."""
         if not store.enabled:
             return "the store is not enabled"
         if store.country != self.settings.country:
             return f"the store is for {store.country}, not the configured country"
+        names = [strategy.name for strategy in store.extraction.strategies]
+        if not any(self._extractors.get(name) for name in names):
+            return f"no extraction strategy of this store is built (it asks for {names})"
         return None
 
     @staticmethod

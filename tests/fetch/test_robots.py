@@ -15,6 +15,7 @@ import respx
 from tests.factories import make_store_config
 from tests.fakes import FakeClock
 from tests.fetch.conftest import ALLOW_ALL_ROBOTS, HOST, ROBOTS_URL, fixture_text, text_response
+from vga.errors import StoreBlockedError
 from vga.fetch.client import PoliteClient
 from vga.fetch.errors import BlockedError, CooldownError, RobotsDeniedError
 from vga.fetch.robots import ROBOTS_TTL_S, RobotsChecker
@@ -435,7 +436,9 @@ async def test_concurrent_searches_all_see_a_block_from_the_one_robots_request(
     )
 
     assert route.call_count == 1
-    assert all(isinstance(outcome, BlockedError) for outcome in outcomes)
+    assert isinstance(outcomes[0], BlockedError)
+    # whoever asked after the block sees the cooldown, never a second request
+    assert all(isinstance(outcome, StoreBlockedError) for outcome in outcomes)
 
 
 async def test_cancelling_the_task_that_fetches_robots_txt_does_not_cancel_the_others(
