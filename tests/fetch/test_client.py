@@ -557,6 +557,61 @@ async def test_every_redirect_hop_takes_a_rate_limit_slot(
     assert clock.monotonic() - started == pytest.approx(1.0)
 
 
+async def test_the_hosts_of_one_store_share_one_rate(
+    client: PoliteClient, router: respx.MockRouter, clock: FakeClock
+) -> None:
+    two_hosts = make_store_config(**TWO_HOSTS)
+    router.get(url__startswith="https://www.shop.example/").mock(return_value=text_response("ok"))
+    router.get(url__startswith="https://shop.example/").mock(return_value=text_response("ok"))
+    started = clock.monotonic()
+
+    await asyncio.gather(
+        fetch(client, two_hosts, "https://www.shop.example/a"),
+        fetch(client, two_hosts, "https://shop.example/b"),
+        fetch(client, two_hosts, "https://www.shop.example/c"),
+    )
+
+    assert clock.monotonic() - started == pytest.approx(2.0)  # three requests, one a second
+
+
+async def test_a_redirect_to_the_stores_other_host_takes_the_stores_next_slot(
+    client: PoliteClient, router: respx.MockRouter, clock: FakeClock
+) -> None:
+    two_hosts = make_store_config(**TWO_HOSTS)
+    router.get("https://www.shop.example/a").mock(
+        return_value=httpx.Response(302, headers={"location": "https://shop.example/b"})
+    )
+    router.get("https://shop.example/b").mock(return_value=text_response("ok"))
+    started = clock.monotonic()
+
+    await fetch(client, two_hosts, "https://www.shop.example/a")
+
+    assert clock.monotonic() - started == pytest.approx(1.0)
+
+
+async def test_an_image_cdn_keeps_its_own_rate_apart_from_the_store(
+    client: PoliteClient, router: respx.MockRouter, clock: FakeClock
+) -> None:
+    shop = make_store_config(
+        search_url_template="https://www.shop.example/search?q={query}",
+        allowed_hosts=["www.shop.example", "cdn.shopify.com"],
+    )
+    router.get("https://www.shop.example/a").mock(return_value=text_response("ok"))
+    router.get("https://cdn.shopify.com/i.jpg").mock(return_value=text_response("ok"))
+    started = clock.monotonic()
+
+    await asyncio.gather(
+        fetch(client, shop, "https://www.shop.example/a"),
+        client.fetch(
+            "https://cdn.shopify.com/i.jpg",
+            shop,
+            client.image_policy(shop, "cdn.shopify.com", timeout_s=4),
+        ),
+    )
+
+    assert clock.monotonic() == started  # neither waited for the other
+
+
 # --------------------------------------------------------------------------------------------
 # 6.1.4 Block detection and cooldown
 # --------------------------------------------------------------------------------------------

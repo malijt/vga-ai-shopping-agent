@@ -25,6 +25,7 @@ from urllib.parse import urlsplit
 import httpx
 
 from vga.fetch.errors import UrlNotAllowedError
+from vga.models import StoreConfig
 
 _FORBIDDEN_CHARS = re.compile(r"[\s\x00-\x1f\x7f\\]")
 _NUMERIC_HOST = re.compile(r"^(0x[0-9a-f]+|\d+)(\.(0x[0-9a-f]+|\d+))*$", re.IGNORECASE)
@@ -55,6 +56,16 @@ def registered_domain(host: str) -> str:
 def normalise_host(host: str) -> str:
     """Lower-case a host and drop a trailing dot (``Shop.Example.`` is ``shop.example``)."""
     return host.strip().lower().rstrip(".")
+
+
+def belongs_to_store_site(store: StoreConfig, host: str) -> bool:
+    """True for a host of the store's own site: the host of its search URL and any other host of
+    the same registered domain (``www.`` and the bare domain, a market sub-domain). False for a
+    separate domain such as the shared image CDN ``cdn.shopify.com``, even when the store lists it
+    in ``allowed_hosts``. A pure name comparison: it says nothing about whether ``host`` is
+    allowed (``check_url`` does that)."""
+    search_host = normalise_host(urlsplit(store.search_url_template).hostname or "")
+    return registered_domain(normalise_host(host)) == registered_domain(search_host)
 
 
 def _refuse(url: str, why: str) -> UrlNotAllowedError:

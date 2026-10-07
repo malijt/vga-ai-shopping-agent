@@ -1,4 +1,4 @@
-"""Per-host rate limiter, cooldowns and the clock-based deadline (plan 6.1.3, 6.1.4)."""
+"""Rate limiter (per store or image host), cooldowns and the deadline (plan 6.1.3, 6.1.4)."""
 
 import asyncio
 
@@ -91,6 +91,34 @@ async def test_a_crawl_delay_slows_a_host_but_never_speeds_it_up(clock: FakeCloc
     await limiter.acquire("slow.example", rps=5)  # asks for 0.2 s, robots.txt says 4 s
 
     assert clock.monotonic() - start == pytest.approx(4.0)
+
+
+async def test_a_longer_crawl_delay_is_not_undone_by_a_shorter_one_from_another_host(
+    clock: FakeClock,
+) -> None:
+    """Two hosts of one store share a bucket (``key``); each robots.txt asks for its own delay."""
+    limiter = RateLimiter(clock)
+    limiter.set_min_interval("store", 4.0, source="www.shop.example")
+    limiter.set_min_interval("store", 1.0, source="shop.example")
+    start = clock.monotonic()
+
+    await limiter.acquire("store", rps=1)
+    await limiter.acquire("store", rps=1)
+
+    assert clock.monotonic() - start == pytest.approx(4.0)
+
+
+async def test_a_host_can_lower_its_own_crawl_delay(clock: FakeClock) -> None:
+    """A robots.txt read again after its day is up may ask for less than it did."""
+    limiter = RateLimiter(clock)
+    limiter.set_min_interval("store", 4.0, source="www.shop.example")
+    limiter.set_min_interval("store", 2.0, source="www.shop.example")
+    start = clock.monotonic()
+
+    await limiter.acquire("store", rps=1)
+    await limiter.acquire("store", rps=1)
+
+    assert clock.monotonic() - start == pytest.approx(2.0)
 
 
 # --------------------------------------------------------------------------------------------

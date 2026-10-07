@@ -8,7 +8,9 @@ One honest ``httpx`` client, and these rules for every request, whatever it is f
   (``vga.fetch.allowlist``); at most 3 redirects; a redirect to another registered domain stops
   the request instead of following the store to its new home; and a redirect is followed only
   after the caller's ``vet_redirect`` (robots.txt of the page it leads to) agrees;
-- one slot per request from the per-host rate limiter, before the request is sent;
+- one slot per request, before it is sent, from a rate limiter that works per *store* across all
+  the hosts of the store's own site (the bare domain and ``www.``, say) and per host for any
+  other host such as a shared image CDN;
 - a total time limit and a response size limit; a response that grows past the cap is aborted;
 - a 401, 403 or 429, a login redirect or a bot-challenge page means the store is *blocked*: the
   request is not repeated, and the key it belongs to is put in cooldown (``vga.fetch.ratelimit``);
@@ -26,7 +28,7 @@ from urllib.parse import urljoin, urlsplit
 
 import httpx
 
-from vga.fetch.allowlist import check_url, normalise_host, registered_domain
+from vga.fetch.allowlist import belongs_to_store_site, check_url, normalise_host, registered_domain
 from vga.fetch.blocking import (
     BLOCKING_STATUSES,
     LOGIN_PATH,
@@ -172,11 +174,13 @@ class PoliteClient:
         )
 
     @staticmethod
-    def _is_store_host(store: StoreConfig, host: str) -> bool:
-        """True for the store's own domain (its search host and its sub-domains), false for a
-        separate CDN such as ``cdn.shopify.com``."""
-        page_host = normalise_host(urlsplit(store.search_url_template).hostname or "")
-        return registered_domain(host) == registered_domain(page_host)
+    def contact_key(store: StoreConfig, host: str) -> str:
+        """Who a request to ``host`` is addressed to, as far as the rate limit is concerned: the
+        store (its id) for any host of the store's own site, else that host alone
+        (``host:<name>``, which cannot clash with a store id). The BRD's "about one request a
+        second" is per store, so the bare domain and its ``www.`` share one queue; a shared image
+        CDN is another party with its own."""
+        return store.id if belongs_to_store_site(store, host) else f"host:{normalise_host(host)}"
 
     def image_policy(self, store: StoreConfig, host: str, *, timeout_s: float) -> FetchPolicy:
         """Limits for a thumbnail. A host that belongs to the store itself keeps the store's
@@ -184,7 +188,7 @@ class PoliteClient:
         A block puts that image host, never the store, in cooldown."""
         rps = (
             store.rps or self.settings.rps_per_store
-            if self._is_store_host(store, host)
+            if belongs_to_store_site(store, host)
             else self.settings.rps_images_per_host
         )
         return FetchPolicy(
@@ -201,7 +205,7 @@ class PoliteClient:
         rate and timeout and its own cooldown key, so a CDN that refuses us never puts the store
         in cooldown."""
         page = self.page_policy(store)
-        if self._is_store_host(store, host):
+        if belongs_to_store_site(store, host):
             return page
         return replace(
             page,
@@ -240,7 +244,7 @@ class PoliteClient:
             self._raise_if_cooling(policy.cooldown_key)
             if hop > 0 and vet_redirect is not None:
                 await vet_redirect(current, store)
-            await self.limiter.acquire(host, policy.rps)
+            await self.limiter.acquire(self.contact_key(store, host), policy.rps)
             # Another task may have been turned away while this one waited for its slot.
             self._raise_if_cooling(policy.cooldown_key)
             raw = await self._send(current, policy, store.id)

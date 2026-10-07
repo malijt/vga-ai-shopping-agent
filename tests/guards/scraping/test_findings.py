@@ -9,6 +9,7 @@ is a gap that is still open. They sit together so they can be routed as a list.
    client asks the store's robots check about every redirect target before it follows it.
 2. A store's second host (``www.`` after an apex redirect) is held to the one-request-a-second
    spacing of the first (BRD Rule 2: about one a second per *store*; the limiter was per host).
+   Fixed: the store's own hosts share one rate-limit queue, an image CDN keeps its own.
 3. A product link is not accepted on the shared image CDN, which is on ``allowed_hosts`` but is
    not the store's product page (BRD Rule 1: every result links to the original store's product
    page).
@@ -60,14 +61,6 @@ async def test_a_redirect_to_another_host_of_the_store_does_not_get_round_its_ro
     assert reached_www == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "FINDING 2: RateLimiter keeps one bucket per host (plan 6.1.3) but BRD Rule 2 says per "
-        "store; a search that redirects from alpha.example to www.alpha.example reaches both "
-        "hosts in the same second"
-    ),
-)
 async def test_a_store_that_redirects_to_its_other_host_is_still_asked_once_a_second_in_all(
     world: GuardWorld, build: GuardPipelines, settings: Settings
 ) -> None:
