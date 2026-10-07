@@ -7,6 +7,8 @@ fake network, OpenAI calls on the fake understander, and model calls on the fake
 
 from dataclasses import dataclass
 
+import pytest
+
 from tests.factories import (
     make_budget,
     make_chip_edits,
@@ -17,6 +19,7 @@ from tests.factories import (
 from tests.fakes import FakeClock, FakeUnderstander
 from tests.pipeline.conftest import PipelineMaker
 from tests.pipeline.world import StoreWorld
+from vga.errors import InvalidInputError
 from vga.models import (
     Category,
     Flag,
@@ -30,7 +33,7 @@ from vga.models import (
     Step,
     TierMix,
 )
-from vga.pipeline.rerun import MAX_REQUESTS, CachedRun, RerunCache
+from vga.pipeline.rerun import MAX_REQUESTS, CachedItem, CachedRun, RerunCache
 from vga.settings import Settings
 
 BLAZER = make_item_intent(
@@ -512,3 +515,68 @@ def test_the_cache_keeps_a_bounded_number_of_requests(clock: FakeClock) -> None:
 def test_a_missing_request_id_finds_nothing(clock: FakeClock) -> None:
     assert RerunCache(clock).get(None) is None
     assert RerunCache(clock).get("unknown") is None
+
+
+def cached_blazer(
+    expires_at: float = 2000.0, stores: tuple[str, ...] = ("alpha", "beta")
+) -> CachedItem:
+    return CachedItem(
+        item=BLAZER,
+        store_ids=stores,
+        products=(),
+        image_scores={},
+        reports=(),
+        searched_ids=frozenset(stores),
+        expires_at=expires_at,
+    )
+
+
+def test_an_entry_is_reusable_only_for_the_same_item_the_same_stores_and_before_it_expires(
+    clock: FakeClock,
+) -> None:
+    cache = RerunCache(clock)  # the fake clock starts at 1000 s
+    run = CachedRun(items={0: cached_blazer()})
+    both = ("alpha", "beta")
+
+    assert cache.reusable(run, 0, BLAZER, both) is not None
+    assert cache.reusable(run, 1, BLAZER, both) is None  # another position
+    assert cache.reusable(run, 0, SHIRT, both) is None  # another item
+    assert cache.reusable(run, 0, BLAZER.model_copy(update={"colour": "red"}), both) is None
+    assert cache.reusable(run, 0, BLAZER, ("alpha",)) is None  # other stores
+    assert cache.reusable(None, 0, BLAZER, both) is None
+    clock.advance(1000)
+    assert cache.reusable(run, 0, BLAZER, both) is None  # expired exactly now
+
+
+async def test_chips_with_no_earlier_understanding_are_applied_to_a_fresh_one(
+    make_pipeline: PipelineMaker, two_stores: list, settings: Settings
+) -> None:
+    understander = FakeUnderstander(make_understand_result(items=[BLAZER]))
+    pipeline = make_pipeline(understander=understander)
+    chips = make_chip_edits(items=[ItemEdit(index=0, colour="brown")])
+
+    response = await pipeline.run(
+        make_search_request(text="a blazer"), settings, RunOverrides(chips=chips)
+    )
+
+    assert len(understander.calls) == 1
+    assert response.understood.items[0].colour == "brown"
+    assert make_pipeline.spy is not None
+    sent = [keyword for call in make_pipeline.spy.calls for keyword in call.keywords]
+    assert any("brown" in keyword for keyword in sent)
+
+
+async def test_a_chip_edit_for_a_garment_that_does_not_exist_is_a_plain_error(
+    make_pipeline: PipelineMaker, world: StoreWorld, two_stores: list, settings: Settings
+) -> None:
+    pipeline = make_pipeline()
+    overrides = RunOverrides(
+        chips=make_chip_edits(items=[ItemEdit(index=3, colour="red")]),
+        understood=make_understand_result(items=[BLAZER]),
+    )
+
+    with pytest.raises(InvalidInputError) as caught:
+        await pipeline.run(SearchRequest(rerun_of="earlier"), settings, overrides)
+
+    assert caught.value.code == "invalid_input"
+    assert world.all_requests() == 0

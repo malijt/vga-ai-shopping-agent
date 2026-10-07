@@ -1,7 +1,10 @@
 """Plan 13.1.2: a single item, from request to response, through the REAL engine, ranker and
 price-range shaper. Only the stores' HTTP, OpenAI and the image model are faked."""
 
+import logging
 from collections import Counter
+
+import pytest
 
 from tests.factories import make_item_intent, make_search_request, make_understand_result
 from tests.fakes import FakeImageRanker, FakeUnderstander
@@ -174,3 +177,27 @@ async def test_stores_that_gave_products_are_reported_as_used_with_their_strateg
     assert {report.status for report in response.stores_used} == {StoreStatus.OK}
     assert {report.strategy for report in response.stores_used} == {"shopify"}
     assert all(report.product_count == 8 for report in response.stores_used)
+
+
+async def test_every_log_line_of_a_run_carries_its_request_id(
+    make_pipeline: PipelineMaker,
+    two_stores: list[StoreConfig],
+    settings: Settings,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level(logging.INFO, logger="vga")
+    pipeline = make_pipeline()
+    request = make_search_request(text="black oversized blazer")
+
+    await pipeline.run(request, settings)
+
+    ours = [r for r in caplog.records if r.name.startswith("vga")]
+    assert {r.name.split(".")[1] for r in ours} >= {"pipeline", "stores", "timing"}
+    assert {getattr(r, "request_id", None) for r in ours} == {request.request_id}
+    # a second request does not borrow the first one's id
+    other = make_search_request(text="black oversized blazer")
+    caplog.clear()
+    await pipeline.run(other, settings)
+    assert {getattr(r, "request_id", None) for r in caplog.records if r.name.startswith("vga")} == {
+        other.request_id
+    }

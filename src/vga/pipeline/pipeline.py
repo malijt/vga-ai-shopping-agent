@@ -19,8 +19,10 @@ stages had finished: every stage writes its partial result into the ``RunState``
 nothing is lost by stopping one half-way.
 
 Failure policy: a failure degrades the result and says so. Each one is logged at warning level with
-the request id and appears in ``SearchResponse.warnings``. Only input that cannot be searched, or a
-request that ran out of time before it was even understood, raises a ``VgaError``.
+the request id and appears in ``SearchResponse.warnings``. A ``VgaError`` is raised only when there
+is nothing to search or nothing to search with: input that cannot be searched, an understander that
+has no answer and no fallback (a photo-only request when the model is down, the daily call cap, a
+missing API key), or a request that ran out of time before it was even understood.
 
 The pipeline holds no per-request state except the re-run cache, so one instance serves any number
 of runs, one after another or at the same time. It never writes the photo anywhere: after the image
