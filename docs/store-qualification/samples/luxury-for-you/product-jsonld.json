@@ -1,0 +1,20 @@
+{
+ "@context": "https://schema.org",
+ "@type": "Product",
+ "name": "BLAZER \"DELILAH\"",
+ "description": "- 54% Polyester 44% Wool 2% Elastane- MADE IN Portugal",
+ "image": "https://luxuryforyou.com/images/69d3a9c81e183-6ad00b0-fp.webp",
+ "sku": "prod_01KNHD72JVEV6FQ38BQZKACAFV",
+ "brand": {
+  "@type": "Brand",
+  "name": "FILIPPA K"
+ },
+ "offers": {
+  "@type": "Offer",
+  "url": "https://luxuryforyou.com/ae_en/blazer-delilah-21on",
+  "price": "2000",
+  "priceCurrency": "AED",
+  "availability": "https://schema.org/InStock",
+  "itemCondition": "https://schema.org/NewCondition"
+ }
+}
