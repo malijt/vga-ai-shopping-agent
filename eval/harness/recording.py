@@ -18,7 +18,9 @@ This is **not raw HTTP capture** (no response bodies, headers or cookies are sav
 therefore cannot test a change to the fetch or extraction code: for that, use the recorded store
 responses under ``tests/`` with ``StoreHttpFixtures``. A replay also cannot judge a changed search
 keyword: the stand-in refuses a search for an item or a store list that differs from the recording
-(``RecordingMismatchError``) rather than return results for something else.
+(``RecordingMismatchError``) rather than return results for something else. The same holds when
+the pipeline now asks for another search than the recording holds, for example because a query
+file gained a ``shopper_gender`` answer after the run was recorded.
 
 Never saved: the photo, any image bytes, any embedding. Only text, URLs and numbers are written,
 and ``_refuse_image_data`` checks every payload before it is written.
@@ -28,12 +30,21 @@ Layout of a recording directory
 ::
 
     <dir>/manifest.json     format, the query ids in order, model and prompt version, and each
-                            query's live duration in milliseconds
+                            query's live duration in milliseconds (the first search), plus
+                            ``live_confirm_ms`` when the gender question was answered
     <dir>/<query_id>.json   {"understand": [...], "search": [...], "image_scores": [...]}, one
                             entry per call in the order the calls were made
 
 Calls are keyed by query id and call order. The order is fixed when a call *starts*, so
 concurrent calls (an outfit searched garment by garment) replay in the order they began.
+
+**The gender question.** A query that records the shopper's answer is searched twice (``confirm``):
+the first search, then the search after the answer. Both belong to the same query, so the second
+search's store calls follow the first's in ``search``, in order. The second search reuses the
+first understanding, so it adds no ``understand`` entry and no model call, in a recording or a
+replay. Its image scores are recorded like any others; the one thing a replay needs to repeat them
+is that the photo's embedding existed, which each image score entry notes as ``embedded`` (the
+embedding itself is never saved).
 """
 
 import json
@@ -189,7 +200,9 @@ class RecordingSession:
     def begin_query(self, query_id: str) -> None:
         self._bucket = _Bucket()
 
-    def end_query(self, query_id: str, *, duration_ms: float) -> None:
+    def end_query(
+        self, query_id: str, *, duration_ms: float, confirm_ms: float | None = None
+    ) -> None:
         bucket = self.bucket()
         calls = (bucket.understand, bucket.search, bucket.image_scores)
         incomplete = any(entry is None for entries in calls for entry in entries)
@@ -206,7 +219,10 @@ class RecordingSession:
                 "image_scores": bucket.image_scores,
             },
         )
-        self._queries[query_id] = {"file": f"{query_id}.json", "live_duration_ms": duration_ms}
+        entry: dict[str, Any] = {"file": f"{query_id}.json", "live_duration_ms": duration_ms}
+        if confirm_ms is not None:
+            entry["live_confirm_ms"] = confirm_ms
+        self._queries[query_id] = entry
         self._bucket = None
         _write_json(
             self._dir / MANIFEST_FILE,
@@ -279,7 +295,11 @@ class _RecordingImageRanker:
         slot = len(bucket.image_scores)
         bucket.image_scores.append(None)
         scores = await self._inner.score(query, products)
-        bucket.image_scores[slot] = {"scores": dict(scores)}
+        # Only the fact that an embedding now exists is kept, never the embedding (BRD Rule 4). A
+        # replay needs the fact: the page's re-search after the gender question carries the photo's
+        # embedding, and the pipeline scores images again only if it has one.
+        embedded = query is not None and query.embedding is not None
+        bucket.image_scores[slot] = {"scores": dict(scores), "embedded": embedded}
         return scores
 
 
@@ -345,8 +365,15 @@ class ReplaySession:
         self._missing_scores = 0
 
     def live_duration_ms(self, query_id: str) -> float | None:
-        """How long the recorded live run of this query took, if the recording says."""
+        """How long the recorded live run of this query took, if the recording says. For a query
+        whose gender question was answered that is the first search alone."""
         value = self._queries.get(query_id, {}).get("live_duration_ms")
+        return float(value) if isinstance(value, int | float) else None
+
+    def live_confirm_ms(self, query_id: str) -> float | None:
+        """How long the search after the gender question took in the recorded live run, if the
+        recording says."""
+        value = self._queries.get(query_id, {}).get("live_confirm_ms")
         return float(value) if isinstance(value, int | float) else None
 
     @property
@@ -403,7 +430,9 @@ class ReplaySession:
             list(data.get("image_scores", [])),
         )
 
-    def end_query(self, query_id: str, *, duration_ms: float) -> None:
+    def end_query(
+        self, query_id: str, *, duration_ms: float, confirm_ms: float | None = None
+    ) -> None:
         replay = self.current()
         for kind, used, total in (
             ("understand", replay.used_understand, len(replay.understand)),
@@ -484,6 +513,11 @@ class _ReplayImageRanker:
             self._session, replay, replay.image_scores, replay.used_image_scores, "image score"
         )
         replay.used_image_scores += 1
+        if entry.get("embedded") and query is not None and query.embedding is None:
+            # The live ranker left an embedding on the query, and the pipeline keeps it for a
+            # re-search that has no photo. The real one is never recorded, so this is a stand-in:
+            # one number, only to tell the pipeline "there is one". Nothing reads its value.
+            query.embedding = [0.0]
         recorded: dict[str, float | None] = entry["scores"]
         scores: dict[str, float | None] = {}
         missing = 0

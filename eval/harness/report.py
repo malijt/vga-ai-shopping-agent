@@ -26,6 +26,7 @@ from eval.harness.scoring import ScoredRun
 from eval.harness.stages import (
     fetch_rows,
     format_dropped,
+    gender_rows,
     rank_rows,
     step_summaries,
     store_summaries,
@@ -222,6 +223,57 @@ def _rank_stage(scored: ScoredRun) -> list[str]:
     return _table(header, rows or [["none", "", "", "", ""]])
 
 
+def _question_was_asked(scored: ScoredRun) -> bool:
+    """True when some query's "Who is this for?" question was asked, so it has a second search."""
+    return any(row.asked for row in gender_rows(scored.loaded.runs))
+
+
+SECONDS_SENTENCE = (
+    "Seconds is the first search, the wait before the shopper sees anything, and the 30 s limit "
+    'applies to it alone; where the "Who is this for?" question was answered, the search after the '
+    "answer and the sum of the two follow in brackets, and the other columns judge the results "
+    "shown after the answer."
+)
+FETCH_AFTER_ANSWER = (
+    ' Where the "Who is this for?" question was answered, this is the search after the answer.'
+)
+
+
+def _gender_section(scored: ScoredRun) -> list[str]:
+    """Each query's answer to "Who is this for?", with the first search, the search after the
+    answer and their sum. Nothing when no query records an answer."""
+    rows = [
+        [
+            row.query_id,
+            row.answer,
+            "yes" if row.asked else "no (every garment's gender was stated)",
+            escape(row.garments),
+            f"{row.first_ms / 1000:.1f}",
+            f"{row.after_ms / 1000:.1f}" if row.after_ms is not None else "-",
+            f"{row.total_ms / 1000:.1f}",
+        ]
+        for row in gender_rows(scored.loaded.runs)
+    ]
+    if not rows:
+        return []
+    header = (
+        "Query",
+        "Answer",
+        "Asked",
+        "Garments answered (what the model had guessed)",
+        "First search s",
+        "After the answer s",
+        "Total s",
+    )
+    return [
+        "",
+        'The "Who is this for?" question, per query. The per-step table above counts the first '
+        "searches only; the 30 s limit is checked against the first search alone.",
+        "",
+        *_table(header, rows),
+    ]
+
+
 def _warm_up_lines(scored: ScoredRun) -> list[str]:
     """The warm-up, apart from the queries: loading the image model is not part of any search."""
     warm_up = scored.loaded.meta.warm_up
@@ -272,6 +324,7 @@ def _timings(scored: ScoredRun) -> list[str]:
         ),
         stores or [["none", "", "", "", "", "", "", ""]],
     )
+    lines += _gender_section(scored)
     return lines
 
 
@@ -370,11 +423,16 @@ def render_report(scored: ScoredRun) -> str:
         f'{config.price_range_tolerance} result of its target count or flagged "few options".',
         "",
     ]
+    if _question_was_asked(scored):
+        lines += [SECONDS_SENTENCE, ""]
     lines += _table(RESULT_COLUMNS, _results_rows(scored))
     lines += [""]
     lines += _verdict_lines(scored)
     lines += ["", "## Failures", "", *_failures(scored)]
-    lines += ["", "## Fetch stage", "", "What each store returned, per query.", ""]
+    fetch_intro = "What each store returned, per query."
+    if _question_was_asked(scored):
+        fetch_intro += FETCH_AFTER_ANSWER
+    lines += ["", "## Fetch stage", "", fetch_intro, ""]
     lines += _fetch_stage(scored)
     lines += ["", "## Rank stage", "", "How well the ranked results match, per garment group.", ""]
     lines += _rank_stage(scored)

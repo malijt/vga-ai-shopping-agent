@@ -128,7 +128,11 @@ class TestLabellingThroughTheCommandLine:
         cli.run("--rescore", str(run_dir), "--labels", str(run_dir / LABELS_FILE))
 
         text = (run_dir / REPORT_FILE).read_text(encoding="utf-8")
-        assert "| q01_product_gown | 12 / 9 | 4 | 5.5 | 21/21 | 10 / 9 | yes |" in text
+        # q01 is a photo query, so the mock "shopper" answered the gender question for it: the
+        # seconds cell shows the first search, then the search after the answer and the sum.
+        expected = "| 12 / 9 | 4 | 5.5 (+5.5 after the answer = 11.0) | 21/21 | 10 / 9 | yes |"
+        assert f"| q01_product_gown {expected}" in text
+        assert "| q06_text_blazer_budget | 12 / 9 | 4 | 5.5 | 21/21 | 10 / 9 | yes |" in text
 
     def test_rescoring_changes_only_the_report_never_the_run_or_the_sheet(self, cli: Cli) -> None:
         run_dir = self.labelled(cli, good_queries=7)

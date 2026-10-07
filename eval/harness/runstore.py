@@ -22,6 +22,7 @@ from typing import Literal
 
 from pydantic import Field, ValidationError
 
+from eval.harness.confirm import GenderAnswer
 from eval.harness.errors import RunFileError
 from eval.harness.links import LinkCheck, LinksMode
 from eval.harness.queries import AcceptanceQuery, QuerySet
@@ -81,10 +82,20 @@ class FailureRecord(VgaModel):
 class QueryRecord(VgaModel):
     query: AcceptanceQuery
     response_file: str | None
+    """The response that was scored: where the gender question was asked, the search after the
+    answer."""
     failure: FailureRecord | None
     wall_ms: float = Field(ge=0)
+    """The first search, measured around ``Pipeline.run``."""
     duration_ms: float = Field(ge=0)
+    """The first search: the figure the 30 s limit is checked against."""
     duration_source: DurationSource = "measured"
+    gender: GenderAnswer | None = None
+    """The "Who is this for?" question: the recorded answer, whether it was asked, the garments it
+    was given for and the search after the answer (``gender.duration_ms``)."""
+    total_ms: float | None = Field(default=None, ge=0)
+    """The first search and the search after the answer, added up. Written for the reader of
+    ``run.json``; it is worked out again, not read, when the run is loaded."""
     link_checks: list[LinkCheck] = Field(default_factory=list)
 
 
@@ -147,6 +158,8 @@ def save_run(directory: Path | str, loaded: LoadedRun, *, overwrite: bool = Fals
                 wall_ms=run.wall_ms,
                 duration_ms=run.duration_ms,
                 duration_source=run.duration_source,
+                gender=run.gender,
+                total_ms=run.total_ms,
                 link_checks=loaded.links.get(run.query.id, []),
             )
         )
@@ -193,6 +206,7 @@ def load_run(directory: Path | str) -> LoadedRun:
                 wall_ms=item.wall_ms,
                 duration_ms=item.duration_ms,
                 duration_source=item.duration_source,
+                gender=item.gender,
             )
         )
         if item.link_checks:

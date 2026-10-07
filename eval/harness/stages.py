@@ -10,6 +10,7 @@ person's labels.
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+from eval.harness.confirm import describe_asked
 from eval.harness.criteria import CriteriaConfig, QueryEvaluation
 from eval.harness.runner import QueryRun
 from vga.models import SearchResponse, StoreReport, StoreStatus
@@ -67,6 +68,41 @@ class RankRow:
     """good@10 as ``n/10``, ``max n/10`` when the group is too small, or ``not labelled``."""
     reaches_bar: str
     """``yes``, ``no`` or ``pending``."""
+
+
+@dataclass(frozen=True)
+class GenderRow:
+    """The "Who is this for?" question of one query that records an answer, with its times."""
+
+    query_id: str
+    answer: str
+    asked: bool
+    garments: str
+    """The garments the answer was given for, with what the model had guessed; ``-`` if none."""
+    first_ms: float
+    """The first search: the wait before the shopper sees anything; 30 s is checked on it."""
+    after_ms: float | None
+    """The search after the answer; ``None`` when the question was not asked."""
+
+    @property
+    def total_ms(self) -> float:
+        return self.first_ms + (self.after_ms or 0.0)
+
+
+def gender_rows(runs: Sequence[QueryRun]) -> list[GenderRow]:
+    """One row per query that records an answer, in run order."""
+    return [
+        GenderRow(
+            run.query.id,
+            run.gender.answer.value,
+            run.gender.asked,
+            describe_asked(run.gender.garments) if run.gender.asked else "-",
+            run.duration_ms,
+            run.confirm_ms,
+        )
+        for run in runs
+        if run.gender is not None
+    ]
 
 
 def _reports(response: SearchResponse) -> list[StoreReport]:
@@ -133,12 +169,14 @@ def step_summaries(runs: Sequence[QueryRun]) -> list[StepSummary]:
     """Mean and slowest time of each pipeline step, in the order the steps first appear.
 
     Per-store ``fetch`` entries are left to ``store_summaries``; only whole-request steps count.
+    The steps are those of the first search, the wait the 30 s limit is about: where the gender
+    question was answered, the search after the answer is summed up apart (``GenderRow``).
     """
     durations: dict[str, list[float]] = {}
     for run in runs:
         if run.response is None:
             continue
-        for timing in run.response.timings:
+        for timing in run.first_timings:
             if timing.store is None:
                 durations.setdefault(timing.step, []).append(timing.duration_ms)
     return [

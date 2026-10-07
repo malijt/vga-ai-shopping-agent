@@ -8,6 +8,13 @@ in through ``QueryScope``, which is told when each query starts and ends.
 A query whose pipeline raises is not allowed to stop the run: the failure is kept (code and
 plain message, never a stack trace) so the report lists it as a failed query and the other nine
 still run. Nothing is swallowed silently.
+
+**The gender question.** A query may record the shopper's answer to "Who is this for?"
+(``shopper_gender``). After the first search, if the app would ask (some garment's gender was not
+stated) the runner answers it as the page does: one more search with the answer applied
+(``eval.harness.confirm``). That second response is the one scored, labelled and link-checked. The
+30 s limit is checked against the first search alone, because that is the wait before the shopper
+sees anything; the second search's time is kept beside it.
 """
 
 import re
@@ -15,10 +22,11 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Literal, Protocol
 
+from eval.harness.confirm import GenderAnswer, read_question, rerun_overrides, rerun_request
 from eval.harness.queries import AcceptanceQuery
 from vga.errors import VgaError
 from vga.interfaces import Clock, Pipeline
-from vga.models import SearchRequest, SearchResponse
+from vga.models import RunOverrides, SearchRequest, SearchResponse, StepTiming
 from vga.settings import Settings
 
 ImageLoader = Callable[[AcceptanceQuery], bytes | None]
@@ -32,7 +40,12 @@ class QueryScope(Protocol):
 
     def begin_query(self, query_id: str) -> None: ...
 
-    def end_query(self, query_id: str, *, duration_ms: float) -> None: ...
+    def end_query(
+        self, query_id: str, *, duration_ms: float, confirm_ms: float | None = None
+    ) -> None:
+        """``duration_ms`` is the first search; ``confirm_ms`` the search after the gender question
+        was answered, or ``None`` when there was none."""
+        ...
 
 
 @dataclass(frozen=True)
@@ -51,13 +64,36 @@ class QueryRun:
 
     query: AcceptanceQuery
     response: SearchResponse | None
+    """The response that is scored, labelled and link-checked: what the shopper sees at the end.
+    When the gender question was asked, that is the search after the answer."""
     failure: PipelineFailure | None
     wall_ms: float
-    """Time the runner measured around ``Pipeline.run``."""
+    """Time the runner measured around the first ``Pipeline.run``."""
     duration_ms: float
-    """The figure the 30 s limit is checked against: the slower of the pipeline's own
-    ``duration_ms`` and the runner's wall time, or the recorded live figure on a replay."""
+    """The figure the 30 s limit is checked against: the first search only, the wait before the
+    shopper sees anything. The slower of the pipeline's own ``duration_ms`` and the runner's wall
+    time, or the recorded live figure on a replay."""
     duration_source: DurationSource = "measured"
+    gender: GenderAnswer | None = None
+    """What happened to the "Who is this for?" question; ``None`` when the query records no
+    answer."""
+
+    @property
+    def first_timings(self) -> list[StepTiming]:
+        """The step timings of the first search, which the 30 s limit is about."""
+        if self.gender is not None and self.gender.asked:
+            return list(self.gender.first_timings)
+        return list(self.response.timings) if self.response is not None else []
+
+    @property
+    def confirm_ms(self) -> float | None:
+        """The search after the answer, or ``None`` when the question was not asked."""
+        return self.gender.duration_ms if self.gender is not None and self.gender.asked else None
+
+    @property
+    def total_ms(self) -> float:
+        """The first search and the search after the answer, added up."""
+        return self.duration_ms + (self.confirm_ms or 0.0)
 
 
 def build_request(query: AcceptanceQuery, image: bytes | None) -> SearchRequest:
@@ -86,6 +122,35 @@ def _failure_from(exc: Exception) -> PipelineFailure:
     return PipelineFailure("unexpected", message, type(exc).__name__)
 
 
+@dataclass(frozen=True)
+class _Timed:
+    """One ``Pipeline.run`` call: its response or failure, and how long it took."""
+
+    response: SearchResponse | None
+    failure: PipelineFailure | None
+    wall_ms: float
+    duration_ms: float
+
+
+async def _timed_run(
+    pipeline: Pipeline,
+    request: SearchRequest,
+    settings: Settings,
+    overrides: RunOverrides | None,
+    clock: Clock,
+) -> _Timed:
+    started = clock.monotonic()
+    response: SearchResponse | None = None
+    failure: PipelineFailure | None = None
+    try:
+        response = await pipeline.run(request, settings, overrides)
+    except Exception as exc:  # a broken query must not stop the other nine; it is reported
+        failure = _failure_from(exc)
+    wall_ms = (clock.monotonic() - started) * 1000.0
+    duration_ms = wall_ms if response is None else max(response.duration_ms, wall_ms)
+    return _Timed(response, failure, wall_ms, duration_ms)
+
+
 async def run_query(
     query: AcceptanceQuery,
     pipeline: Pipeline,
@@ -94,18 +159,60 @@ async def run_query(
     clock: Clock,
     image: bytes | None,
 ) -> QueryRun:
-    """Run one query and time it. A failing pipeline becomes a ``PipelineFailure``."""
-    request = build_request(query, image)
-    started = clock.monotonic()
-    response: SearchResponse | None = None
-    failure: PipelineFailure | None = None
-    try:
-        response = await pipeline.run(request, settings)
-    except Exception as exc:  # a broken query must not stop the other nine; it is reported
-        failure = _failure_from(exc)
-    wall_ms = (clock.monotonic() - started) * 1000.0
-    duration_ms = wall_ms if response is None else max(response.duration_ms, wall_ms)
-    return QueryRun(query, response, failure, wall_ms, duration_ms)
+    """Run one query and time it. A failing pipeline becomes a ``PipelineFailure``.
+
+    When the query records the shopper's answer to "Who is this for?" and the app would ask, the
+    answer is given as the page gives it (see ``eval.harness.confirm``) and the second response
+    is the one returned."""
+    first = await _timed_run(pipeline, build_request(query, image), settings, None, clock)
+    if first.response is None or query.shopper_gender is None:
+        return QueryRun(query, first.response, first.failure, first.wall_ms, first.duration_ms)
+
+    question = read_question(first.response.understood, query.shopper_gender)
+    if question.edits is None:
+        # Every garment's gender was stated, so the page would not ask. What was typed stands.
+        answer = GenderAnswer(
+            answer=question.answer,
+            asked=False,
+            typed_differently=list(question.typed_differently),
+        )
+        return QueryRun(
+            query, first.response, None, first.wall_ms, first.duration_ms, gender=answer
+        )
+
+    second = await _timed_run(
+        pipeline,
+        rerun_request(first.response),
+        settings,
+        rerun_overrides(first.response, question.edits),
+        clock,
+    )
+    answer = GenderAnswer(
+        answer=question.answer,
+        asked=True,
+        garments=list(question.asked_about),
+        typed_differently=list(question.typed_differently),
+        first_timings=list(first.response.timings),
+        wall_ms=second.wall_ms,
+        duration_ms=second.duration_ms,
+    )
+    failure = _failure_after_the_answer(second.failure, question.answer.value)
+    return QueryRun(
+        query, second.response, failure, first.wall_ms, first.duration_ms, gender=answer
+    )
+
+
+def _failure_after_the_answer(
+    failure: PipelineFailure | None, answer: str
+) -> PipelineFailure | None:
+    """The second search's failure, worded so the report says where in the shopper's path it
+    happened: the first search had worked and the answer was given."""
+    if failure is None:
+        return None
+    message = (
+        f"After the shopper answered '{answer}' the search could not be repeated. {failure.message}"
+    )
+    return PipelineFailure(failure.code, message, failure.kind)
 
 
 async def run_queries(
@@ -132,7 +239,7 @@ async def run_queries(
         else:
             run = await run_query(query, pipeline, settings, clock=clock, image=image)
             if scope is not None:
-                scope.end_query(query.id, duration_ms=run.duration_ms)
+                scope.end_query(query.id, duration_ms=run.duration_ms, confirm_ms=run.confirm_ms)
         runs.append(run)
         if progress is not None:
             progress(run)
