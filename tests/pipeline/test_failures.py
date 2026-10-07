@@ -463,6 +463,32 @@ async def test_one_empty_garment_of_an_outfit_gets_its_own_note(
     assert messages.NO_RESULTS_ANYWHERE not in response.warnings
 
 
+async def test_a_store_that_fails_for_one_garment_only_is_named_in_a_warning(
+    make_pipeline: PipelineMaker,
+    world: StoreWorld,
+    settings: Settings,
+    photo: bytes,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    # Alpha answers for the blazer but turns the shirt searches away.
+    world.add(store_for("alpha"), status=lambda query: 403 if "shirt" in query else 200)
+    world.add(store_for("beta"))
+    pipeline = make_pipeline(understander=outfit_understander(OUTFIT[:2]))
+    request = make_search_request(image=photo, text=None)
+
+    response = await pipeline.run(request, settings)
+
+    assert {r.store_id for r in response.stores_used} == {"alpha", "beta"}  # it did give products
+    assert messages.store_partial_warning("Alpha") in response.warnings
+    assert not any("Beta" in warning for warning in response.warnings)
+    tops = response.groups[1]
+    assert {s.product.store for s in tops.tiers[0].results + tops.tiers[1].results} <= {"Beta"}
+    assert any(
+        "store failed for some of the items" in message
+        for message in warnings_logged(caplog, request.request_id)
+    )
+
+
 async def test_the_input_type_does_not_matter_to_the_failure_paths(
     make_pipeline: PipelineMaker, world: StoreWorld, settings: Settings, photo: bytes
 ) -> None:

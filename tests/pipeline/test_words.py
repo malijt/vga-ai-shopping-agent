@@ -3,6 +3,8 @@
 import inspect
 from collections.abc import Iterator
 
+import pytest
+
 from tests.factories import make_budget, make_search_request
 from tests.pipeline.conftest import PipelineMaker
 from tests.pipeline.world import StoreWorld, store_for
@@ -57,6 +59,17 @@ def test_no_fixed_message_says_tier() -> None:
 
     assert len(texts) > 40
     assert [text for text in texts if "tier" in text.lower()] == []
+
+
+def test_a_category_or_gender_without_a_word_reads_as_its_own_name_instead_of_crashing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(messages, "_CATEGORY_WORDS", {})
+    monkeypatch.setattr(messages, "_GENDER_WORDS", {})
+
+    assert messages.category_word(Category.SHOES) == "shoes"
+    assert messages.gender_word(Gender.WOMEN) == "women"
+    assert "shoes" in messages.no_store_for_gender(Category.SHOES, Gender.MEN)
 
 
 def test_every_message_function_is_covered_by_the_scan_above() -> None:

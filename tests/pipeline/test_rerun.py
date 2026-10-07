@@ -18,7 +18,7 @@ from tests.factories import (
 from tests.fakes import FakeClock, FakeUnderstander
 from tests.pipeline.builders import BLAZER, SHIRT, photo_search, rerun
 from tests.pipeline.conftest import PipelineMaker
-from tests.pipeline.world import StoreWorld
+from tests.pipeline.world import StoreWorld, store_for
 from vga.errors import InvalidInputError
 from vga.models import (
     Category,
@@ -403,6 +403,30 @@ async def test_a_rerun_does_not_make_old_products_live_longer(
     await pipeline.run(request, settings, overrides)
 
     assert counts(world, understander, make_pipeline).searches > before.searches
+
+
+async def test_products_age_from_when_their_store_answered_not_from_when_it_was_collected(
+    make_pipeline: PipelineMaker,
+    world: StoreWorld,
+    settings: Settings,
+    photo: bytes,
+    clock: FakeClock,
+) -> None:
+    # The first garment is slow (about ten seconds); the second comes back in about a second but
+    # is only collected after the first, because garments are collected in order.
+    world.add(store_for("alpha"), delay=lambda query: 5.0 if "blazer" in query else 0.0)
+    pipeline = make_pipeline(understander=photo_search([BLAZER, SHIRT], InputType.OUTFIT_PHOTO))
+    started = clock.monotonic()
+
+    response = await pipeline.run(make_search_request(image=photo, text=None), settings)
+
+    cached = pipeline._cache.get(response.request_id)
+    assert cached is not None
+    blazers, shirts = cached.items[0], cached.items[1]
+    ttl = settings.store_cache_ttl_s
+    assert shirts.expires_at - ttl < started + 5  # stamped when the shirts came back
+    assert blazers.expires_at - shirts.expires_at > 5  # the slow blazers are younger
+    assert response.duration_ms > 10_000
 
 
 async def test_a_rerun_of_a_request_the_process_never_saw_searches_normally(

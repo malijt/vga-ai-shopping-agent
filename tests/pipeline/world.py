@@ -126,7 +126,8 @@ class Site:
     """Response body by kind of garment. A query of another kind gets an empty answer."""
     delay: Callable[[str], float] = lambda _query: 0.0
     """Seconds (on the fake clock) a search answer takes, by query."""
-    status: int = 200
+    status: int | Callable[[str], int] = 200
+    """The HTTP status of every answer, or a function of the query (to fail only some)."""
     queries: list[str] = field(default_factory=list)
     """Every search query this store received, in order."""
     times: list[float] = field(default_factory=list)
@@ -158,7 +159,7 @@ class StoreWorld:
         bodies: Mapping[str, str] | None = None,
         prices: Mapping[str, Sequence[float]] | None = None,
         delay: float | Callable[[str], float] = 0.0,
-        status: int = 200,
+        status: int | Callable[[str], int] = 200,
         colour: str = "Black",
     ) -> Site:
         """Serve ``store``. Without ``bodies`` it sells generated products of every kind."""
@@ -191,8 +192,9 @@ class StoreWorld:
             seconds = site.delay(query)
             if seconds > 0:
                 await self.clock.sleep(seconds)
-            if site.status != 200:
-                return httpx.Response(site.status, text="no")
+            code = site.status(query) if callable(site.status) else site.status
+            if code != 200:
+                return httpx.Response(code, text="no")
             kind = kind_of_query(query)
             body = site.bodies.get(kind or "", suggest_body())
             return json_response(body)
