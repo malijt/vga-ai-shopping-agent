@@ -195,7 +195,7 @@ class TestRedaction:
         assert FAKE_KEY not in stream.getvalue()
 
     def test_api_key_from_the_environment_is_never_written(self, stream, monkeypatch) -> None:
-        secret = "plain-secret-value-without-a-prefix"
+        secret = "x" * 24
         monkeypatch.setenv("OPENAI_API_KEY", secret)
 
         get_logger("tests.demo").info(f"oops {secret}", extra={"data": {"nested": [secret]}})
@@ -209,7 +209,7 @@ class TestRedaction:
         assert "x9Y8z7W6" not in stream.getvalue()
 
     @pytest.mark.parametrize(
-        "text", ["password=hunter22hunter", "token: abcdef123456", "api_key='zzzzzz999999'"]
+        "text", ["password=hunter22hunter", "token: qqqqqq111111", "api_key='zzzzzz999999'"]
     )
     def test_key_value_secrets_in_text_are_not_written(self, stream, text: str) -> None:
         get_logger("tests.demo").info(f"config {text}")
