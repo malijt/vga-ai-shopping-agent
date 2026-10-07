@@ -4,6 +4,7 @@ Nothing here touches the network or OpenAI, and nothing waits on real time. The 
 is a temporary folder, so no test writes into ``eval/results/`` of the real checkout.
 """
 
+import asyncio
 import csv
 import io
 import json
@@ -19,8 +20,10 @@ from eval.harness.runstore import LABELS_FILE, REPORT_FILE, RUN_FILE, load_run
 from eval.harness.wiring import Wiring, WiringFactory, load_wiring_factory
 
 from tests.factories import make_settings
+from tests.fakes import FakeUnderstander
 from tests.harness.helpers import ToyPipeline
-from tests.harness.live_parts import LiveParts, make_stores, ok_link_fetch
+from tests.harness.live_parts import LiveParts, make_stores, ok_link_fetch, understand_for
+from vga.models import SearchRequest, UnderstandResult
 from vga.settings import Settings
 
 TODAY = date(2026, 10, 7)
@@ -391,6 +394,46 @@ class TestRecordThenReplayThroughTheCommandLine:
         assert len(names) == 11
         manifest = json.loads((cli.root / "rec" / "manifest.json").read_text(encoding="utf-8"))
         assert len(manifest["queries"]) == 10
+
+    def test_the_recording_may_live_inside_the_runs_own_folder(self, cli: Cli) -> None:
+        # Plan 16.1.1: "eval/results/run-1/ has JSON, report, labelling CSV and the recording".
+        put_photos(cli.root)
+        recording = cli.root / "eval" / "results" / "run-1" / "recording"
+
+        code = cli.run("--record", str(recording), wiring=wiring_over(LiveParts()))
+
+        assert code == 0, cli.errors
+        run_dir = recording.parent
+        assert (recording / "manifest.json").is_file()
+        assert (run_dir / REPORT_FILE).is_file()
+        assert (run_dir / LABELS_FILE).is_file()
+        assert len(list((run_dir / "responses").glob("*.json"))) == 10
+        assert (
+            (run_dir / REPORT_FILE)
+            .read_text(encoding="utf-8")
+            .startswith("# Acceptance results: run 1")
+        )
+
+    def test_the_pipeline_and_the_link_checks_share_one_event_loop(self, cli: Cli) -> None:
+        # A real HTTP client belongs to the loop it first ran in; two loops would break it.
+        loops: list[object] = []
+        live = LiveParts()
+
+        def understand_on_a_loop(req: SearchRequest) -> UnderstandResult:
+            loops.append(asyncio.get_running_loop())
+            return understand_for(req)
+
+        live.understander = FakeUnderstander(understand_on_a_loop)
+
+        async def fetch(url: str) -> LinkResult:
+            loops.append(asyncio.get_running_loop())
+            return await ok_link_fetch(url)
+
+        put_photos(cli.root)
+        cli.run("--record", str(cli.root / "rec"), wiring=wiring_over(live, fetch))
+
+        assert len(loops) > 10
+        assert len({id(loop) for loop in loops}) == 1
 
     def test_the_next_free_run_number_is_used(self, cli: Cli) -> None:
         results = cli.root / "eval" / "results"

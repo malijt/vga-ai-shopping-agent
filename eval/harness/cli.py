@@ -155,6 +155,13 @@ def _resolve_output(
         number = args.run if args.run is not None else (int(match.group(1)) if match else None)
         return out, number, bool(args.overwrite)
     if mode == "record":
+        # `--record eval/results/run-1/recording` keeps the recording inside its run's folder
+        # (plan 16.1.1), so that folder is where the results go too.
+        beside = Path(args.record).parent
+        match = _RUN_DIR.match(beside.name)
+        if match:
+            number = args.run if args.run is not None else int(match.group(1))
+            return beside, number, bool(args.overwrite)
         number = args.run if args.run is not None else _next_run_number(results_dir)
         return results_dir / f"run-{number}", number, bool(args.overwrite)
     return results_dir / mode, args.run, True
@@ -240,7 +247,7 @@ def _setup_record(
     )
 
 
-def _check_links(
+async def _check_links(
     runs: Sequence[QueryRun],
     mode: LinksMode,
     fetch: LinkFetch,
@@ -248,15 +255,68 @@ def _check_links(
 ) -> dict[str, list[LinkCheck]]:
     checker = LinkChecker(fetch, allowed)
     checks: dict[str, list[LinkCheck]] = {}
-
-    async def run_all() -> None:
-        for run in runs:
-            if run.response is not None:
-                products = products_to_check(run.response, mode)
-                checks[run.query.id] = await checker.check_all(products)
-
-    asyncio.run(run_all())
+    for run in runs:
+        if run.response is not None:
+            checks[run.query.id] = await checker.check_all(products_to_check(run.response, mode))
     return checks
+
+
+def _link_tools(
+    setup: _Setup, runs: Sequence[QueryRun]
+) -> tuple[LinkFetch, Mapping[str, Collection[str]]]:
+    """The fetch function and allowed hosts to check links with."""
+    if setup.mode == "mock":
+        products = [s.product for r in runs if r.response for s in r.response.products]
+        responses = [r.response for r in runs if r.response]
+        return MockLinkFetch(products), allowed_hosts_from_responses(responses)
+    if setup.link_fetch is None:
+        msg = "The wiring has no link_fetch, so links cannot be checked."
+        raise WiringError(msg)
+    return setup.link_fetch, setup.allowed_hosts or {}
+
+
+async def _run_and_check(
+    setup: _Setup,
+    queries: list[AcceptanceQuery],
+    settings: Settings,
+    links: LinksMode,
+    progress: Callable[[QueryRun], None],
+) -> tuple[list[QueryRun], dict[str, list[LinkCheck]]]:
+    """Run the queries, then check links. One event loop for both, because a fetch function or
+    pipeline may keep an HTTP client that belongs to the loop it was first used in."""
+    runs = await run_queries(
+        queries,
+        setup.pipeline,
+        settings,
+        clock=SystemClock(),
+        load_image=setup.load_image,
+        scope=setup.scope,
+        progress=progress,
+    )
+    if setup.replay is not None:
+        runs = [
+            replace(run, duration_ms=recorded, duration_source="recorded")
+            if (recorded := setup.replay.live_duration_ms(run.query.id)) is not None
+            else run
+            for run in runs
+        ]
+    if links is LinksMode.NONE:
+        return runs, {}
+    fetch, allowed = _link_tools(setup, runs)
+    return runs, await _check_links(runs, links, fetch, allowed)
+
+
+def _run_notes(setup: _Setup) -> list[str]:
+    notes: list[str] = []
+    if setup.replay is not None:
+        notes.extend(setup.replay.final_notes())
+    if setup.recording is not None and setup.recording.incomplete:
+        notes.append(
+            "The recording of "
+            + ", ".join(setup.recording.incomplete)
+            + " is incomplete (a boundary failed mid-call); it cannot be replayed."
+        )
+    return notes
 
 
 def _write_report(scored: ScoredRun, out: Path) -> Path:
@@ -336,48 +396,8 @@ def _execute(
             failure = run.failure.message if run.failure else "no response"
             print(f"{run.query.id}: FAILED ({failure})", file=out_stream)
 
-    runs = asyncio.run(
-        run_queries(
-            queries,
-            setup.pipeline,
-            settings,
-            clock=SystemClock(),
-            load_image=setup.load_image,
-            scope=setup.scope,
-            progress=progress,
-        )
-    )
-
-    notes: list[str] = []
-    if setup.replay is not None:
-        runs = [
-            replace(run, duration_ms=recorded, duration_source="recorded")
-            if (recorded := setup.replay.live_duration_ms(run.query.id)) is not None
-            else run
-            for run in runs
-        ]
-        notes.extend(setup.replay.final_notes())
-    if setup.recording is not None and setup.recording.incomplete:
-        notes.append(
-            "The recording of "
-            + ", ".join(setup.recording.incomplete)
-            + " is incomplete (a boundary failed mid-call); it cannot be replayed."
-        )
-
-    link_checks: dict[str, list[LinkCheck]] = {}
-    if links is not LinksMode.NONE:
-        fetch: LinkFetch
-        allowed: Mapping[str, Collection[str]]
-        if setup.mode == "mock":
-            products = [s.product for r in runs if r.response for s in r.response.products]
-            fetch = MockLinkFetch(products)
-            allowed = allowed_hosts_from_responses(r.response for r in runs if r.response)
-        else:
-            if setup.link_fetch is None:
-                msg = "The wiring has no link_fetch, so links cannot be checked."
-                raise WiringError(msg)
-            fetch, allowed = setup.link_fetch, setup.allowed_hosts or {}
-        link_checks = _check_links(runs, links, fetch, allowed)
+    runs, link_checks = asyncio.run(_run_and_check(setup, queries, settings, links, progress))
+    notes = _run_notes(setup)
 
     meta = RunMeta(
         number=number,
@@ -389,7 +409,9 @@ def _execute(
         notes=notes,
     )
     loaded = LoadedRun(meta, runs, link_checks)
-    save_run(out, loaded, overwrite=overwrite)
+    # The folder was checked before the run (`_ensure_output_is_free`). By now it may hold the
+    # recording, written there on purpose, so this save must not treat that as a collision.
+    save_run(out, loaded, overwrite=True)
     sheet = out / LABELS_FILE
     rows = 0 if args.labels else export_label_sheet(runs, sheet)
 
