@@ -1,0 +1,24 @@
+# Nishat Linen UAE: the UAE storefront of a Pakistani fashion house (long dresses, kaftans, gowns and
+# embroidered suits for women, kurtas for men) on Shopify.
+# Data path: Shopify's public predictive search, /search/suggest.json, which robots.txt leaves open.
+# Evidence: docs/store-qualification/nishat-linen-uae.md. Quirks and what would break this file:
+# docs/store-notes/nishat-linen-uae.md
+id: nishat-linen-uae
+name: Nishat Linen UAE
+country: AE
+currency: AED          # the suggest response has no currency field; AED is store-level (product page JSON-LD)
+search_url_template: "https://www.nishatlinenuae.com/search/suggest.json?q={query}&resources[type]=product&resources[limit]=10"
+allowed_hosts:
+  - www.nishatlinenuae.com   # product links; the apex nishatlinenuae.com was never requested
+  - cdn.shopify.com          # product images
+extraction:
+  strategies:
+    - name: shopify
+      options:
+        # `title` is a garment word plus a code ("Printed Dress - AS26-92"); `vendor` is a season label,
+        # so the title stays the name. Gender: men's kurtas have type "RTW Men"; the tag "Women" is on
+        # only some women's items (the rest stay unknown and the ranker reads their titles).
+        gender_fields: [type, tags]
+# genders is left unset on purpose: the store sells women's wear and men's kurtas (10 of 40 records seen).
+tier_hint: budget      # AED 39.50-239 seen, almost all at 50% off; women's long dresses AED 59.50-164.50
+enabled: false         # the live smoke test passed on 2026-10-08 (tests/stores/nishat-linen-uae); held until the store set is decided

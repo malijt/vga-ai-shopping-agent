@@ -1,0 +1,25 @@
+# Signature Studio: a Dubai boutique for Pakistani designer wear on Shopify (multi-brand: the vendor is
+# the designer label). Designer South Asian sets, kaftans, printed long dresses and formal wear for
+# women, and some kurta sets for men.
+# Data path: Shopify's public predictive search, /search/suggest.json, which robots.txt leaves open.
+# Evidence: docs/store-qualification/signature-studio.md. Quirks and what would break this file:
+# docs/store-notes/signature-studio.md
+id: signature-studio
+name: Signature Studio
+country: AE
+currency: AED          # the suggest response has no currency field; AED is store-level (product page JSON-LD)
+search_url_template: "https://www.signaturestudio.ae/search/suggest.json?q={query}&resources[type]=product&resources[limit]=10"
+allowed_hosts:
+  - www.signaturestudio.ae   # product links; the apex signaturestudio.ae was never requested
+  - cdn.shopify.com          # product images
+extraction:
+  strategies:
+    - name: shopify
+      options:
+        # `type` is "Clothing" on every record, so it names no gender and the default order [type, tags]
+        # falls through to the tags: the men's kurta sets carry the tag "Menswear". Women's items carry
+        # no gender tag at all and stay unknown (the ranker reads their titles).
+        gender_fields: [type, tags]
+# genders is left unset on purpose: the store sells women's wear and men's kurta sets (10 of 40 records seen).
+tier_hint: mid_range   # AED 174-2,753 seen, median 589; printed and casual pieces 170-625, formal and wedding sets above 1,200
+enabled: false         # the live smoke test passed on 2026-10-08 (tests/stores/signature-studio); held until the store set is decided
