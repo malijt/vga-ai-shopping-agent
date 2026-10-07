@@ -71,12 +71,14 @@ def card_page(scored: ScoredProduct, base_currency: str = "AED") -> AppTest:
 
 
 def bold_lines(at: AppTest) -> list[str]:
-    """The price lines (a card's one bold line), without the markers. The page's fixed notes and
-    the chips' headings are not bold, so on a whole page these are the cards' prices."""
+    """The price lines (a card's one bold line), without the markers. The page has other bold
+    text ("Who is this for?", "Item 2"), but only a price names a currency code."""
     return [
         markdown.value.strip("*")
         for markdown in at.markdown
-        if markdown.value.startswith("**") and markdown.value.endswith("**")
+        if markdown.value.startswith("**")
+        and markdown.value.endswith("**")
+        and re.search(r"[A-Z]{3}", markdown.value)
     ]
 
 

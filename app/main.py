@@ -24,6 +24,7 @@ from app import flow, runner, state
 from app.boundary import error_boundary
 from app.components.chips import render_chips
 from app.components.empty_state import render_no_results, render_welcome
+from app.components.gender_question import render_gender_question
 from app.components.groups import render_groups
 from app.components.input_panel import render_input_panel
 from app.components.run_details import render_run_details
@@ -87,6 +88,7 @@ def render_page() -> None:
         render_notes(response.warnings)
         render_run_details(response)
     else:
+        render_gender_question(response, disabled=searching)
         render_notes(response.warnings)
         render_groups(response, base_currency=settings.base_currency)
         render_run_details(response)

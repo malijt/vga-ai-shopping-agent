@@ -34,6 +34,7 @@ _ERROR = "last_error"
 _ACTIVE_REQUEST_ID = "active_request_id"
 _PHOTO_GENERATION = "photo_generation"
 _PHOTO_RELEASED = "photo_released"
+_GENDER_DISMISSED = "gender_question_dismissed"
 
 
 @dataclass(frozen=True)
@@ -115,6 +116,23 @@ def store_response(response: SearchResponse, *, keep_chips: bool = False) -> Non
 def drop_response() -> None:
     st.session_state[_RESPONSE] = None
     clear_chip_state()
+    reopen_gender_question()
+
+
+def gender_question_dismissed() -> bool:
+    """True once the shopper answered "Show both" for the search on the page. Answering Women or
+    Men needs no flag: the gender is then explicit and the question has nothing left to ask."""
+    return st.session_state.get(_GENDER_DISMISSED) is True
+
+
+def dismiss_gender_question() -> None:
+    st.session_state[_GENDER_DISMISSED] = True
+
+
+def reopen_gender_question() -> None:
+    """A new search from the boxes asks again, if it needs to. A search again from the chips or
+    the price-range mix does not: it is the same search."""
+    st.session_state[_GENDER_DISMISSED] = False
 
 
 def last_error() -> str | None:

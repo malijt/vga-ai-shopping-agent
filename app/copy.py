@@ -5,7 +5,7 @@ they do. A test walks the whole page and fails if the word "tier" appears. Nothi
 comes from a store or from the shopper, so it is safe to pass to functions that read markdown.
 """
 
-from vga.models import Category, Flag, Gender, Step
+from vga.models import Category, Flag, Gender, InputType, Step
 
 APP_TITLE = "AI Fashion Shopping Agent"
 
@@ -40,6 +40,29 @@ GENDER_LABELS: dict[Gender, str] = {
     Gender.UNISEX: "Unisex",
 }
 GENDER_NOT_SET = "Not set"
+
+# The question above the results when a gender was only guessed, or not found (BRD Rule 8). The
+# buttons answer it: "Women" and "Men" use GENDER_LABELS, "Show both" closes it.
+GENDER_QUESTION = "Who is this for?"
+BUTTON_SHOW_BOTH = "Show both"
+GENDER_NOT_STATED = "Your request does not say who it is for, so results for everyone are shown."
+GENDER_GUESS_DIFFERS = (
+    "The AI guessed different genders for different items. None has been applied."
+)
+# Where a guess came from, by what the shopper gave.
+GUESS_SOURCE_WORDS: dict[InputType, str] = {
+    InputType.TEXT: "your description",
+    InputType.PRODUCT_PHOTO: "your photo",
+    InputType.OUTFIT_PHOTO: "your photo",
+    InputType.PHOTO_TEXT: "your photo and description",
+}
+
+
+def gender_guess_note(gender: Gender, input_type: InputType) -> str:
+    """``The AI guessed women from your photo. It has not been applied.`` (BRD Rule 8)."""
+    words = GUESS_SOURCE_WORDS[input_type]
+    return f"The AI guessed {GENDER_LABELS[gender].lower()} from {words}. It has not been applied."
+
 
 # The pipeline reports each step as it starts (plan 13.1.2). Present tense: it is happening now.
 STEP_LABELS: dict[Step, str] = {
