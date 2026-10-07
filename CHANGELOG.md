@@ -15,6 +15,8 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 - This changelog is maintained from now on (user request).
 
 **Added**
+- Product gender from the store's own data: the Shopify extractor reads `type` and `tags` to say who an item is for, and the ranker drops the other gender when the shopper states one. On the 160 saved products it labelled every Sacoor, Nautica and Maison D'Vie item and none wrongly; Giordano, Oh Polly and Club L London mostly stay unlabelled and rely on the title or the store-level setting.
+- Sixteen test photos supplied by the user (abayas, dresses, ethnic sets, bottoms, a blouse), kept in the git-ignored private assets folder with descriptive names and a manifest. No duplicates.
 - Store adapters for all six demo stores, each enabled only after a live smoke test through the project's own engine: Sacoor Brothers UAE, Giordano UAE, Club L London UAE, Oh Polly UAE, Maison D'Vie, Nautica UAE. Every live response was HTTP 200, with no block or challenge.
 - The OpenAI understanding step (Phase 5): one structured call turns a photo and/or text into what to search for, with output validation, one corrective retry, a raw-text fallback and a daily call cap. Tested with fakes only at merge time.
 - Acceptance harness (Phase 11): runs the 10 frozen queries, checks the BRD pass rule, exports a labelling sheet, and can record a live run and replay it offline.
@@ -26,6 +28,8 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 - `httpx2`, which the Understand tests import directly, is now a declared test dependency. `app` and `eval` imports sort as first-party.
 
 **Found**
+- The default test suite reads the developer's real `.env`: with the user's `.env` in place, 112 UI tests fail or error in the main checkout, and the real API key is copied into the test process. With `.env` moved aside the same suite passes. Agents never saw it because their worktrees have no `.env`. A fix (tests isolated from the real `.env`) is in progress.
+- Sacoor's women's suit blazers are tagged "Formalwear Men", so `type` has to outrank `tags` when reading gender.
 - Nautica UAE sells women's clothing as well as men's. The qualification pass had seen only women's accessories.
 - Giordano UAE repeats one title under several listings, so only 4 to 6 distinct products survive per search.
 - Sacoor Brothers, Nautica and Maison D'Vie keep gender in `type` or `tags`, not always in the title, so a stated gender could let the other gender's items through. A fix is in progress.
