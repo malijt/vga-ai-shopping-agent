@@ -296,6 +296,21 @@ class PipelineContract:
                 "luxury",
             ]
 
+    async def test_a_price_in_another_currency_carries_its_base_currency_figure(
+        self, pipeline: Pipeline, search_request: SearchRequest, settings: Settings
+    ) -> None:
+        response = await pipeline.run(search_request, settings)
+
+        # A range's span is in its own currency (the base currency), so a product priced in
+        # another currency must carry ``base_price`` and one priced in the base must not.
+        for scored, tier_currency in (
+            (scored, tier.currency)
+            for group in response.groups
+            for tier in group.tiers
+            for scored in tier.results
+        ):
+            assert (scored.base_price is None) == (scored.product.currency == tier_currency)
+
     async def test_no_store_exceeds_the_per_store_cap(
         self, pipeline: Pipeline, search_request: SearchRequest, settings: Settings
     ) -> None:
