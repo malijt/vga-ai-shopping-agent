@@ -26,10 +26,8 @@ photos in ``eval/data/ASSETS.md`` are in ``eval/data/assets/private/``.
 import os
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
-from typing import get_args
 
 import pytest
-from openai.types.shared import ReasoningEffort
 
 from tests.understand.eval_cases import (
     REPO_ROOT,
@@ -48,6 +46,7 @@ pytestmark = pytest.mark.live
 
 REPORT_DIR_ENV = "VGA_EVAL_REPORT_DIR"
 EFFORT_ENV = "VGA_EVAL_REASONING_EFFORT"
+EFFORTS = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
 DEFAULT_REPORT_DIR = REPO_ROOT / "eval" / "results"
 
 
@@ -70,11 +69,11 @@ def settings() -> Settings:
 
 
 @pytest.fixture(scope="module", autouse=True)
-def reasoning_effort(settings: Settings, request: pytest.FixtureRequest) -> Iterator[str]:
+def reasoning_effort(settings: Settings) -> Iterator[str]:
     """The effort this run uses: the constant in the gateway, or ``VGA_EVAL_REASONING_EFFORT``."""
     chosen = os.environ.get(EFFORT_ENV, "").strip() or REASONING_EFFORT
-    if chosen not in get_args(ReasoningEffort):
-        pytest.fail(f"{EFFORT_ENV} must be one of {get_args(ReasoningEffort)}, got {chosen!r}")
+    if chosen not in EFFORTS:
+        pytest.fail(f"{EFFORT_ENV} must be one of {EFFORTS}, got {chosen!r}")
     patcher = pytest.MonkeyPatch()
     patcher.setattr("vga.understand.understander.REASONING_EFFORT", chosen)
     yield chosen
