@@ -42,7 +42,13 @@ image_ranker: siglip            # "siglip" (needs `uv sync --group ml` and sigli
 siglip_revision: c56244cc94f92419e8369fa71efdaf403b124ce8   # 40-character Hugging Face commit hash.
 siglip_cos_lo: 0.45             # Image cosine at or below this scores 0 (spike: median cosine between different categories, rounded down).
 siglip_cos_hi: 0.90             # Image cosine at or above this scores 1 (spike: 10th percentile of edited same-photo pairs, rounded down).
-openai_model: null              # DATED snapshot id (ends in -YYYY-MM-DD), chosen from OpenAI's docs. Never an alias.
+# The OpenAI model for the Understand step: a DATED snapshot id (ends in -YYYY-MM-DD), never an
+# alias. This id comes from OpenAI's model page for gpt-5-mini
+# (https://developers.openai.com/api/docs/models/gpt-5-mini). It has NOT yet been exercised
+# against the real API from this project. Changing it requires re-running the Understand eval
+# (`uv run pytest -m live tests/understand`) and adding an entry to
+# src/vga/understand/prompts/CHANGELOG.md.
+openai_model: gpt-5-mini-2025-08-07
 daily_llm_call_cap: 200         # Fail closed when reached (also VGA_DAILY_LLM_CALL_CAP).
 
 # --- Logging and debugging ----------------------------------------------------------------
