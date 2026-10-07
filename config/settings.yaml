@@ -16,6 +16,7 @@ max_image_bytes: 8000000        # Largest photo the app accepts, in bytes (the U
 # --- Fetching (be polite: BRD Rule 2) -----------------------------------------------------
 timeout_s: 6                    # Per store request (PRD R5).
 rps_per_store: 1                # Requests per second per store (BRD Rule 2).
+rps_per_platform: 2             # Requests per second to all the stores of one platform together (all 13 are Shopify): the platform counts per client, not per shop.
 rps_images_per_host: 5          # Thumbnail downloads per second per image host (assumption A5).
 store_cache_ttl_s: 600          # Identical store searches within this time are served from memory.
 store_cooldown_s: 900           # A store that blocked us is not contacted again for this long (errors and timeouts do not start it, ADR 0003).

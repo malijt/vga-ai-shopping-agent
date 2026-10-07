@@ -43,6 +43,8 @@ from vga.settings import DEFAULT_STORES_DIR, PROJECT_ROOT, Settings
 from vga.stores import StoreRegistry
 
 STORES = ("alpha", "beta")
+PLATFORM_STORES = tuple(f"shop{number:02d}" for number in range(13))
+"""As many stores as the app ships, all Shopify storefronts, so all on one platform."""
 THREE_VARIANTS = make_item_intent(
     search_keywords=["black blazer", "oversized blazer", "tailored jacket"]
 )
@@ -180,6 +182,21 @@ async def test_two_searches_running_at_the_same_time_share_one_second_spacing(
         times = world.request_times(store_id)
         assert len(times) == 1 + 2 * 2
         assert all(gap >= MIN_GAP_S for gap in gaps(times))
+
+
+async def test_requests_to_all_the_stores_of_one_platform_are_never_closer_than_the_platform_rate(
+    world: GuardWorld, build: GuardPipelines, settings: Settings
+) -> None:
+    for store_id in PLATFORM_STORES:
+        world.add(store_for(store_id))
+    pipeline = build(understander=understanding(THREE_VARIANTS))
+
+    await pipeline.run(make_search_request(text="black blazer"), settings)
+
+    everything = sorted(t for store_id in PLATFORM_STORES for t in world.request_times(store_id))
+    assert len(everything) >= 2 * len(PLATFORM_STORES)  # robots.txt and a search for every store
+    assert all(gap >= 1 / settings.rps_per_platform - 1e-9 for gap in gaps(everything))
+    assert world.stray == []
 
 
 async def test_a_crawl_delay_in_robots_txt_slows_that_store_down_and_only_that_store(

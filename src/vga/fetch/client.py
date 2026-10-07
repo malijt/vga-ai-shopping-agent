@@ -10,7 +10,9 @@ One honest ``httpx`` client, and these rules for every request, whatever it is f
   after the caller's ``vet_redirect`` (robots.txt of the page it leads to) agrees;
 - one slot per request, before it is sent, from a rate limiter that works per *store* across all
   the hosts of the store's own site (the bare domain and ``www.``, say) and per host for any
-  other host such as a shared image CDN;
+  other host such as a shared image CDN; and every request to a store's own site also takes a
+  slot in the queue its whole platform shares (``Settings.rps_per_platform``, see
+  ``vga.fetch.platform``), because a hosted platform counts requests per client, not per shop;
 - a total time limit and a response size limit; a response that grows past the cap is aborted;
 - a 401, 403 or 429, a login redirect or a bot-challenge page means the store is *blocked*: the
   request is not repeated, and the key it belongs to is put in cooldown (``vga.fetch.ratelimit``);
@@ -46,7 +48,8 @@ from vga.fetch.errors import (
     TooManyRedirectsError,
     UrlNotAllowedError,
 )
-from vga.fetch.ratelimit import Cooldowns, RateLimiter
+from vga.fetch.platform import platform_of
+from vga.fetch.ratelimit import Cooldowns, RateLimiter, SharedLimit
 from vga.interfaces import Clock, SystemClock
 from vga.log import get_logger
 from vga.models import StoreConfig
@@ -155,7 +158,10 @@ class PoliteClient:
     ) -> None:
         self.settings = settings
         self.clock: Clock = clock or SystemClock()
-        self.limiter = limiter or RateLimiter(self.clock)
+        self._platform_limits: dict[str, SharedLimit] = {}
+        """The platform queue each store's own site belongs to, by store id, filled as the stores
+        are first requested."""
+        self.limiter = limiter or RateLimiter(self.clock, group_of=self._platform_limits.get)
         self.cooldowns = cooldowns or Cooldowns(self.clock, settings.store_cooldown_s)
         self._transport = transport
         self._client: httpx.AsyncClient | None = None
@@ -249,7 +255,12 @@ class PoliteClient:
             self._raise_if_cooling(policy.cooldown_key)
             if hop > 0 and vet_redirect is not None:
                 await vet_redirect(current, store)
-            await self.limiter.acquire(self.contact_key(store, host), policy.rps)
+            contact = self.contact_key(store, host)
+            if contact == store.id:  # the store's own site: it shares its platform's queue
+                self._platform_limits[store.id] = SharedLimit(
+                    platform_of(store), self.settings.rps_per_platform
+                )
+            await self.limiter.acquire(contact, policy.rps)
             # Another task may have been turned away while this one waited for its slot.
             self._raise_if_cooling(policy.cooldown_key)
             raw = await self._send(current, policy, store.id)

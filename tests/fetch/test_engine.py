@@ -166,8 +166,11 @@ async def test_stores_are_searched_in_parallel(
     results = await engine.search(item(), [shopify_store(), club_l_store()])
 
     assert [r.status for r in results] == [StoreStatus.OK, StoreStatus.OK]
-    # robots.txt, a 1 s rate-limit slot, then 3 s of waiting: the stores overlap (sequential: 8 s)
-    assert clock.monotonic() - started == pytest.approx(4, abs=0.01)
+    # Both stores are Shopify storefronts, so they share one queue at 2 requests a second. Oh Polly
+    # asks for robots.txt at 0 s and Club L at 0.5 s; each store then waits out its own 1 s, so Oh
+    # Polly searches at 1.0 s and Club L at 1.5 s, and the slower answer arrives 3 s later. The
+    # stores overlap (one after the other it would be 9 s).
+    assert clock.monotonic() - started == pytest.approx(4.5, abs=0.01)
 
 
 # --------------------------------------------------------------------------------------------
@@ -212,9 +215,13 @@ async def test_one_store_raises_one_times_out_one_succeeds_and_all_three_come_ba
         StoreStatus.OK,
     ]
     assert "RuntimeError" in (results[0].detail or "")
-    assert results[2].duration_ms < 2000  # the good store was not held up by the slow one
-    # the slow store gave up at its own timeout, not at the end of the world
-    assert clock.monotonic() - started == pytest.approx(settings.timeout_s, abs=1.1)
+    # The good store was not held up by the slow one. It is third in the shared queue (2 requests
+    # a second): its robots.txt goes at 1.0 s and its search at 2.0 s, nothing is waited for.
+    assert results[2].duration_ms == pytest.approx(2000)
+    # The slow store gave up at its own timeout, not at the end of the world. Its robots.txt went
+    # second in the shared queue (0.5 s) and its search a second after that (1.5 s); the 6 s
+    # timeout is for the request itself, so it ends at 7.5 s.
+    assert clock.monotonic() - started == pytest.approx(1.5 + settings.timeout_s, abs=0.01)
 
 
 async def test_a_bug_in_one_stores_extractor_does_not_touch_another_store(
