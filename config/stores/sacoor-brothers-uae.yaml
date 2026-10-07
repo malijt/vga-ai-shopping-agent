@@ -1,0 +1,15 @@
+# Sacoor Brothers UAE (plan 12.3). Shopify predictive search; see docs/store-notes/sacoor-brothers-uae.md.
+id: sacoor-brothers-uae
+name: Sacoor Brothers UAE
+country: AE
+currency: AED          # the suggest response has no currency; AED is store-level (qualification report)
+search_url_template: "https://ae.sacoorbrothers.com/search/suggest.json?q={query}&resources[type]=product&resources[limit]=10"
+allowed_hosts:
+  - ae.sacoorbrothers.com   # market subdomain: product links
+  - cdn.shopify.com         # image CDN
+extraction:
+  strategies:
+    - name: shopify
+tier_hint: premium
+# genders is left unset on purpose: the store sells for men (36 of 40 records seen) and women (4 of 40).
+enabled: false           # true only after the live smoke test passes
