@@ -27,8 +27,8 @@ from PIL.PngImagePlugin import PngInfo
 
 DEFAULT_CARRIERS = frozenset({"exif", "gps", "icc", "xmp", "tail"})
 """Everything except ``comment``: the audits that follow the photo around the machine use this.
-``comment`` has its own tests, because it is the one carrier the app does not strip (see
-``test_sent_photo.py``)."""
+``comment`` has its own tests in ``test_sent_photo.py``: it was the one carrier the app did not
+strip until 2026-10-08."""
 
 _EXIF_MAKE = 0x010F
 _EXIF_DESCRIPTION = 0x010E

@@ -18,8 +18,8 @@ Every statement is one of three kinds, and the text says which:
 - The photo and the words you type go to **OpenAI**, and nowhere else. The stores never get the
   photo. **Checked.**
 - Before the photo is sent, the app draws it again as a smaller JPEG, which drops the camera
-  details, the GPS position and the colour profile. **Checked.** It does **not** drop a text comment
-  that some files carry, and it does not blur faces. See "What is removed".
+  details, the GPS position, the colour profile and any text comment in the file. **Checked.** It
+  does not blur faces. See "What is removed".
 - The app asks OpenAI not to store the request. OpenAI may still keep it for a time, unless the
   account has OpenAI's "zero data retention". That is an account setting the owner has to ask OpenAI
   for. See "What OpenAI does with it".
@@ -88,14 +88,15 @@ retention question above is decided.
 ## What is removed from the photo, and what is not
 
 Before sending, the app opens the photo, turns it upright (using the camera's rotation tag, then
-forgets the tag), shrinks it to at most 1024 pixels on the long side and saves it again as a new
-JPEG. **Checked** with JPEG, PNG and WebP photos that hide a marker in each place below:
+forgets the tag), shrinks it to at most 1024 pixels on the long side and saves a new JPEG built
+from the pixels alone, so nothing else in the file can travel with it. **Checked** with JPEG, PNG and WebP photos that hide a marker in each place below:
 
 | Removed | Not removed |
 |---|---|
 | Camera make and model, the description, the date (the EXIF block) | **The picture itself**: any people and faces, text on clothes or signs, the room, the street |
-| The GPS position | **A text comment inside the file** (a JPEG comment, or a PNG text note named exactly `comment`) |
+| The GPS position | |
 | The embedded colour profile | |
+| A text comment inside the file (a JPEG comment, or a PNG text note named `comment`) | |
 | XMP packets, other PNG text notes, anything after the end of the picture | |
 
 Two things to know:
@@ -103,13 +104,11 @@ Two things to know:
 1. **Faces are not blurred or removed.** There is no face detection anywhere in the code. A photo of
    a person, a group or a child goes to OpenAI as it is. An outfit photo is usually a photo of a
    person.
-2. **A comment is sent. This is a gap.** `src/vga/understand/image.py` says comments are stripped,
-   but Pillow's JPEG writer re-uses the comment of the picture it is given when no comment is passed
-   in. The audit has two tests for it, marked as known failures
-   (`test_nothing_but_the_picture_goes_to_openai[JPEG comment]` and
-   `[PNG text chunk named comment]`). A comment is free text, so it can hold whatever someone typed
-   into a photo editor, a caption or a name for example. The fix is one line; the owner decides
-   when.
+2. **A comment used to be sent; fixed on 2026-10-08.** The audit found that a JPEG comment, or a
+   PNG text note named `comment`, went out with the photo, because the picture library copied it
+   into the new file. The outgoing JPEG is now built from the pixels alone, and the audit's two
+   tests for it (`test_nothing_but_the_picture_goes_to_openai[JPEG comment]` and
+   `[PNG text chunk named comment]`) pass.
 
 ## What stays in memory, and for how long
 
@@ -265,7 +264,7 @@ None of this is decided here. A person who can give legal advice should look at:
 |---|---|
 | Nothing leaves a trace in files, logs, memory, requests or answers | `test_no_retention.py` |
 | The audit can fail | `test_canaries.py`, `test_instruments.py` |
-| What is stripped before sending; `store` is false; the comment gap | `test_sent_photo.py` |
+| What is stripped before sending, including a file comment; `store` is false | `test_sent_photo.py` |
 | What the switches write; the libraries do not log the photo | `test_debug_switches.py` |
 | The "search again" cache; no thumbnail cache | `test_caches.py` |
 | The command line | `test_cli.py` |

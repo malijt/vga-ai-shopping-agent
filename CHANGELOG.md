@@ -40,6 +40,15 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 - Acceptance harness (Phase 11): runs the 10 frozen queries, checks the BRD pass rule, exports a labelling sheet, and can record a live run and replay it offline.
 
 **Fixed**
+- **All ten findings from the guard audits:**
+  - robots.txt is read for a redirect target before the redirect is followed, for search pages and thumbnails. A store that redirects every search now costs about twice the wait per keyword; a store that does not is unchanged.
+  - A store's page requests share one request-a-second limit across all of its own hosts; the shared image host keeps its own limit.
+  - A product link must be on the store's own site. A link to the shared image host is dropped. None of the ten stores is affected.
+  - A store host that just refused a search is not asked for thumbnails during its cooldown.
+  - A budget is kept only when the shopper typed a number, in digits or in words, in English or Arabic. A price printed in a photo no longer becomes the budget.
+  - An edit such as "cheaper" or a colour change is kept only when the shopper's typed words ask for it.
+  - More price words are kept out of store searches: plurals, "markdown", "half price", "70% off" and similar phrases, and more Arabic sale words. "Off-white", "off-shoulder" and "100% cotton" are untouched.
+  - The photo sent to OpenAI is rebuilt from its pixels alone, so a comment or any other hidden field cannot travel with it.
 - **An outfit photo no longer runs image comparison** (plan A26). The same real search, a black dress with heels, went from 30.3 s and a timeout warning to 9.4 s, with 24 results from 5 stores.
 - **A product the photo was not compared with no longer outranks one that was.** Only the top 40 candidates get an image score; the rest are now totalled with the average image score of that search, so being compared is no longer a penalty.
 - **A store is searched only for the categories it sells** (plan A27, a new optional `categories` field on a store config). Hanayen, Maison Arabelle, Nishat Linen UAE and Signature Studio are searched for dresses only. The abaya that had appeared under shoes is gone, and those stores get no request at all for a shoes or jeans search.
@@ -55,7 +64,9 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 - `httpx2`, which the Understand tests import directly, is now a declared test dependency. `app` and `eval` imports sort as first-party.
 
 **Found**
-- **One privacy gap, being fixed:** a comment stored inside a JPEG, or a PNG text field named "comment", is sent to OpenAI with the photo. Location data, camera details, colour profiles and every other hidden field are stripped; this was the one that got through.
+- **Live Understand eval after the validation changes: 23 of 24 passed.** The one failure is not from those changes: the real model labelled the single-gown photo an outfit photo this time and a product photo last time. The kind of request will be decided by the code from facts (photo or not, text or not, number of garments) and not by the model's label; being fixed. Typical answer 2.2 s, worst 4.7 s.
+- Still possible after the fixes: a shopper who types a budget in words next to a sign with another price could get the sign's price if the model obeys it; price words outside the list (coupon, voucher, outlet) still reach a store search; a sign can still sway colour or style when the typed text is silent on them.
+- **One privacy gap, fixed the same day (see Fixed):** a comment stored inside a JPEG, or a PNG text field named "comment", is sent to OpenAI with the photo. Location data, camera details, colour profiles and every other hidden field are stripped; this was the one that got through.
 - The privacy audit cannot see: files written by non-Python code, the image model's internals (read, not run), or how a running Streamlit page stores an upload. Whether this OpenAI account has zero data retention is not verified; it is an account setting the owner must request from OpenAI.
 - Four gaps in the fetch engine from the store-access guards, being fixed. The main one: when a store redirects a search to another of its hosts (for example to `www.`), that host's robots.txt was not read. Also: the one-request-a-second limit was per host and not per store; a product link was accepted on the shared image host; and a store host that had just refused a search could still be asked for thumbnails (not reachable with today's stores, which all use a shared image host).
 - Cooldown wording corrected: the code, the plan and ADR 0003 cool a store down only after a block. Two comments said "blocked or failed". A store that only errors or times out is skipped for that search and asked again on the next.
