@@ -1,16 +1,19 @@
 """Validation of raw records (plan 6.5.1 and 6.5.2): what is kept, dropped and why."""
 
 import logging
+from pathlib import Path
 from typing import Any
 
 import pytest
 
 from tests.factories import make_product, make_store_config
 from tests.fetch.conftest import CDN, HOST
-from vga.models import Gender
+from vga.models import ExtractionConfig, Gender, StrategyConfig
+from vga.stores.extractors import ShopifyExtractor
 from vga.stores.normalise import DropReason, dedupe_products, normalise_records, normalise_title
 
 BASE = f"https://{HOST}/search?q=blazer"
+SAMPLES = Path(__file__).resolve().parents[2] / "docs" / "store-qualification" / "samples"
 
 
 def record(index: int = 1, **overrides: Any) -> dict[str, Any]:
@@ -130,6 +133,65 @@ def test_luxury_for_you_style_prices_are_read_with_the_stores_currency() -> None
     [product] = normalise(record(1, price=bidi)).products
 
     assert (product.price, product.currency) == (6900.0, "AED")
+
+
+def test_a_dinar_store_keeps_a_three_decimal_price_in_its_own_currency() -> None:
+    [product] = normalise(record(1, price="260.000"), currency="KWD", country="KW").products
+
+    assert (product.price, product.currency) == (260.0, "KWD")
+
+
+def test_the_same_price_text_from_a_dirham_store_is_dropped_not_read_as_260() -> None:
+    batch = normalise(record(1, price="260.000"))
+
+    assert batch.products == []
+    assert batch.dropped == {"unknown_price_format": 1}
+
+
+def test_a_dinar_store_drops_a_two_decimal_price_it_was_not_seen_to_write() -> None:
+    batch = normalise(record(1, price="260.00"), currency="KWD", country="KW")
+
+    assert batch.products == []
+    assert batch.dropped == {"unknown_price_format": 1}
+
+
+def test_a_zero_dinar_price_is_dropped_as_not_positive() -> None:
+    batch = normalise(record(1, price="0.000"), currency="KWD", country="KW")
+
+    assert batch.dropped == {"price_not_positive": 1}
+
+
+KUWAITI_STORES = {
+    "bazza-alzouman": ("bazzaalzouman.com", ["suggest-dress.json", "suggest-gown.json"]),
+    "hamsa-kw": ("hamsakw.com", ["suggest-abaya.json", "suggest-kaftan.json"]),
+    "manal-smaoui": ("manalsmaoui.com", ["suggest-dress.json", "suggest-kaftan.json"]),
+}
+
+
+@pytest.mark.parametrize("store_id", sorted(KUWAITI_STORES))
+def test_the_saved_kuwaiti_search_responses_become_dinar_products_with_nothing_dropped(
+    store_id: str,
+) -> None:
+    host, files = KUWAITI_STORES[store_id]
+    store = make_store_config(
+        id=store_id,
+        name=store_id,
+        country="KW",
+        currency="KWD",
+        search_url_template=f"https://{host}/search/suggest.json?q={{query}}",
+        allowed_hosts=[host, "cdn.shopify.com"],
+        extraction=ExtractionConfig(strategies=[StrategyConfig(name="shopify")]),
+    )
+    for name in files:
+        body = (SAMPLES / store_id / name).read_text(encoding="utf-8")
+        records = ShopifyExtractor().extract(body, store, store.extraction.strategies[0])
+
+        batch = normalise_records(records, store, f"https://{host}/search/suggest.json")
+
+        assert len(batch.products) == len(records) > 0
+        assert batch.dropped == {}
+        assert {p.currency for p in batch.products} == {"KWD"}
+        assert all(p.price > 0 for p in batch.products)
 
 
 def test_a_zero_price_is_dropped() -> None:
