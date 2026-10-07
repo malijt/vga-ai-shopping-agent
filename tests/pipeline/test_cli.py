@@ -334,6 +334,43 @@ def test_a_file_that_is_not_a_photo_is_refused_with_a_plain_message(
     assert world.all_requests() == 0
 
 
+def test_a_photo_over_the_size_limit_is_refused_after_reading_only_a_little_past_it(
+    world: StoreWorld,
+    stores: list,
+    clock: FakeClock,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    small = make_settings(max_image_bytes=2_000, log_dir=str(tmp_path / "logs"))
+    photo = make_image_bytes("JPEG", (64, 64)) + b"\x00" * 50_000
+    path = tmp_path / "huge.jpg"
+    path.write_bytes(photo)
+    understander = FakeUnderstander()
+
+    code, out, err = run_cli(
+        ["--image", str(path)], world, clock, small, understander=understander, capsys=capsys
+    )
+
+    assert code == 1
+    assert out == ""
+    assert "larger than" in err
+    assert understander.calls == []  # refused before any model call
+
+
+def test_text_over_the_length_limit_is_refused_with_a_plain_message(
+    world: StoreWorld,
+    stores: list,
+    clock: FakeClock,
+    cli_settings: Settings,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    code, out, err = run_cli(["--text", "x" * 2001], world, clock, cli_settings, capsys=capsys)
+
+    assert code == 1
+    assert out == ""
+    assert "longer than 2000 characters" in err
+
+
 def test_a_missing_photo_file_is_refused_with_a_plain_message(
     world: StoreWorld,
     stores: list,

@@ -29,19 +29,19 @@ from vga.errors import GENERIC_USER_MESSAGE, InvalidInputError, VgaError
 from vga.log import configure_logging, get_logger
 from vga.models import (
     DEFAULT_CURRENCY,
+    MAX_TEXT_CHARS,
     Budget,
     RunOverrides,
     SearchRequest,
     SearchResponse,
     SettingsOverride,
 )
-from vga.pipeline import SearchPipeline, build_pipeline
+from vga.pipeline import SearchPipeline, build_pipeline, messages
 from vga.settings import Settings, load_settings
 
 log = get_logger(__name__)
 
 EXIT_FAILED = 1
-EXIT_USAGE = 2
 
 PipelineBuilder = Callable[[Settings], SearchPipeline]
 
@@ -128,7 +128,7 @@ def main(
             log_dir=loaded.log_dir,
             stream=sys.stderr if args.verbose else _Discard(),
         )
-        request = _build_request(args.text, args.image)
+        request = _build_request(args.text, args.image, loaded.max_image_bytes)
         overrides = _build_overrides(args.budget, args.currency)
         response = asyncio.run(_search(build, loaded, request, overrides))
     except VgaError as error:
@@ -156,20 +156,29 @@ async def _search(
         await pipeline.aclose()
 
 
-def _build_request(text: str | None, image_path: str | None) -> SearchRequest:
-    photo: bytes | None = None
-    if image_path is not None:
-        try:
-            photo = Path(image_path).read_bytes()
-        except OSError as exc:
-            raise InvalidInputError(
-                f"We couldn't open the photo file {Path(image_path).name!r}. "
-                "Check the path, or describe the item with --text.",
-                detail=f"cannot read {image_path}: {type(exc).__name__}",
-            ) from exc
+def _read_photo(image_path: str, max_bytes: int) -> bytes:
+    """The photo file's bytes, but never more than one byte past the size limit: the pipeline
+    refuses a photo over the limit, and there is no need to load a huge file to learn that."""
+    try:
+        with Path(image_path).open("rb") as source:
+            return source.read(max_bytes + 1)
+    except OSError as exc:
+        raise InvalidInputError(
+            f"We couldn't open the photo file {Path(image_path).name!r}. "
+            "Check the path, or describe the item with --text.",
+            detail=f"cannot read {image_path}: {type(exc).__name__}",
+        ) from exc
+
+
+def _build_request(text: str | None, image_path: str | None, max_image_bytes: int) -> SearchRequest:
+    photo = _read_photo(image_path, max_image_bytes) if image_path is not None else None
     try:
         return SearchRequest(text=text, image=photo)
     except ValidationError as exc:
+        if text is not None and len(text.strip()) > MAX_TEXT_CHARS:
+            raise InvalidInputError(
+                messages.text_too_long(MAX_TEXT_CHARS), detail="text over the limit"
+            ) from exc
         raise InvalidInputError(detail=str(exc)) from exc
 
 
