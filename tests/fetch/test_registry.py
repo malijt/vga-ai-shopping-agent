@@ -343,6 +343,53 @@ def test_only_enabled_stores_in_the_configured_country_are_active(tmp_path: Path
     assert [store.id for store in registry.active(make_settings(country="SA"))] == ["saudi-shop"]
 
 
+KUWAITI_STORE = {
+    **OH_POLLY,
+    "id": "hamsa-kw",
+    "name": "Hamsa",
+    "country": "KW",
+    "currency": "KWD",
+    "search_url_template": (
+        "https://hamsakw.com/search/suggest.json?q={query}"
+        "&resources[type]=product&resources[limit]=10"
+    ),
+    "allowed_hosts": ["hamsakw.com", "cdn.shopify.com"],
+}
+
+
+def test_a_store_in_an_extra_country_is_active_next_to_the_home_market_stores(
+    tmp_path: Path,
+) -> None:
+    registry = registry_of(tmp_path, OH_POLLY, KUWAITI_STORE)
+
+    active = registry.active(make_settings(country="AE", extra_store_countries=["KW"]))
+
+    assert [store.id for store in active] == ["hamsa-kw", "oh-polly"]
+
+
+def test_a_store_in_a_country_that_is_not_listed_stays_unused(tmp_path: Path) -> None:
+    registry = registry_of(tmp_path, OH_POLLY, KUWAITI_STORE)
+
+    assert [store.id for store in registry.active(make_settings())] == ["oh-polly"]
+    assert [store.id for store in registry.active(make_settings(extra_store_countries=["SA"]))] == [
+        "oh-polly"
+    ]
+
+
+def test_a_listed_country_never_enables_a_store_that_is_not_enabled(tmp_path: Path) -> None:
+    registry = registry_of(tmp_path, {**KUWAITI_STORE, "enabled": False})
+
+    assert registry.active(make_settings(extra_store_countries=["KW"])) == []
+
+
+def test_settings_stores_still_narrows_across_countries(tmp_path: Path) -> None:
+    registry = registry_of(tmp_path, OH_POLLY, KUWAITI_STORE)
+
+    chosen = registry.active(make_settings(extra_store_countries=["KW"], stores=["hamsa-kw"]))
+
+    assert [store.id for store in chosen] == ["hamsa-kw"]
+
+
 def test_a_store_without_enabled_true_is_never_active(tmp_path: Path) -> None:
     registry = registry_of(tmp_path, {k: v for k, v in OH_POLLY.items() if k != "enabled"})
 

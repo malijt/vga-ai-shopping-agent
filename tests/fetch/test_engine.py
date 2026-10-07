@@ -363,6 +363,35 @@ async def test_a_store_in_another_country_gets_no_request(
     assert router.calls.call_count == 0
 
 
+async def test_a_store_in_a_listed_extra_country_is_searched(
+    router: respx.MockRouter, clock: FakeClock
+) -> None:
+    engine = StoreSearchEngine(
+        make_settings(country="AE", extra_store_countries=["KW"]), clock=clock
+    )
+    mock_oh_polly(router)
+
+    [result] = await engine.search(item(), [shopify_store(country="KW")])
+
+    assert result.status is StoreStatus.OK
+    assert router.calls.call_count > 0
+
+
+async def test_a_store_in_a_country_that_is_not_listed_still_gets_no_request(
+    router: respx.MockRouter, clock: FakeClock
+) -> None:
+    engine = StoreSearchEngine(
+        make_settings(country="AE", extra_store_countries=["KW"]), clock=clock
+    )
+    mock_oh_polly(router)
+
+    [result] = await engine.search(item(), [shopify_store(country="SA")])
+
+    assert result.status is StoreStatus.ERROR
+    assert "SA" in (result.detail or "")
+    assert router.calls.call_count == 0
+
+
 async def test_a_store_whose_strategies_are_not_built_gets_no_request(
     engine: StoreSearchEngine, router: respx.MockRouter
 ) -> None:

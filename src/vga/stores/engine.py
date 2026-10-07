@@ -2,7 +2,8 @@
 
 ``StoreSearchEngine.search`` runs one task per store, in parallel. For each store it:
 
-1. skips it, with no request, if it is not ``enabled`` or is not in the configured country;
+1. skips it, with no request, if it is not ``enabled`` or is not in a country that is searched
+   (the home country or one of ``Settings.extra_store_countries``);
 2. skips it, with no request, while it is in cooldown after a block;
 3. for each of the item's keyword variants (at most ``max_variants``), in order: answers from the
    cache if it can, else checks robots.txt, fetches the search page and reads it through the
@@ -253,8 +254,8 @@ class StoreSearchEngine:
         """Why this store is not searched at all (no request, not even robots.txt), or ``None``."""
         if not store.enabled:
             return "the store is not enabled"
-        if store.country != self.settings.country:
-            return f"the store is for {store.country}, not the configured country"
+        if not self.settings.searches_country(store.country):
+            return f"the store is for {store.country}, which is not a country searched"
         names = [strategy.name for strategy in store.extraction.strategies]
         if not any(self._extractors.get(name) for name in names):
             return f"no extraction strategy of this store is built (it asks for {names})"

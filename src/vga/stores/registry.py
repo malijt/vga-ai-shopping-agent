@@ -5,8 +5,9 @@ file is collected and reported together, each naming the file and the field, so 
 everything to fix. A missing or empty directory is fine and gives an empty registry (the shipped
 directory is empty until the store-adapter phase fills it).
 
-Only stores with ``enabled: true`` in the configured country (and, when ``Settings.stores`` is not
-empty, listed there) are used; ``StoreRegistry.active`` applies exactly that rule.
+Only stores with ``enabled: true`` in the home country or one of ``Settings.extra_store_countries``
+(and, when ``Settings.stores`` is not empty, listed there) are used; ``StoreRegistry.active``
+applies exactly that rule.
 """
 
 from collections.abc import Iterable, Sequence
@@ -139,8 +140,9 @@ class StoreRegistry:
         return None
 
     def active(self, settings: Settings) -> list[StoreConfig]:
-        """The stores to search: enabled, in ``settings.country``, and listed in
-        ``settings.stores`` when that list is not empty."""
+        """The stores to search: enabled, in a country that is searched (``settings.country``
+        or one of ``settings.extra_store_countries``), and listed in ``settings.stores`` when
+        that list is not empty."""
         wanted = set(settings.stores)
         for unknown in sorted(wanted - self._by_id.keys()):
             log.warning(
@@ -150,9 +152,9 @@ class StoreRegistry:
         for store in self._by_id.values():
             if not store.enabled:
                 log.info("store disabled; not searched", extra={"store": store.id})
-            elif store.country != settings.country:
+            elif not settings.searches_country(store.country):
                 log.info(
-                    "store is for another country; not searched",
+                    "store is for a country that is not searched; not searched",
                     extra={"store": store.id, "country": store.country},
                 )
             elif wanted and store.id not in wanted:
