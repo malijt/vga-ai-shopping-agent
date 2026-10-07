@@ -61,8 +61,8 @@ class MeteredLimiter(RateLimiter):
         self._inner = inner
         self.waited_s = 0.0
 
-    def set_min_interval(self, host: str, seconds: float) -> None:
-        self._inner.set_min_interval(host, seconds)
+    def set_min_interval(self, key: str, seconds: float, *, source: str | None = None) -> None:
+        self._inner.set_min_interval(key, seconds, source=source)
 
     async def acquire(self, host: str, rps: float) -> float:
         waited = await self._inner.acquire(host, rps)

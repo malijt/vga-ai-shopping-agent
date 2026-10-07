@@ -2,9 +2,8 @@
 resume. Nothing here touches the network or really waits.
 """
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 
-from eval.harness.links import LinkResult
 from eval.harness.wiring import Wiring, WiringFactory
 from tests.fakes import FakeClock
 from tests.harness.helpers import ToyPipeline
@@ -106,12 +105,3 @@ def stepped_wiring(
         )
 
     return factory
-
-
-async def link_ok(url: str) -> LinkResult:
-    return await ok_link_fetch(url)
-
-
-def positions(events: Sequence[object], wanted: object) -> list[int]:
-    """Where ``wanted`` occurs in ``events``."""
-    return [index for index, event in enumerate(events) if event == wanted]
