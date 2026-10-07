@@ -20,5 +20,7 @@ extraction:
         # only some women's items (the rest stay unknown and the ranker reads their titles).
         gender_fields: [type, tags]
 # genders is left unset on purpose: the store sells women's wear and men's kurtas (10 of 40 records seen).
+categories:
+  - dresses      # long dresses, kaftans, gowns, 2-3 piece suits and men's kurtas: 40 of 40 records seen; no shoes, jeans, tops or jackets. One men's "Basic Kurta" is really a shalwar (tag men-bottoms); drop this line if men's trousers from here are wanted (docs/store-notes/nishat-linen-uae.md)
 tier_hint: budget      # AED 39.50-239 seen, almost all at 50% off; women's long dresses AED 59.50-164.50
 enabled: true          # the live smoke test passed on 2026-10-08 (tests/stores/nishat-linen-uae); enabled when the user raised the store limit to ten (plan A25)

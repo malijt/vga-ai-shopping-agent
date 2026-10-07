@@ -4,9 +4,9 @@ One run, in order (each stage reports its ``Step`` to ``on_step`` and is timed):
 
 1. validate   the request, on the server side (``validation.py``)
 2. understand one OpenAI call, or the earlier understanding reused with the chip edits applied
-3. search     every store that sells for an item's stated gender gets its own search for it, all
-              started together in item order and then store order; or the item is reused from the
-              re-run cache
+3. search     every store that sells the item's category, and sells for its stated gender, gets
+              its own search for it, all started together in item order and then store order; or
+              the item is reused from the re-run cache
 4. filter     hard filters, text and price scores (``vga.rank.prefilter_and_score``)
 5. rank       the best matches are chosen to be compared with the photo
 6. image_rank the photo is compared with those products; the totals are recomputed. Only for a
@@ -271,7 +271,7 @@ class SearchPipeline:
         state.previous = self._cache.get(state.req.rerun_of) if reusable else None
         for index, item in enumerate(items_to_search(understood)):
             searched, skipped = stores_for_item(state.active_stores, item)
-            run = ItemRun(index=index, item=item, stores=searched, gender_skipped=skipped)
+            run = ItemRun(index=index, item=item, stores=searched, skipped=skipped)
             run.cached = self._cache.reusable(
                 state.previous, index, item, tuple(store.id for store in searched)
             )
@@ -309,7 +309,7 @@ class SearchPipeline:
             if run.stores:
                 pending.append(run)
             else:
-                self._log_no_store(state, run)  # nothing to ask: no store sells for the gender
+                self._log_no_store(state, run)  # nothing to ask: no store sells this item
         if not pending:
             return
 
@@ -606,12 +606,11 @@ class SearchPipeline:
         if not state.active_stores:
             return  # already said: no store is set up
         for run in state.items:
-            gender = effective_gender(run.item)
-            if not run.stores and gender is not None:
-                state.warn(messages.no_store_for_gender(run.item.category, gender))
+            if not run.stores:
+                self._warn_no_store(state, run)
         searched = [run for run in state.items if run.stores]
         if state.timed_out or not searched:
-            return  # the deadline warning, or the gender warning, already explains it
+            return  # the deadline warning, or the no-store warning, already explains it
         found = sum(run.group.result_count for run in searched if run.group is not None)
         if found == 0:
             log.warning(
@@ -622,6 +621,18 @@ class SearchPipeline:
             for run in searched:
                 if run.group is not None and run.group.result_count == 0:
                     state.warn(messages.nothing_found_for(run.item.category))
+
+    @staticmethod
+    def _warn_no_store(state: RunState, run: ItemRun) -> None:
+        """Say why an item had no store to ask. Nobody selling its category comes first; when some
+        store sells it, the shopper's stated gender is what left none."""
+        category = run.item.category
+        if not any(store.sells_category(category) for store in state.active_stores):
+            state.warn(messages.no_store_for_category(category))
+            return
+        gender = effective_gender(run.item)
+        if gender is not None:
+            state.warn(messages.no_store_for_gender(category, gender))
 
     def _insert_store_timings(self, state: RunState, summary: StoreSummary) -> None:
         """Per-store fetch times go just before the ``search`` step they are part of."""
@@ -709,7 +720,7 @@ class SearchPipeline:
     def _log_no_store(self, state: RunState, run: ItemRun) -> None:
         if state.active_stores:
             log.warning(
-                "no store sells for this item's gender; nothing was searched",
+                "no store sells this item's category for its gender; nothing was searched",
                 extra={"item_index": run.index, "category": run.item.category.value},
             )
 

@@ -15,5 +15,7 @@ extraction:
     - name: shopify     # the price is `price`; `compare_at_price_max` is unreliable here and is never read
 genders:
   - women               # kaftans, abayas and dresses only: 40 of 40 records in the qualification pass
+categories:
+  - dresses             # kaftans, abayas and one-piece dresses from one collection: no shoes, trousers, tops or jackets in the 40 records seen (docs/store-qualification/maison-arabelle.md)
 tier_hint: luxury       # AED 790-2,400 seen; abayas 1,200-2,400, kaftans 790-2,400
 enabled: true           # the live smoke test passed on 2026-10-08 (tests/stores/maison-arabelle); enabled when the user raised the store limit to ten (plan A25)

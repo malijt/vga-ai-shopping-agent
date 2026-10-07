@@ -5,7 +5,7 @@ from collections.abc import Iterator
 
 import pytest
 
-from tests.factories import make_budget, make_search_request
+from tests.factories import make_budget, make_search_request, make_store_config
 from tests.pipeline.conftest import PipelineMaker
 from tests.pipeline.world import StoreWorld, store_for
 from vga.models import (
@@ -37,8 +37,11 @@ def message_texts() -> Iterator[str]:
     yield messages.photo_too_large(8_000_000)
     yield messages.text_too_long(2000)
     yield messages.deadline_warning(30)
+    store = make_store_config(name="Some Store")
     for category in Category:
         yield messages.nothing_found_for(category)
+        yield messages.no_store_for_category(category)
+        yield messages.store_not_for_category(store, category)
         for gender in Gender:
             yield messages.no_store_for_gender(category, gender)
     for gender in Gender:
@@ -88,6 +91,31 @@ def test_dresses_read_as_dresses_and_ethnic_wear_in_the_warnings() -> None:
     )
 
 
+def test_the_category_messages_name_the_garment_in_the_shoppers_words() -> None:
+    hanayen = make_store_config(id="hanayen", name="Hanayen")
+
+    assert messages.store_not_for_category(hanayen, Category.SHOES) == (
+        "Not searched: Hanayen does not sell shoes."
+    )
+    assert messages.store_not_for_category(hanayen, Category.BOTTOMS) == (
+        "Not searched: Hanayen does not sell bottoms."
+    )
+    assert messages.no_store_for_category(Category.SHOES) == (
+        "None of the stores we search sell shoes, so we could not look for any."
+    )
+    assert messages.no_store_for_category(Category.DRESSES) == (
+        "None of the stores we search sell dresses and ethnic wear, so we could not look for any."
+    )
+
+
+def test_a_store_without_a_display_name_is_named_by_its_id_in_the_category_reason() -> None:
+    nameless = make_store_config(id="atelier", name=None)
+
+    assert messages.store_not_for_category(nameless, Category.TOPS) == (
+        "Not searched: atelier does not sell tops."
+    )
+
+
 def test_every_message_function_is_covered_by_the_scan_above() -> None:
     functions = {name for name, value in vars(messages).items() if inspect.isfunction(value)}
 
@@ -101,7 +129,9 @@ def test_every_message_function_is_covered_by_the_scan_above() -> None:
         "gender_word",
         "category_word",
         "store_not_for_gender",
+        "store_not_for_category",
         "no_store_for_gender",
+        "no_store_for_category",
         "nothing_found_for",
         "inferred_gender_note",
     }

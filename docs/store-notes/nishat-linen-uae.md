@@ -108,6 +108,15 @@ smoke test. Every response was HTTP 200, no redirect, no challenge, CAPTCHA or l
 - **Gender:** `genders` unset; `gender_fields: [type, tags]` set explicitly in the store file. Evidence:
   the `kurta` answer is 10 of 10 `RTW Men`, and the `dress` answer is 10 of 10 women's long dresses,
   7 of them tagged `Women`. Both genders are sold, so the store must stay open to both.
+- **Categories:** `categories: [dresses]`. Evidence: the 40 qualification records are long dresses,
+  kaftans, a gown, 2- and 3-piece suits and men's kurtas, all of them dress-category garments (kurtas
+  and sets count as dresses, BRD assumption A23); no shoes, jeans, tops or jackets were seen. A search
+  for any other category is therefore not sent to this store, and it is listed among the skipped
+  stores as "Not searched: Nishat Linen UAE does not sell shoes." and so on. **One caveat:** the men's
+  "Basic Kurta - NQ26-010" at AED 39.50 (handle `nq26-028`, tag `men-bottoms`) is a shalwar, men's
+  trousers sold as part of the ready-to-wear range, and the store also lists unstitched fabric. Its
+  title says kurta, so it ranks as a dress, but a men's trousers search is not sent here. If trousers
+  from this store are wanted, remove the line.
 
 ## robots.txt comment addressed to AI agents (data, not acted on)
 

@@ -106,6 +106,13 @@ smoke test. Every response was HTTP 200, no redirect, no challenge, CAPTCHA or l
   title or tag in the recorded answers names a gender. The data itself carries no gender field, so
   this rests on the range and the brand, as for Oh Polly. A men's request is therefore not sent to
   this store.
+- **Categories:** `categories: [dresses]`. Evidence: the 40 qualification records and the 20 recorded
+  today are abayas, under-abaya dresses and sheilas (accessories, out of scope); no shoes, trousers,
+  tops or jackets were seen. A search for any other category is therefore not sent to this store (it
+  would only waste a request, and an abaya's title often names no garment, so it would pass the
+  category filter for any request). Listed among the skipped stores as "Not searched: Hanayen does not
+  sell shoes." and so on. "Not seen" is not "not sold": if the store adds other garments, remove the
+  line.
 
 ## robots.txt comment addressed to AI agents (data, not acted on)
 

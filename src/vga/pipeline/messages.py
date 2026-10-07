@@ -138,6 +138,16 @@ def store_not_for_gender(store: StoreConfig, gender: Gender) -> str:
     return f"Not searched: {store.display_name} does not sell clothing for {gender_word(gender)}."
 
 
+def store_not_for_category(store: StoreConfig, category: Category) -> str:
+    """The reason a store was not searched because it does not sell ``category``."""
+    return f"Not searched: {store.display_name} does not sell {category_word(category)}."
+
+
+def no_store_for_category(category: Category) -> str:
+    word = category_word(category)
+    return f"None of the stores we search sell {word}, so we could not look for any."
+
+
 def no_store_for_gender(category: Category, gender: Gender) -> str:
     return (
         f"None of the stores we search sell clothing for {gender_word(gender)}, so we could not "

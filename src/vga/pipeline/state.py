@@ -39,9 +39,10 @@ class ItemRun:
     item: ItemIntent
     """What is searched for: the understood item, with at most 2 keywords for an outfit."""
     stores: list[StoreConfig]
-    """The stores asked for it: those that sell for the item's stated gender."""
-    gender_skipped: list[StoreConfig]
-    """Active stores that were left out because they do not sell for the item's gender."""
+    """The stores asked for it: those that sell its category and sell for its stated gender."""
+    skipped: list[StoreConfig]
+    """Active stores that were left out because they do not sell the item's category or do not
+    sell for its stated gender. No request is made to them for it."""
     cached: CachedItem | None = None
     """The earlier search of this very item, when it can be reused (a mix or budget change)."""
 
