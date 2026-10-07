@@ -18,7 +18,7 @@ timeout_s: 6                    # Per store request (PRD R5).
 rps_per_store: 1                # Requests per second per store (BRD Rule 2).
 rps_images_per_host: 5          # Thumbnail downloads per second per image host (assumption A5).
 store_cache_ttl_s: 600          # Identical store searches within this time are served from memory.
-store_cooldown_s: 900           # A store that blocked or failed is not contacted again for this long.
+store_cooldown_s: 900           # A store that blocked us is not contacted again for this long (errors and timeouts do not start it, ADR 0003).
 max_response_bytes: 2000000     # Size cap for one HTTP response; a store can override it (max_response_bytes in its file).
 
 # --- Currencies ---------------------------------------------------------------------------
