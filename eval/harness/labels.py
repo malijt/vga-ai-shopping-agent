@@ -34,8 +34,10 @@ from dataclasses import dataclass, replace
 from pathlib import Path, PurePosixPath
 
 from eval.harness.errors import LabelSheetError
-from eval.harness.groups import TOP_N, format_price, group_names, price_range_labels, top_results
+from eval.harness.groups import TOP_N, group_names, price_range_labels, top_results
 from eval.harness.runner import QueryRun
+from vga.models import GarmentGroup
+from vga.money import format_price
 
 LABEL_COLUMNS = (
     "query_id",
@@ -64,7 +66,8 @@ class LabelRow:
     photo: str = ""
     """File name of the query's photo; empty for a text-only query."""
     price: str = ""
-    """The price as the shopper sees it, for example ``349 AED``."""
+    """The price as the result card shows it: ``349 AED``, or for a product in another currency
+    its own price and the approximate base-currency figure, ``245.000 KWD (about 2,920 AED)``."""
     price_range: str = ""
     label: int | None = None
 
@@ -95,6 +98,26 @@ class LabelSet:
         return [row for row in self.rows if row.query_id == query_id and row.group == group]
 
 
+def price_texts(group: GarmentGroup) -> dict[str, str]:
+    """For each product of a group (by ``Product.key``), its price as the result card shows it.
+
+    The card text comes from ``vga.money.format_price``, the one function the page also calls, so
+    the person labelling reads what the shopper read. The base currency is the one the group's
+    price ranges are measured in (``TierResult.currency``), which the contract requires of any
+    range that holds a result, so a recorded run reads right whatever the settings are today.
+    """
+    return {
+        scored.product.key: format_price(
+            scored.product.price,
+            scored.product.currency,
+            base_price=scored.base_price,
+            base_currency=tier.currency,
+        )
+        for tier in group.tiers
+        for scored in tier.results
+    }
+
+
 def label_rows(runs: Sequence[QueryRun]) -> list[LabelRow]:
     """The blank rows of the sheet: the top 10 of every group of every answered query."""
     rows: list[LabelRow] = []
@@ -104,6 +127,7 @@ def label_rows(runs: Sequence[QueryRun]) -> list[LabelRow]:
         photo = PurePosixPath(run.query.image).name if run.query.image else ""
         for name, group in zip(group_names(run.response), run.response.groups, strict=True):
             ranges = price_range_labels(group)
+            prices = price_texts(group)
             for rank, scored in enumerate(top_results(group), start=1):
                 product = scored.product
                 rows.append(
@@ -115,7 +139,7 @@ def label_rows(runs: Sequence[QueryRun]) -> list[LabelRow]:
                         store=product.store,
                         url=product.product_url,
                         photo=photo,
-                        price=format_price(product),
+                        price=prices[product.key],
                         price_range=ranges.get(product.key, ""),
                     )
                 )

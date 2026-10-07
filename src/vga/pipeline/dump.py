@@ -7,7 +7,12 @@ missing here was never returned or was filtered, one present but unshown was out
 
 A line holds the product link, store, title, price, the scores, the price range it was placed in
 (``null`` when it was ranked but not shown), the range's price span and the extraction strategy that
-read the store. It holds no image data of any kind: no photo, no embedding, not even the product
+read the store. ``price`` and ``currency`` are the store's own. A product priced in another currency
+also carries ``base_price``, its price in the base currency at the fixed rate in the settings: the
+figure the price ranges, their spans and the budget check measured it by, so a dinar candidate can
+be read against the dirham ones around it. It is ``null`` for a product already priced in the base
+currency (its ``price`` is then that figure) and for a currency with no rate, which the ranges
+leave out. It holds no image data of any kind: no photo, no embedding, not even the product
 thumbnail's address.
 """
 
@@ -17,8 +22,10 @@ from typing import Any
 
 from vga.log import get_logger
 from vga.models import GarmentGroup, Product, ScoredProduct, StoreConfig, Tier
+from vga.money import to_base
 from vga.pipeline.reports import outcomes_for_item
 from vga.pipeline.state import ItemRun, RunState
+from vga.settings import Settings
 
 log = get_logger(__name__)
 
@@ -36,7 +43,7 @@ def write_candidate_dump(state: RunState) -> Path | None:
     lines = [
         json.dumps(line, ensure_ascii=False)
         for run in state.items
-        for line in _item_lines(state.req.request_id, run, strategies)
+        for line in _item_lines(state.req.request_id, run, strategies, state.settings)
     ]
     path = dump_path(state.settings.log_dir, state.req.request_id)
     try:
@@ -65,15 +72,27 @@ def _strategies(state: RunState) -> dict[str, str | None]:
 
 
 def _item_lines(
-    request_id: str, run: ItemRun, strategies: dict[str, str | None]
+    request_id: str, run: ItemRun, strategies: dict[str, str | None], settings: Settings
 ) -> list[dict[str, Any]]:
     shown = _shown(run.group)
     lines: list[dict[str, Any]] = []
     for rank, scored in enumerate(run.ranked or [], start=1):
-        product = scored.product
-        placed = shown.get(product.key)
-        lines.append(_line(request_id, run, rank, scored, product, placed, strategies))
+        placed = shown.get(scored.product.key)
+        lines.append(_line(request_id, run, rank, scored, placed, strategies, settings))
     return lines
+
+
+def _base_price(product: Product, settings: Settings) -> float | None:
+    """The product's price in the base currency, only when it is priced in another one.
+
+    The same ``to_base`` the price-range shaper calls with the same settings, so for a shown product
+    this is the ``ScoredProduct.base_price`` on its result. A candidate that was ranked but not
+    shown has none on it (the shaper sets it on what it shows), which is why it is worked out here.
+    ``None`` when the product is in the base currency, or its currency has no rate.
+    """
+    if product.currency == settings.base_currency:
+        return None
+    return to_base(product.price, product.currency, settings)
 
 
 def _shown(group: GarmentGroup | None) -> dict[str, tuple[Tier, float | None, float | None]]:
@@ -92,10 +111,11 @@ def _line(
     run: ItemRun,
     rank: int,
     scored: ScoredProduct,
-    product: Product,
     placed: tuple[Tier, float | None, float | None] | None,
     strategies: dict[str, str | None],
+    settings: Settings,
 ) -> dict[str, Any]:
+    product = scored.product
     scores = scored.scores
     return {
         "request_id": request_id,
@@ -108,6 +128,7 @@ def _line(
         "title": product.title,
         "price": product.price,
         "currency": product.currency,
+        "base_price": _base_price(product, settings),
         "scores": {
             "text": scores.text,
             "image": scores.image,

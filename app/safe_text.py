@@ -51,8 +51,3 @@ def label_fragment(text: str | None, max_chars: int = LABEL_MAX_CHARS) -> str:
         return ""
     cleaned = _NOT_LABEL_SAFE.sub("", text.replace("_", " "))
     return clamp(" ".join(cleaned.split()), max_chars)
-
-
-def format_price(value: float) -> str:
-    """``1250`` -> ``1,250``; ``89.5`` -> ``89.50``. Same rule as the price-range headers."""
-    return f"{value:,.0f}" if value == round(value) else f"{value:,.2f}"

@@ -37,6 +37,35 @@ def sample_runs() -> list[QueryRun]:
     ]
 
 
+def mixed_currency_group() -> GarmentGroup:
+    """A dirham dress in Budget and a dinar dress in Luxury, whose range is measured in dirhams
+    (``base_price`` 2,920.40, the range's span 2,920 to 2,921) as the shaper delivers it."""
+    group = make_group(Category.DRESSES, counts=(1, 0, 0, 0))
+    dinar = make_scored_product(
+        make_product(
+            9,
+            title="Embellished Maxi Dress in Black",
+            price=245.0,
+            currency="KWD",
+            store="Hamsa",
+            category=Category.DRESSES,
+        ),
+        scores=make_scores(total=0.5),
+        base_price=2920.4,
+        tier=Tier.LUXURY,
+    )
+    luxury = TierResult(
+        name=Tier.LUXURY,
+        price_min=2920.0,
+        price_max=2921.0,
+        currency="AED",
+        target_count=1,
+        count=1,
+        results=[dinar],
+    )
+    return GarmentGroup(item_index=0, category=Category.DRESSES, tiers=[*group.tiers[:3], luxury])
+
+
 def read_rows(path: Path) -> list[dict[str, str]]:
     with path.open(encoding="utf-8-sig", newline="") as handle:
         return list(csv.DictReader(handle))
@@ -120,6 +149,35 @@ class TestExport:
         export_label_sheet([run_of("q06_text", group)], tmp_path / "labels.csv")
 
         assert read_rows(tmp_path / "labels.csv")[0]["price"] == "349.50 AED"
+
+    def test_a_price_in_another_currency_reads_as_the_card_reads_it(self, tmp_path: Path) -> None:
+        # The labeller sees the store's own price and the approximate AED figure, so a dinar
+        # dress is not mistaken for a 245 AED one.
+        export_label_sheet([run_of("q01_gown", mixed_currency_group())], tmp_path / "labels.csv")
+
+        rows = {row["title"]: row for row in read_rows(tmp_path / "labels.csv")}
+
+        assert rows["Embellished Maxi Dress in Black"]["price"] == "245.000 KWD (about 2,920 AED)"
+        assert rows["Dresses item 1"]["price"] == "100 AED"
+
+    def test_the_price_column_keeps_its_place_when_a_price_has_two_currencies(
+        self, tmp_path: Path
+    ) -> None:
+        export_label_sheet([run_of("q01_gown", mixed_currency_group())], tmp_path / "labels.csv")
+
+        header = (tmp_path / "labels.csv").read_text(encoding="utf-8-sig").splitlines()[0]
+
+        assert header == "query_id,photo,group,rank,title,price,store,price_range,url,label"
+
+    def test_a_sheet_with_a_two_currency_price_still_imports(self, tmp_path: Path) -> None:
+        runs = [run_of("q01_gown", mixed_currency_group())]
+        sheet = tmp_path / "labels.csv"
+        export_label_sheet(runs, sheet)
+        fill(sheet, lambda row: "1")
+
+        labels = import_label_sheet(sheet, runs)
+
+        assert {row.price for row in labels.rows} == {"245.000 KWD (about 2,920 AED)", "100 AED"}
 
     def test_an_outfit_has_one_block_of_rows_per_garment_each_with_the_same_photo(
         self, tmp_path: Path

@@ -8,7 +8,7 @@ so they cannot disagree about which products they mean.
 
 from collections import Counter
 
-from vga.models import GarmentGroup, Product, ScoredProduct, SearchResponse
+from vga.models import GarmentGroup, ScoredProduct, SearchResponse
 
 TOP_N = 10
 """How many results per garment group a person labels (rubric.md, "How to label the top 10")."""
@@ -54,10 +54,3 @@ def price_range_labels(group: GarmentGroup) -> dict[str, str]:
     """For each product of a group (by ``Product.key``), the price range the shopper sees it
     in: ``Budget``, ``Mid-range``, ``Premium`` or ``Luxury``."""
     return {scored.product.key: tier.name.label for tier in group.tiers for scored in tier.results}
-
-
-def format_price(product: Product) -> str:
-    """A price as the shopper reads it: ``349 AED``, or ``349.50 AED`` when it has cents."""
-    price = product.price
-    shown = f"{price:,.0f}" if price == round(price) else f"{price:,.2f}"
-    return f"{shown} {product.currency}"

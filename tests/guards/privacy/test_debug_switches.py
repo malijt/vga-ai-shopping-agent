@@ -42,6 +42,7 @@ DUMP_KEYS = {
     "title",
     "price",
     "currency",
+    "base_price",
     "scores",
     "flags",
     "shown",

@@ -19,7 +19,7 @@ from tests.factories import (
 from tests.fakes import FakePipeline
 from tests.ui.conftest import InstallPipeline
 from tests.ui.helpers import link_buttons, plain_texts, search
-from vga.models import Category, Flag, SearchResponse, Tier
+from vga.models import Category, Flag, ScoredProduct, SearchResponse, Tier
 
 SAMPLE = load_sample_response()
 HEADER_FORMAT = re.compile(
@@ -29,6 +29,19 @@ HEADER_FORMAT = re.compile(
 
 def range_headers(at: AppTest) -> list[str]:
     return [subheader.value for subheader in at.subheader]
+
+
+def card_texts(scored: ScoredProduct) -> list[str]:
+    """The plain text elements of one card drawn on its own (picture placeholder left out)."""
+
+    def script(card) -> None:
+        from app.components.result_card import render_result_card
+
+        render_result_card(card, key="card", base_currency="AED")
+
+    at = AppTest.from_function(script, args=(scored,)).run()
+    assert not at.exception
+    return [text.value for text in at.text if text.value != PLACEHOLDER_NO_IMAGE]
 
 
 class TestPriceRangeSections:
@@ -138,8 +151,43 @@ class TestResultCards:
 
         assert shown == [scored.product.image_url for scored in SAMPLE.products]
 
-    def test_a_missing_colour_is_said_not_left_blank(self, results_at: AppTest) -> None:
-        assert any("Colour: not listed" in text for text in plain_texts(results_at))
+    def test_a_colour_the_product_record_carries_is_shown(self) -> None:
+        scored = make_scored_product(make_product(1, colour="Midnight blue"))
+
+        assert "Store: Demo Store\nColour: Midnight blue" in card_texts(scored)
+
+    def test_a_product_with_no_colour_has_no_colour_line_at_all(self) -> None:
+        # The stores give no separate colour field, so most cards have none. The title and the
+        # reason sentence already say the colour, and "Colour: not listed" under them read as a
+        # mistake.
+        product = make_product(1, title="Embellished Maxi Dress in Black", colour=None)
+        scored = make_scored_product(product, reason="Black, the colour you asked for.")
+
+        texts = card_texts(scored)
+
+        assert texts == [
+            "Embellished Maxi Dress in Black",
+            "Store: Demo Store",
+            "Black, the colour you asked for.",
+        ]
+
+    def test_a_colour_that_tidies_to_nothing_leaves_the_line_out_too(self) -> None:
+        # Control characters are dropped from store text; what is left is empty.
+        product = make_product(1).model_copy(update={"colour": "\x00\x1f \u202e"})
+
+        assert not any("Colour" in text for text in card_texts(make_scored_product(product)))
+
+    def test_no_card_of_the_sample_page_says_a_colour_is_not_listed(
+        self, results_at: AppTest
+    ) -> None:
+        texts = plain_texts(results_at)
+        with_colour = [s for s in SAMPLE.products if s.product.colour]
+        without_colour = [s for s in SAMPLE.products if not s.product.colour]
+
+        assert with_colour
+        assert without_colour  # the sample keeps a product with no colour on purpose
+        assert not any("not listed" in text for text in texts)
+        assert sum("Colour:" in text for text in texts) == len(with_colour)
 
     def test_a_very_long_title_is_cut_to_a_readable_length_with_an_ellipsis(
         self, results_at: AppTest
@@ -156,7 +204,7 @@ class TestResultCards:
         def script(scored) -> None:
             from app.components.result_card import render_result_card
 
-            render_result_card(scored, key="card")
+            render_result_card(scored, key="card", base_currency="AED")
 
         # `model_copy` skips validation: the contract refuses an empty address, but the page must
         # still cope if one ever got through.
@@ -173,7 +221,7 @@ class TestResultCards:
         def script(scored) -> None:
             from app.components.result_card import render_result_card
 
-            render_result_card(scored, key="card")
+            render_result_card(scored, key="card", base_currency="AED")
 
         product = make_product(1).model_copy(update={"product_url": "javascript:alert(1)"})
         scored = make_scored_product(product)
