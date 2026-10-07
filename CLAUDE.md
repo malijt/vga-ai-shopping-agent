@@ -7,7 +7,7 @@ file as the always-on summary and open the matching doc when you need full depth
 ## Project Context
 
 - **What it is:** a one-day demo. A shopper gives a photo, text (English or Arabic), or both. One
-  OpenAI call understands the request, the app searches 4-6 GCC fashion stores' own search pages
+  OpenAI call understands the request, the app searches up to 10 GCC fashion stores' own search pages
   live, ranks the products, and shows the top 30 split into Budget / Mid-range / Premium / Luxury.
   Every result links to the store's own product page.
 - **Categories (five):** tops, outerwear, bottoms, shoes and, since 2026-10-08, **dresses** (dresses,
@@ -16,13 +16,15 @@ file as the always-on summary and open the matching doc when you need full depth
 - **Status (2026-10-07):** the implementation plan
   [`docs/plans/2026-10-07-vga-ai-shopping-agent-implementation-plan.md`](./docs/plans/2026-10-07-vga-ai-shopping-agent-implementation-plan.md)
   is approved (v3). Waves 1 and 2 (Phases 1 to 11) are merged; Wave 3 (pipeline and store adapters)
-  is in progress. **Build only what the plan specifies**, in its phases and waves. Integration
+  is in progress, with the dresses code change alongside it. **Build only what the plan specifies**, in its phases and waves. Integration
   branch: `develop`.
 - **Stores (decided 2026-10-07):** store qualification found that no large GCC retailer can be read
   by an honest client (see [`docs/store-qualification/SUMMARY.md`](./docs/store-qualification/SUMMARY.md)).
-  The demo therefore searches six Shopify storefronts through `/search/suggest.json`: Giordano UAE,
-  Nautica UAE, Sacoor Brothers UAE, Oh Polly UAE, Club L London UAE and Maison D'Vie (six is the
-  BRD's maximum; three more readable stores are held in reserve). Reaching big retailers is
+  The demo therefore searches Shopify storefronts through `/search/suggest.json`. Six are enabled:
+  Giordano UAE, Nautica UAE, Sacoor Brothers UAE, Oh Polly UAE, Club L London UAE and Maison D'Vie.
+  On 2026-10-08 the user raised the limit from six to **ten** so that dresses and modest wear can be
+  covered; the four additions (Hanayen, Maison Arabelle, Nishat Linen UAE, Signature Studio) are
+  enabled one by one as each passes its live smoke test. Three more readable stores are in reserve. Reaching big retailers is
   planned as later Phases 17-19 (agent endpoints, store APIs/headless with a terms sign-off, a
   category + sitemap index). Do not start those without the user's go-ahead.
 - **What it is not (yet):** not multi-tenant, no accounts, no billing or credits, no database, no
@@ -97,6 +99,9 @@ docs/adr/             decision records    docs/store-notes/, docs/store-qualific
 - Prefer the **simplest thing that solves the actual, current requirement**. The plan's
   "Deferred Until a Trigger" list names things deliberately left out; do not build one unless its
   trigger is met.
+- **Live runs that need the API key** are run by the orchestrator from the main checkout, where the
+  app reads `.env` itself. Agents never handle the key, and an agent that a harness guard refuses
+  follows the guard's stated remedy or hands back; it does not work round it.
 - **Agent models:** development subagents and background tasks run on **Sonnet 5.5** (pass
   `model: "sonnet"` on every Agent call). Orchestration, review, merges and decisions (gates,
   go/no-go, changes to the plan or contracts) run on **Opus 5.5**.
