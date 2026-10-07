@@ -157,10 +157,6 @@ class RecordingSession:
         self.incomplete: list[str] = []
         """Query ids whose recording lacks a call because a boundary raised mid-call."""
 
-    @property
-    def directory(self) -> Path:
-        return self._dir
-
     def wrap(self, boundaries: Boundaries) -> Boundaries:
         """Recorders around the live boundaries; hand these to the pipeline factory."""
         return Boundaries(
@@ -323,21 +319,6 @@ class ReplaySession:
         self.notes: list[str] = []
         """Plain notes for the report: calls the pipeline did not use, scores that were missing."""
         self._missing_scores = 0
-
-    @property
-    def directory(self) -> Path:
-        return self._dir
-
-    @property
-    def models(self) -> list[str]:
-        return [str(model) for model in self._manifest.get("models", [])]
-
-    @property
-    def prompt_versions(self) -> list[str]:
-        return [str(version) for version in self._manifest.get("prompt_versions", [])]
-
-    def query_ids(self) -> list[str]:
-        return list(self._queries)
 
     def live_duration_ms(self, query_id: str) -> float | None:
         """How long the recorded live run of this query took, if the recording says."""

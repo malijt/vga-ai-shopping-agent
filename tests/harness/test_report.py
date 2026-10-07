@@ -54,7 +54,7 @@ def meta(**overrides: object) -> RunMeta:
         "mode": "record",
         "date": date(2026, 10, 7),
         "links": LinksMode.ALL,
-        "tier_mix": [25, 25, 25, 25],
+        "price_range_mix": [25, 25, 25, 25],
     }
     return RunMeta.model_validate({**fields, **overrides})
 
@@ -363,7 +363,7 @@ class TestTheFieldTable:
 
     def test_the_value_first_mix_is_named(self) -> None:
         assert (
-            self.fields(tier_mix=[40, 30, 20, 10])["Price-range mix"]
+            self.fields(price_range_mix=[40, 30, 20, 10])["Price-range mix"]
             == "40 / 30 / 20 / 10 (value first)"
         )
 

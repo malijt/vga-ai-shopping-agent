@@ -240,7 +240,7 @@ def loaded_run(tmp_path: Path | None = None) -> LoadedRun:
         mode="record",
         date=date(2026, 10, 7),
         links=LinksMode.ALL,
-        tier_mix=[25, 25, 25, 25],
+        price_range_mix=[25, 25, 25, 25],
     )
     ok = make_response()
     runs = [

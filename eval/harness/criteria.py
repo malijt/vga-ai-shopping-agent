@@ -15,7 +15,7 @@ Stores                at least 3 different stores among the results
 Seconds               at most 30 s
 Links ok              every checked link opens that store's own product page (11.2.3)
 good@10               at least 7 of the top 10 labelled good (A15; outfit rule A14)
-Price ranges ok       each price range within 1 of its target count, or flagged few_options
+Price ranges ok       each price range within 1 of its target count, or flagged "few options"
 ====================  =====================================================================
 
 **Outfit photos.** The PRD gives an outfit 12 results per garment (assumption A2), so a floor of
@@ -300,7 +300,7 @@ def check_price_ranges(response: SearchResponse, config: CriteriaConfig) -> Crit
     evidence = _shown(
         [
             f"{p.group}, {p.tier.label}: {p.count} results for a target of {p.target} "
-            f"(gap {p.gap}), no few_options flag; span {p.span}"
+            f"(gap {p.gap}), not flagged 'few options'; span {p.span}"
             for p in problems
         ]
     )

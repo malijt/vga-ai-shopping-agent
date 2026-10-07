@@ -45,7 +45,7 @@ class RunMeta(VgaModel):
     mode: Mode
     date: date
     links: LinksMode
-    tier_mix: list[int] = Field(min_length=4, max_length=4)
+    price_range_mix: list[int] = Field(min_length=4, max_length=4)
     """Target price-range mix in percent: budget, mid-range, premium, luxury."""
     source: str | None = None
     """Where a replay's recording came from."""

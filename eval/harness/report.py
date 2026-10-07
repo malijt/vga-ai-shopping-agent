@@ -102,7 +102,7 @@ def _fields(loaded: LoadedRun) -> list[list[str]]:
     stores = f"{len(working)}: {', '.join(working)}" if working else "0"
     if skipped:
         stores += f" (never worked: {', '.join(skipped)})"
-    mix = loaded.meta.tier_mix
+    mix = loaded.meta.price_range_mix
     values = [
         loaded.meta.date.isoformat(),
         _run_label(loaded),

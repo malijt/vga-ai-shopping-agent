@@ -11,7 +11,6 @@ import json
 from collections.abc import Sequence
 from pathlib import Path
 
-import httpx
 import pytest
 from eval.harness.errors import RecordingError, RecordingMismatchError
 from eval.harness.queries import AcceptanceQuery
@@ -26,26 +25,26 @@ from eval.harness.runner import QueryRun, run_queries
 from eval.harness.wiring import Boundaries
 
 from tests.factories import (
-    make_image_bytes,
     make_item_intent,
     make_settings,
-    make_store_config,
     make_store_result,
-    make_understand_result,
 )
 from tests.fakes import (
     FakeClock,
     FakeImageRanker,
     FakeStoreSearcher,
     FakeUnderstander,
-    RecordedResponse,
-    StoreHttpFixtures,
 )
 from tests.harness.helpers import ToyPipeline, make_query
+from tests.harness.live_parts import (
+    OUTFIT_TEXT,
+    PHOTO,
+    LiveParts,
+    make_stores,
+)
 from vga.errors import CallBudgetExceededError, LlmError
 from vga.models import (
     Category,
-    InputType,
     ItemIntent,
     Product,
     QueryImage,
@@ -53,75 +52,7 @@ from vga.models import (
     StoreConfig,
     StoreResult,
     StoreStatus,
-    UnderstandResult,
 )
-
-PHOTO = make_image_bytes("JPEG", (64, 64), (10, 120, 200))
-OUTFIT_TEXT = "an outfit: top and shoes"
-
-
-def stores() -> list[StoreConfig]:
-    return [
-        make_store_config(
-            id=name,
-            name=name.title(),
-            search_url_template=f"https://www.{name}.example/search?q={{query}}",
-            allowed_hosts=[f"www.{name}.example", f"cdn.{name}.example"],
-        )
-        for name in ("alpha", "beta")
-    ]
-
-
-def understand_for(req: SearchRequest) -> UnderstandResult:
-    """Two garments for the outfit query, one item otherwise."""
-    if req.text == OUTFIT_TEXT:
-        items = [
-            make_item_intent(category=Category.TOPS, search_keywords=["white shirt"]),
-            make_item_intent(category=Category.SHOES, search_keywords=["white sneakers"]),
-        ]
-        return make_understand_result(input_type=InputType.OUTFIT_PHOTO, items=items)
-    kind = InputType.PRODUCT_PHOTO if req.text is None else InputType.TEXT
-    return make_understand_result(input_type=kind)
-
-
-class NetworkedSearcher:
-    """Like the real fetch engine: it really issues a request per store, through a fake network."""
-
-    def __init__(self, fixtures: StoreHttpFixtures, inner: FakeStoreSearcher) -> None:
-        self._fixtures = fixtures
-        self.inner = inner
-
-    async def search(self, item: ItemIntent, stores: Sequence[StoreConfig]) -> list[StoreResult]:
-        async with httpx.AsyncClient(transport=self._fixtures.transport()) as client:
-            for store in stores:
-                await client.get(f"https://www.{store.id}.example/search?q=x")
-        return await self.inner.search(item, stores)
-
-
-class LiveParts:
-    """The fake 'live' boundaries and everything that proves what they were asked."""
-
-    def __init__(self) -> None:
-        self.fixtures = StoreHttpFixtures()
-        for store in stores():
-            host = f"www.{store.id}.example"
-            self.fixtures.add(
-                f"https://{host}/", RecordedResponse(f"https://{host}/", 200, {}, b"{}")
-            )
-        self.understander = FakeUnderstander(understand_for)
-        self.searcher = NetworkedSearcher(self.fixtures, FakeStoreSearcher(product_count=4))
-        self.ranker = FakeImageRanker({}, default=0.8)
-
-    def boundaries(self) -> Boundaries:
-        return Boundaries(self.understander, self.searcher, self.ranker)
-
-    def calls(self) -> tuple[int, int, int, int]:
-        return (
-            self.fixtures.request_count(),
-            len(self.understander.calls),
-            len(self.searcher.inner.calls),
-            len(self.ranker.calls),
-        )
 
 
 def acceptance_queries() -> list[AcceptanceQuery]:
@@ -140,7 +71,7 @@ async def run_with(
     boundaries: Boundaries, scope: RecordingSession | ReplaySession
 ) -> list[QueryRun]:
     pipeline = ToyPipeline(
-        boundaries.understander, boundaries.searcher, boundaries.image_ranker, stores()
+        boundaries.understander, boundaries.searcher, boundaries.image_ranker, make_stores()
     )
     return await run_queries(
         acceptance_queries(),
@@ -228,7 +159,7 @@ class TestEachBoundaryReturnsExactlyWhatWasSaved:
 
         session.begin_query("q06_text")
         understood = await wrapped.understander.understand(request)
-        found = await wrapped.searcher.search(item, stores())
+        found = await wrapped.searcher.search(item, make_stores())
         flat: list[Product] = [p for result in found for p in result.products]
         scores = await wrapped.image_ranker.score(QueryImage(image=PHOTO), flat)
         session.end_query("q06_text", duration_ms=10.0)
@@ -237,7 +168,7 @@ class TestEachBoundaryReturnsExactlyWhatWasSaved:
         replayed.begin_query("q06_text")
         boundaries = replayed.boundaries()
         assert await boundaries.understander.understand(request) == understood
-        assert await boundaries.searcher.search(item, stores()) == found
+        assert await boundaries.searcher.search(item, make_stores()) == found
         assert await boundaries.image_ranker.score(QueryImage(image=PHOTO), flat) == scores
 
     async def test_an_understander_error_is_replayed_as_the_same_kind_of_error(
@@ -280,12 +211,12 @@ class TestEachBoundaryReturnsExactlyWhatWasSaved:
         session = RecordingSession(tmp_path / "rec")
         wrapped = session.wrap(Boundaries(FakeUnderstander(), searcher, FakeImageRanker()))
         session.begin_query("q06_text")
-        await wrapped.searcher.search(make_item_intent(), stores())
+        await wrapped.searcher.search(make_item_intent(), make_stores())
         session.end_query("q06_text", duration_ms=1.0)
 
         replayed = ReplaySession(tmp_path / "rec")
         replayed.begin_query("q06_text")
-        results = await replayed.searcher.search(make_item_intent(), stores())
+        results = await replayed.searcher.search(make_item_intent(), make_stores())
 
         assert results[0].status is StoreStatus.BLOCKED
         assert results[0].detail == "HTTP 403"
@@ -354,7 +285,7 @@ class TestWhatIsSaved:
         wrapped = session.wrap(Boundaries(FakeUnderstander(), Exploding(), FakeImageRanker()))
         session.begin_query("q06_text")
         with pytest.raises(RuntimeError, match="network down"):
-            await wrapped.searcher.search(make_item_intent(), stores())
+            await wrapped.searcher.search(make_item_intent(), make_stores())
         session.end_query("q06_text", duration_ms=1.0)
 
         assert session.incomplete == ["q06_text"]
@@ -393,7 +324,8 @@ class TestWhatIsSaved:
         session.begin_query("q04_outfit")
 
         await asyncio.gather(
-            wrapped.searcher.search(tops, stores()), wrapped.searcher.search(shoes, stores())
+            wrapped.searcher.search(tops, make_stores()),
+            wrapped.searcher.search(shoes, make_stores()),
         )
         session.end_query("q04_outfit", duration_ms=1.0)
 
@@ -411,11 +343,11 @@ class TestReplayRefusesWhatWasNotRecorded:
         boundaries = session.boundaries()
         tops = make_item_intent(category=Category.TOPS, search_keywords=["white shirt"])
         shoes = make_item_intent(category=Category.SHOES, search_keywords=["white sneakers"])
-        await boundaries.searcher.search(tops, stores())
-        await boundaries.searcher.search(shoes, stores())
+        await boundaries.searcher.search(tops, make_stores())
+        await boundaries.searcher.search(shoes, make_stores())
 
         with pytest.raises(RecordingMismatchError, match="search call number 3"):
-            await boundaries.searcher.search(shoes, stores())
+            await boundaries.searcher.search(shoes, make_stores())
 
     async def test_a_search_for_other_stores_is_a_mismatch(self, tmp_path: Path) -> None:
         await record(tmp_path / "rec", LiveParts())
@@ -423,7 +355,7 @@ class TestReplayRefusesWhatWasNotRecorded:
         session.begin_query("q06_text")
 
         with pytest.raises(RecordingMismatchError, match="stores"):
-            await session.searcher.search(make_item_intent(), stores()[:1])
+            await session.searcher.search(make_item_intent(), make_stores()[:1])
 
     async def test_a_search_for_a_different_item_is_a_mismatch(self, tmp_path: Path) -> None:
         await record(tmp_path / "rec", LiveParts())
@@ -432,7 +364,7 @@ class TestReplayRefusesWhatWasNotRecorded:
         other = make_item_intent(search_keywords=["red coat"])
 
         with pytest.raises(RecordingMismatchError, match="different item"):
-            await session.searcher.search(other, stores())
+            await session.searcher.search(other, make_stores())
 
     async def test_a_product_without_a_recorded_image_score_gets_none_and_a_note(
         self, tmp_path: Path
@@ -440,7 +372,7 @@ class TestReplayRefusesWhatWasNotRecorded:
         await record(tmp_path / "rec", LiveParts())
         session = ReplaySession(tmp_path / "rec")
         session.begin_query("q01_photo")
-        found = await session.searcher.search(make_item_intent(), stores())
+        found = await session.searcher.search(make_item_intent(), make_stores())
         known = found[0].products[0]
         stranger = Product.model_validate(
             {**known.model_dump(), "product_url": "https://www.alpha.example/p/never-recorded"}
