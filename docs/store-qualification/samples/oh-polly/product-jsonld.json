@@ -1,0 +1,44 @@
+{
+ "@context": "http://schema.org/",
+ "@type": "Product",
+ "name": "Oversized Single-Breasted Blazer in Soft Lilac",
+ "image": [
+  "https://ohpolly.ae/cdn/shop/files/9460-SoftLilac_Edessa_7.jpg?v=1723008980&width=2000"
+ ],
+ "description": "Our take on classic tailoring, the Edessa blazer is crafted from premium, slinky soft-touch twill with a stretch-cotton poplin lining. It’s cut to an oversized single-breasted silhouette and features hallmark elements, such as a sleek notch collar, two front flap pockets and a central rear vent. The",
+ "sku": "9460__SoftLilac_6",
+ "offers": [
+  {
+   "@type": "Offer",
+   "url": "https://ohpolly.ae/products/edessa-oversized-single-breasted-blazer-soft-lilac?variant=49011331694877",
+   "sku": "9460__SoftLilac_4",
+   "priceCurrency": "AED",
+   "price": "230.0",
+   "itemCondition": "NewCondition",
+   "availability": "OutOfStock"
+  },
+  {
+   "@type": "Offer",
+   "url": "https://ohpolly.ae/products/edessa-oversized-single-breasted-blazer-soft-lilac?variant=49011331727645",
+   "sku": "9460__SoftLilac_6",
+   "priceCurrency": "AED",
+   "price": "230.0",
+   "itemCondition": "NewCondition",
+   "availability": "InStock"
+  },
+  {
+   "@type": "Offer",
+   "url": "https://ohpolly.ae/products/edessa-oversized-single-breasted-blazer-soft-lilac?variant=49011331760413",
+   "sku": "9460__SoftLilac_8",
+   "priceCurrency": "AED",
+   "price": "230.0",
+   "itemCondition": "NewCondition",
+   "availability": "InStock"
+  }
+ ],
+ "aggregateRating": {
+  "@type": "AggregateRating",
+  "ratingValue": "5.0",
+  "ratingCount": "3"
+ }
+}
