@@ -84,6 +84,9 @@ def main() -> None:
         layout="wide",
         initial_sidebar_state="auto",
     )
+    # .streamlit/config.toml says the same, but Streamlit reads it from the folder the app was
+    # started in. Setting it here keeps "never show a stack trace" true from any folder.
+    st.set_option("client.showErrorDetails", "none")
     with error_boundary():
         render_page()
 

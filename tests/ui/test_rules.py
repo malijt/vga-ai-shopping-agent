@@ -129,3 +129,17 @@ class TestSourceRules:
                     missing.append(f"{path.name}:{node.lineno} st.{node.func.attr}")
 
         assert not missing
+
+
+def test_the_page_turns_error_details_off_itself_so_a_wrong_start_folder_cannot_show_a_trace(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import streamlit as st
+    from streamlit.testing.v1 import AppTest
+
+    monkeypatch.setenv("VGA_UI_FIXTURE", "1")
+    st.set_option("client.showErrorDetails", "full")  # as if config.toml had not been found
+
+    AppTest.from_file(str(APP_DIR / "main.py"), default_timeout=20).run()
+
+    assert st.get_option("client.showErrorDetails") == "none"
