@@ -22,6 +22,7 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "httpx2>=2.13.1",   # imported directly by tests/understand/fake_openai.py (the OpenAI SDK's HTTP client)
     "mypy>=2.4.0",
     "pip-audit>=2.10.1",
     "pip-licenses>=5.5.5",
