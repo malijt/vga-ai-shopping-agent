@@ -45,14 +45,16 @@ class LinkResult(VgaModel):
     url: str
     """The address that was requested."""
     final_url: str | None = None
-    """The address after redirects. ``None`` means no redirect happened (same as ``url``)."""
+    """The address after redirects. ``None`` means no redirect happened (same as ``url``); a
+    fetch that followed a redirect must report it, or the link fails."""
     status: int | None = None
     """Final HTTP status, or ``None`` when no response came back."""
     title: str | None = None
     """The page's ``<title>`` (or its Open Graph title), if it has one."""
     redirects: int = Field(default=0, ge=0)
     elapsed_s: float | None = Field(default=None, ge=0)
-    """Time the request itself took, excluding any wait for the rate limiter."""
+    """Time the request itself took, excluding any wait for the rate limiter. A page that opened
+    without this figure fails, because the 6 s rule would otherwise go unchecked."""
     error: str | None = None
     """Set instead of a status when there was no page: ``timeout``, ``connection error``, a
     robots.txt refusal, and so on."""
@@ -188,8 +190,15 @@ def evaluate_link(
     problems: list[str] = []
     if result.redirects > rules.max_redirects:
         problems.append(f"{result.redirects} redirects (at most {rules.max_redirects})")
-    if result.elapsed_s is not None and result.elapsed_s > rules.max_seconds:
+    if result.elapsed_s is None:
+        problems.append("the fetch did not report how long the request took, so 6 s is unchecked")
+    elif result.elapsed_s > rules.max_seconds:
         problems.append(f"took {result.elapsed_s:.1f} s (at most {rules.max_seconds:g} s)")
+    if result.redirects > 0 and not result.final_url:
+        problems.append(
+            f"{result.redirects} redirect(s) followed but the final address was not reported, "
+            "so its host and page cannot be checked"
+        )
 
     final_url = result.final_url or result.url
     final = urlsplit(final_url)

@@ -115,6 +115,21 @@ class TestAWorkingLink:
     async def test_exactly_six_seconds_and_three_redirects_are_allowed(self) -> None:
         assert await check(opens(elapsed_s=6.0, redirects=3)) == []
 
+    async def test_a_page_that_opened_but_reported_no_timing_cannot_be_called_ok(self) -> None:
+        bare = LinkResult(url=URL, status=200, title="Oversized Wool Blazer")
+
+        problems = await check(bare)
+
+        assert problems == [
+            "the fetch did not report how long the request took, so 6 s is unchecked"
+        ]
+
+    async def test_a_redirect_without_a_reported_final_address_fails(self) -> None:
+        problems = await check(opens(final_url=None, redirects=2))
+
+        assert len(problems) == 1
+        assert "final address was not reported" in problems[0]
+
     async def test_a_fourth_redirect_fails(self) -> None:
         problems = await check(opens(redirects=4))
 
