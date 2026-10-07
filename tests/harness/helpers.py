@@ -41,20 +41,20 @@ from vga.models import (
 from vga.settings import Settings
 
 STORE_NAMES = ("Alpha Store", "Beta Store", "Gamma Store", "Delta Store")
-JACKET_PATH = "eval/data/assets/private/product_jacket.jpg"
+PHOTO_PATH = "eval/data/assets/private/dress_burgundy_gown.png"
 
 
 def make_query(
-    query_id: str = "q01_product_jacket", kind: str = "text", **overrides: Any
+    query_id: str = "q01_product_gown", kind: str = "text", **overrides: Any
 ) -> AcceptanceQuery:
-    """A valid query of ``kind``; photo kinds get the jacket path (the file need not exist)."""
+    """A valid query of ``kind``; photo kinds get a placeholder photo path (it need not exist)."""
     has_text = kind in {"text", "photo_text"}
     has_image = kind != "text"
     fields: dict[str, Any] = {
         "id": query_id,
         "type": kind,
         "text": "black oversized blazer" if has_text else None,
-        "image": JACKET_PATH if has_image else None,
+        "image": PHOTO_PATH if has_image else None,
         "notes": "A test query.",
     }
     return AcceptanceQuery.model_validate({**fields, **overrides})

@@ -38,7 +38,7 @@ from vga.rank.lexicon import (
 
 OutOfScope = Literal["out_of_scope"]
 OUT_OF_SCOPE: Final[OutOfScope] = "out_of_scope"
-"""Result of ``classify_title`` for a garment or accessory outside the four categories."""
+"""Result of ``classify_title`` for a garment or accessory outside the five categories."""
 
 TitleKind = Category | OutOfScope | None
 
@@ -54,7 +54,7 @@ def _head(tokens: list[str]) -> list[str]:
 
 
 def classify_title(title: str) -> TitleKind:
-    """A ``Category``, ``OUT_OF_SCOPE`` for a dress, bag, belt and the like, or ``None``."""
+    """A ``Category``, ``OUT_OF_SCOPE`` for a jumpsuit, bag, sheila and the like, or ``None``."""
     tokens = _head(tokenize(title))
     if OUT_OF_SCOPE_OVERRIDES.intersection(tokens):
         return OUT_OF_SCOPE
@@ -94,7 +94,7 @@ def infer_category(title: str, breadcrumb: str | None = None) -> Category | None
     """The category a product title (or, failing that, a breadcrumb) names, else ``None``.
 
     ``None`` covers titles that name no garment, ambiguous titles and sets, and also items outside
-    the four categories (use ``classify_title`` to tell those apart). ``breadcrumb`` is a path
+    the five categories (use ``classify_title`` to tell those apart). ``breadcrumb`` is a path
     such as ``"Women > Clothing > Coats & Jackets"``; the most specific part is tried first.
     """
     kind = classify_title(title)

@@ -2,7 +2,7 @@
 
 Built with ``model_construct`` on purpose: it skips pydantic's checks, so a test can hand the
 validator the kind of garbage a model that obeyed an attack would return (a category that is not
-one of the four, a link in a keyword) and prove that ``validation.py`` still holds.
+one of the five, a link in a keyword) and prove that ``validation.py`` still holds.
 """
 
 from typing import Any

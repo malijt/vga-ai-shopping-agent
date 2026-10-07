@@ -71,7 +71,7 @@ def good_run(query_id: str, kind: str = "text") -> QueryRun:
     return QueryRun(make_query(query_id, kind), response, None, 5400.0, 5400.0)
 
 
-def outfit_run(query_id: str = "q04_outfit_casual") -> QueryRun:
+def outfit_run(query_id: str = "q04_outfit_palazzo_top") -> QueryRun:
     groups = [
         make_group(Category.TOPS, counts=(3, 3, 3, 3)),
         make_group(Category.BOTTOMS, counts=(3, 3, 3, 3), item_index=1),
@@ -108,7 +108,7 @@ def scored(
 
 class TestFollowsTheTemplate:
     def report(self) -> str:
-        runs = [good_run("q01_product_jacket", "product_photo"), outfit_run(), weak_run()]
+        runs = [good_run("q01_product_gown", "product_photo"), outfit_run(), weak_run()]
         return render_report(scored(runs))
 
     def test_it_has_the_templates_sections_in_the_templates_order(self) -> None:
@@ -142,8 +142,8 @@ class TestFollowsTheTemplate:
         rows = table_after(self.report(), "## Results")[1:]
 
         assert [row[0] for row in rows] == [
-            "q01_product_jacket",
-            "q04_outfit_casual",
+            "q01_product_gown",
+            "q04_outfit_palazzo_top",
             "q06_text_blazer_budget",
         ]
 
@@ -156,13 +156,13 @@ class TestFollowsTheTemplate:
 
 class TestTheResultsTable:
     def rows(self) -> dict[str, list[str]]:
-        runs = [good_run("q01_product_jacket", "product_photo"), outfit_run(), weak_run()]
+        runs = [good_run("q01_product_gown", "product_photo"), outfit_run(), weak_run()]
         table = table_after(render_report(scored(runs)), "## Results")
         return {row[0]: row for row in table[1:]}
 
     def test_a_good_query_fills_every_cell(self) -> None:
-        assert self.rows()["q01_product_jacket"] == [
-            "q01_product_jacket",
+        assert self.rows()["q01_product_gown"] == [
+            "q01_product_gown",
             "30",
             "3",
             "5.4",
@@ -172,7 +172,7 @@ class TestTheResultsTable:
         ]
 
     def test_an_outfit_shows_one_figure_per_garment_as_the_template_describes(self) -> None:
-        row = self.rows()["q04_outfit_casual"]
+        row = self.rows()["q04_outfit_palazzo_top"]
 
         assert row[1] == "12 / 12 / 11"
         assert row[5] == "8 / 8 / 8"
@@ -226,7 +226,7 @@ class TestTheVerdict:
 
 class TestTheFailuresTable:
     def failures(self) -> list[list[str]]:
-        runs = [good_run("q01_product_jacket", "product_photo"), weak_run()]
+        runs = [good_run("q01_product_gown", "product_photo"), weak_run()]
         return table_after(render_report(scored(runs)), "## Failures")[1:]
 
     def test_every_failed_criterion_is_a_row_with_a_cause_and_evidence(self) -> None:
@@ -284,7 +284,7 @@ class TestTheFetchStageAndTheRankStageAreSeparate:
             [make_group(counts=(8, 8, 7, 7))], stores_used=used, skipped=["gamma"]
         )
         run = QueryRun(
-            make_query("q01_product_jacket", "product_photo"), response, None, 5000.0, 5000.0
+            make_query("q01_product_gown", "product_photo"), response, None, 5000.0, 5000.0
         )
         return render_report(scored([run]))
 
@@ -311,7 +311,7 @@ class TestTheFetchStageAndTheRankStageAreSeparate:
         rank = table_after(text, "## Rank stage")
 
         assert rank[0] == ["Query", "Garment group", "Results in group", "good@10", "Reaches 7"]
-        assert rank[1] == ["q01_product_jacket", "outerwear", "30", "8/10", "yes"]
+        assert rank[1] == ["q01_product_gown", "outerwear", "30", "8/10", "yes"]
         assert text.index("## Fetch stage") < text.index("## Rank stage")
 
     def test_an_unlabelled_rank_stage_says_so_and_flags_a_group_too_small_to_pass(self) -> None:
@@ -391,7 +391,7 @@ class TestNotes:
     def test_an_outfit_run_says_the_checks_are_per_garment(self) -> None:
         text = render_report(scored([outfit_run()]))
 
-        assert "Outfit photos (q04_outfit_casual): the price-range check and good@10" in text
+        assert "Outfit photos (q04_outfit_palazzo_top): the price-range check and good@10" in text
         assert "are applied per garment group" in text
         assert "20-result floor is applied to the total" in text
 

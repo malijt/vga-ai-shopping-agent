@@ -88,6 +88,7 @@ Tests fake only the boundaries, using `tests/fakes.py`, and never reach real sto
 These describe the design; the features themselves land in later phases.
 
 - **The model can misread a photo or a request.** Colour, style and category are guesses, shown as editable chips labelled "Detected by AI". Matching is AI-assisted and can be wrong.
+- **Five garment categories are covered:** tops, outerwear, bottoms, shoes, and dresses and ethnic wear (dresses, gowns, kaftans, abayas, jalabiyas, kurtas and similar one-piece or ethnic garments; added 2026-10-08). Accessories, jumpsuits, swimwear and nightwear are out of scope, and so are the sheilas and hijabs sold next to abayas. Few of the stores we can read sell abayas, kaftans or South Asian wear, so those requests may come back thin; a title with the word "suit" is not classed as either a dress or a men's suit, because stores use it both ways.
 - **Gender inferred from a photo is shown, never applied,** until the shopper confirms it. Gender stated in the text is applied.
 - **Arabic is translated to English keywords** for store search; translation quality varies. The translated chip can be corrected.
 - **Body size is never guessed** from a photo.

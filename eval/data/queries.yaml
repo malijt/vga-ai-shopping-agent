@@ -4,6 +4,12 @@
 # Do not edit a query, add one or reorder after the first acceptance run. If one must
 # change, record why in eval/results/ and re-run all 10.
 #
+# REWRITTEN ONCE on 2026-10-08, before any acceptance run had happened (plan assumption A23):
+# dresses became a fifth category, and the business supplied 16 photos, most of them dresses,
+# abayas or ethnic wear. The seven photo-based queries were rewritten around five of them; the
+# three text queries (q06, q07, q08) are exactly as they were. The other 11 photos are in
+# extra_queries.yaml, which is NOT part of the 10-query pass rule.
+#
 # Contract (plan section 4, "Acceptance queries.yaml"). Each entry has exactly:
 #   id     unique, stable
 #   type   product_photo | outfit_photo | text | photo_text
@@ -12,59 +18,61 @@
 #   notes  what a labeller should expect (the labelling rules are in rubric.md)
 #
 # Mix required by the PRD "Acceptance test (10 queries)": 3 product photo, 2 outfit photo,
-# 3 text, 2 photo + text. Every query is about tops, outerwear, bottoms or shoes only.
+# 3 text, 2 photo + text. Every query is about tops, outerwear, bottoms, shoes or dresses
+# (dresses, gowns, kaftans, abayas, kurtas and similar) only.
 #
-# The 5 photos live in eval/data/assets/private/ (gitignored) and are supplied by the user.
-# See ASSETS.md for exactly what each file must show. The two photo + text queries reuse
-# product photos, so only 5 photos are needed in total.
+# The 5 photos live in eval/data/assets/private/ (gitignored) and were supplied by the user.
+# See ASSETS.md for what each file shows. The two photo + text queries reuse two of the product
+# photos (the gown and the jeans), so only 5 photos are needed in total.
 
 queries:
   # ---- Product photo (3) ---------------------------------------------------------------
-  - id: q01_product_jacket
+  - id: q01_product_gown
     type: product_photo
     text: null
-    image: eval/data/assets/private/product_jacket.jpg
+    image: eval/data/assets/private/dress_burgundy_gown.png
     notes: >-
-      One jacket on a plain background (outerwear). The jacket is NOT dark brown, so q09
-      can ask for a colour change. Expected: one outerwear item. Good match = a jacket of
-      the same kind with a close colour and fit.
+      A burgundy evening gown (dresses). The gown is NOT dark green, so q09 can ask for a
+      colour change. Expected: one dresses item. Good match = a gown or long evening dress
+      with a close colour and silhouette; a short dress, an abaya or a kaftan is a style miss.
 
-  - id: q02_product_sneakers
+  - id: q02_product_abaya
     type: product_photo
     text: null
-    image: eval/data/assets/private/product_sneakers.jpg
+    image: eval/data/assets/private/dress_pink_embellished_abaya.png
     notes: >-
-      One pair of low-top sneakers, side view (shoes). Expected: one shoes item. Good match
-      = sneakers with a close colour and sole/upper style; boots, sandals and loafers are
-      not good matches.
+      A pink embellished abaya (dresses). Expected: one dresses item whose search keywords hold
+      the garment's own word "abaya", not "long dress". Good match = an abaya with a close
+      colour and a similar amount of embellishment; a plain dress or a kaftan is a near miss
+      at best. Few stores sell abayas, so a "few options" flag is a plausible, honest result.
 
-  - id: q03_product_jeans
+  - id: q03_product_skinny_jeans
     type: product_photo
     text: null
-    image: eval/data/assets/private/product_jeans.jpg
+    image: eval/data/assets/private/bottoms_light_blue_skinny_jeans.png
     notes: >-
-      One pair of jeans or trousers laid flat or on a hanger (bottoms), plain colour (for
-      example mid-blue jeans). Expected: one bottoms item. Good match = same garment type
-      with a close wash/colour and cut.
+      One pair of light blue skinny jeans (bottoms). Expected: one bottoms item. Good match =
+      jeans of the same cut (skinny) with a close wash; wide-leg or straight jeans are not good
+      matches.
 
   # ---- Outfit photo (2) ----------------------------------------------------------------
-  - id: q04_outfit_casual
+  - id: q04_outfit_palazzo_top
     type: outfit_photo
     text: null
-    image: eval/data/assets/private/outfit_casual.jpg
+    image: eval/data/assets/private/outfit_navy_print_palazzo_white_top.png
     notes: >-
-      Mirror selfie or full-body photo with a visible top, bottoms and shoes (3 garments).
-      Expected: three item groups (tops, bottoms, shoes), each with its own result list.
-      Label the top 10 of each group separately (see rubric.md).
+      A person in navy printed palazzo trousers and a white top. Expected: one group for the
+      top and one for the bottoms (palazzo trousers), plus shoes only if they are visible. Label
+      the top 10 of each group separately (see rubric.md). The trousers are bottoms, not a dress.
 
-  - id: q05_outfit_layered
+  - id: q05_outfit_dress_heels
     type: outfit_photo
     text: null
-    image: eval/data/assets/private/outfit_layered.jpg
+    image: eval/data/assets/private/outfit_black_dress_heels.png
     notes: >-
-      Full-body photo with outerwear over a top, plus bottoms and shoes (4 garments, the
-      most the app handles). Expected: four item groups. Tests the 4-garment cap and the
-      time budget (about 4x the search pages).
+      A person in a black dress and heels. A dress worn with shoes is two garments (PRD).
+      Expected: two groups, dresses and shoes, each with its own result list. Label the top 10
+      of each group separately (see rubric.md).
 
   # ---- Text (3) ------------------------------------------------------------------------
   - id: q06_text_blazer_budget
@@ -93,20 +101,20 @@ queries:
       budget, all four price ranges are filled by the quartile rule.
 
   # ---- Photo + text (2) ----------------------------------------------------------------
-  - id: q09_photo_text_jacket_brown
+  - id: q09_photo_text_gown_green
     type: photo_text
-    text: similar but dark brown and cheaper
-    image: eval/data/assets/private/product_jacket.jpg
+    text: similar but dark green and cheaper
+    image: eval/data/assets/private/dress_burgundy_gown.png
     notes: >-
-      Reuses the q01 jacket photo. The photo gives the look; the text changes the colour to
-      dark brown and asks for cheaper. No budget is given, so "cheaper" switches the request
-      to the value-first mix (plan assumption A7). Good match = a jacket of the same kind in
-      dark brown.
+      Reuses the q01 gown photo. The photo gives the look; the text changes the colour to
+      dark green and asks for cheaper. No budget is given, so "cheaper" switches the request
+      to the value-first mix (plan assumption A7). Good match = a gown or long evening dress
+      in dark green.
 
   - id: q10_photo_text_jeans_black
     type: photo_text
     text: same cut but in black, under 250 AED
-    image: eval/data/assets/private/product_jeans.jpg
+    image: eval/data/assets/private/bottoms_light_blue_skinny_jeans.png
     notes: >-
       Reuses the q03 photo. The photo gives the cut; the text changes the colour to black and
       sets a budget of 250 AED. Good match = same garment type and cut in black.
