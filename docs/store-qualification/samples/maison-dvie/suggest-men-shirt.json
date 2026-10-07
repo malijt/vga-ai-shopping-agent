@@ -1,0 +1,120 @@
+{
+ "resources": {
+  "results": {
+   "products": [
+    {
+     "available": true,
+     "body": "Man linen light shirt with long sleeves. White color, regular fit, buttoned in the front",
+     "compare_at_price_max": "0.00",
+     "compare_at_price_min": "0.00",
+     "handle": "pamplona-men-shirt-white",
+     "id": 7675193950458,
+     "image": "https://cdn.shopify.com/s/files/1/0654/8160/5370/products/mc2-saint-barth-male-pamplona-shirt-white-main.jpg?v=1658141136",
+     "price": "610.00",
+     "price_max": "610.00",
+     "price_min": "610.00",
+     "tags": [
+      "Gifts collection",
+      "Men"
+     ],
+     "title": "Pamplona Men Shirt White",
+     "type": "Men shirts",
+     "url": "/products/pamplona-men-shirt-white?_pos=1&_psq=men+shirt&_psid=501f37b2c&_ss=e",
+     "variants": [],
+     "vendor": "MC2 Saint Barth",
+     "featured_image": {
+      "alt": "MC2 Saint Barth men linen light shirt with long sleeves in white color, front view",
+      "aspect_ratio": 0.666,
+      "height": 1441,
+      "url": "https://cdn.shopify.com/s/files/1/0654/8160/5370/products/mc2-saint-barth-male-pamplona-shirt-white-main.jpg?v=1658141136",
+      "width": 960
+     }
+    },
+    {
+     "available": true,
+     "body": "Man linen light shirt with long sleeves. Beige color, regular fit, buttoned in the front",
+     "compare_at_price_max": "0.00",
+     "compare_at_price_min": "0.00",
+     "handle": "pamplona-men-shirt-beige",
+     "id": 7675193983226,
+     "image": "https://cdn.shopify.com/s/files/1/0654/8160/5370/products/mc2-saint-barth-male-pamplona-shirt-beige-main.jpg?v=1658140563",
+     "price": "610.00",
+     "price_max": "610.00",
+     "price_min": "610.00",
+     "tags": [
+      "Gifts collection",
+      "Men"
+     ],
+     "title": "Pamplona Men Shirt Beige",
+     "type": "Men shirts",
+     "url": "/products/pamplona-men-shirt-beige?_pos=2&_psq=men+shirt&_psid=501f37b2c&_ss=e",
+     "variants": [],
+     "vendor": "MC2 Saint Barth",
+     "featured_image": {
+      "alt": "MC saint barth male pamplona shirt beige main",
+      "aspect_ratio": 0.667,
+      "height": 1440,
+      "url": "https://cdn.shopify.com/s/files/1/0654/8160/5370/products/mc2-saint-barth-male-pamplona-shirt-beige-main.jpg?v=1658140563",
+      "width": 960
+     }
+    },
+    {
+     "available": true,
+     "body": "Man linen light shirt with long sleeves. Orange color, regular fit, buttoned in the front",
+     "compare_at_price_max": "0.00",
+     "compare_at_price_min": "0.00",
+     "handle": "pamplona-men-shirt-orange",
+     "id": 7675194015994,
+     "image": "https://cdn.shopify.com/s/files/1/0654/8160/5370/products/mc2-saint-barth-male-pamplona-shirt-orange-main.jpg?v=1658140999",
+     "price": "610.00",
+     "price_max": "610.00",
+     "price_min": "610.00",
+     "tags": [
+      "Gifts collection",
+      "Men"
+     ],
+     "title": "Pamplona Men Shirt Orange",
+     "type": "Men shirts",
+     "url": "/products/pamplona-men-shirt-orange?_pos=3&_psq=men+shirt&_psid=501f37b2c&_ss=e",
+     "variants": [],
+     "vendor": "MC2 Saint Barth",
+     "featured_image": {
+      "alt": "MC saint barth male pamplona shirt orange main",
+      "aspect_ratio": 0.667,
+      "height": 1440,
+      "url": "https://cdn.shopify.com/s/files/1/0654/8160/5370/products/mc2-saint-barth-male-pamplona-shirt-orange-main.jpg?v=1658140999",
+      "width": 960
+     }
+    },
+    {
+     "available": true,
+     "body": "Man linen light shirt with long sleeves. Blue color, regular fit, buttoned in the front",
+     "compare_at_price_max": "0.00",
+     "compare_at_price_min": "0.00",
+     "handle": "pamplona-men-shirt-bluette",
+     "id": 7675194048762,
+     "image": "https://cdn.shopify.com/s/files/1/0654/8160/5370/products/mc2-saint-barth-male-pamplona-shirt-bluette-main.jpg?v=1658140688",
+     "price": "610.00",
+     "price_max": "610.00",
+     "price_min": "610.00",
+     "tags": [
+      "Gifts collection",
+      "Men"
+     ],
+     "title": "Pamplona Men Shirt Bluette",
+     "type": "Men shirts",
+     "url": "/products/pamplona-men-shirt-bluette?_pos=4&_psq=men+shirt&_psid=501f37b2c&_ss=e",
+     "variants": [],
+     "vendor": "MC2 Saint Barth",
+     "featured_image": {
+      "alt": "MC saint barth male pamplona shirt bluette main",
+      "aspect_ratio": 0.667,
+      "height": 1440,
+      "url": "https://cdn.shopify.com/s/files/1/0654/8160/5370/products/mc2-saint-barth-male-pamplona-shirt-bluette-main.jpg?v=1658140688",
+      "width": 960
+     }
+    }
+   ]
+  }
+ }
+}

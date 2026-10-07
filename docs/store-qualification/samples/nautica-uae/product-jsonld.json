@@ -1,0 +1,53 @@
+{
+ "@context": "http://schema.org/",
+ "@type": "Product",
+ "name": "Men's Solid Linen Shirt - White",
+ "url": "https://nautica-ae.com/products/mens-solid-linen-shirt-white",
+ "image": [
+  "https://nautica-ae.com/cdn/shop/files/STYLE_36_pose2_Studio_STYLE_36_pose1_Studio_model_4_bg1_bg1_1_864x.jpg?v=1774697278"
+ ],
+ "description": "This men&#39;s long sleeve shirt from Nautica in white features a solid design. Made with linen and Tencel, this linen-blend shirt has a collar.DetailsMen&#39;s solid linen shirtPattern: SolidCollar type: CollarSleeve type: Long sleeveComposition: Tencel LinenCare: Machine wash coldStyle Colour Code",
+ "sku": "3623001556023",
+ "mpn": "3623001556023",
+ "brand": {
+  "@type": "Brand",
+  "name": "Nautica"
+ },
+ "offers": [
+  {
+   "@type": "Offer",
+   "sku": "3623001556023",
+   "mpn": "3623001556023",
+   "availability": "http://schema.org/InStock",
+   "price": "139.0",
+   "priceValidUntil": "2026-10-08 22:09",
+   "priceCurrency": "AED",
+   "url": "https://nautica-ae.com/products/mens-solid-linen-shirt-white?variant=45447467729033"
+  },
+  {
+   "@type": "Offer",
+   "sku": "3623001556054",
+   "mpn": "3623001556054",
+   "availability": "http://schema.org/InStock",
+   "price": "139.0",
+   "priceValidUntil": "2026-10-08 22:09",
+   "priceCurrency": "AED",
+   "url": "https://nautica-ae.com/products/mens-solid-linen-shirt-white?variant=45447467761801"
+  },
+  {
+   "@type": "Offer",
+   "sku": "3623001556085",
+   "mpn": "3623001556085",
+   "availability": "http://schema.org/InStock",
+   "price": "139.0",
+   "priceValidUntil": "2026-10-08 22:09",
+   "priceCurrency": "AED",
+   "url": "https://nautica-ae.com/products/mens-solid-linen-shirt-white?variant=45447467794569"
+  }
+ ],
+ "aggregateRating": {
+  "@type": "AggregateRating",
+  "ratingValue": "",
+  "reviewCount": ""
+ }
+}

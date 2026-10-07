@@ -1,0 +1,74 @@
+{
+ "@context": "http://schema.org",
+ "@type": "Product",
+ "name": "Slim Fit Travel Poplin Shirt in Comfort Cotton",
+ "url": "https://ae.sacoorbrothers.com/products/slim-fit-travel-poplin-shirt-in-comfort-cotton-185",
+ "image": [
+  "https://ae.sacoorbrothers.com/cdn/shop/files/4f01dcfcd2f999e0506905b96bf1b34e_df01239e-f5cb-4e4d-a2b6-b2e5ab6847ea.jpg?v=1784823131&width=938"
+ ],
+ "description": "A refined piece that offers lasting elegance and easy versatility. Made from a comfort cotton poplin blend with polyester and spandex, this Travel line shirt ensures perfect comfort, an excellent fit, and top-performance yarns for elasticity, breathability, and a subtle shine. Designed in a slim fit",
+ "sku": "12212825792231",
+ "brand": {
+  "@type": "Brand",
+  "name": "Sacoor Brothers"
+ },
+ "offers": [
+  {
+   "@type": "Offer",
+   "sku": "12212825792265",
+   "availability": "http://schema.org/OutOfStock",
+   "price": 495.0,
+   "priceCurrency": "AED",
+   "url": "https://ae.sacoorbrothers.com/products/slim-fit-travel-poplin-shirt-in-comfort-cotton-185?variant=41659124154423",
+   "seller": {
+    "@type": "Organization",
+    "name": "Sacoor Brothers",
+    "sameAs": [
+     "https://www.facebook.com/SacoorBrothers/",
+     "https://www.youtube.com/user/SBrothersOfficial",
+     "https://www.instagram.com/sacoorbrothers/?hl=en",
+     "https://www.pinterest.com/sacoor/",
+     "https://linkedin.com/company/sacoor-brothers"
+    ]
+   }
+  },
+  {
+   "@type": "Offer",
+   "sku": "12212825792205",
+   "availability": "http://schema.org/OutOfStock",
+   "price": 495.0,
+   "priceCurrency": "AED",
+   "url": "https://ae.sacoorbrothers.com/products/slim-fit-travel-poplin-shirt-in-comfort-cotton-185?variant=41659124187191",
+   "seller": {
+    "@type": "Organization",
+    "name": "Sacoor Brothers",
+    "sameAs": [
+     "https://www.facebook.com/SacoorBrothers/",
+     "https://www.youtube.com/user/SBrothersOfficial",
+     "https://www.instagram.com/sacoorbrothers/?hl=en",
+     "https://www.pinterest.com/sacoor/",
+     "https://linkedin.com/company/sacoor-brothers"
+    ]
+   }
+  },
+  {
+   "@type": "Offer",
+   "sku": "12212825792297",
+   "availability": "http://schema.org/OutOfStock",
+   "price": 495.0,
+   "priceCurrency": "AED",
+   "url": "https://ae.sacoorbrothers.com/products/slim-fit-travel-poplin-shirt-in-comfort-cotton-185?variant=41659124219959",
+   "seller": {
+    "@type": "Organization",
+    "name": "Sacoor Brothers",
+    "sameAs": [
+     "https://www.facebook.com/SacoorBrothers/",
+     "https://www.youtube.com/user/SBrothersOfficial",
+     "https://www.instagram.com/sacoorbrothers/?hl=en",
+     "https://www.pinterest.com/sacoor/",
+     "https://linkedin.com/company/sacoor-brothers"
+    ]
+   }
+  }
+ ]
+}

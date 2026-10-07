@@ -1,0 +1,49 @@
+{
+ "@context": "http://schema.org",
+ "@type": "Product",
+ "offers": [
+  {
+   "@type": "Offer",
+   "sku": "ma-Tee-112",
+   "availability": "http://schema.org/InStock",
+   "price": 150.0,
+   "priceCurrency": "AED",
+   "priceValidUntil": "2026-10-17",
+   "url": "https://good-times.ae/products/marble-tee?variant=42160588226818"
+  },
+  {
+   "@type": "Offer",
+   "sku": "ma-Tee-113",
+   "availability": "http://schema.org/InStock",
+   "price": 150.0,
+   "priceCurrency": "AED",
+   "priceValidUntil": "2026-10-17",
+   "url": "https://good-times.ae/products/marble-tee?variant=42160588259586"
+  },
+  {
+   "@type": "Offer",
+   "sku": "ma-Tee-114",
+   "availability": "http://schema.org/InStock",
+   "price": 150.0,
+   "priceCurrency": "AED",
+   "priceValidUntil": "2026-10-17",
+   "url": "https://good-times.ae/products/marble-tee?variant=42160588292354"
+  }
+ ],
+ "brand": "The Ragged Priest",
+ "sku": "ma-Tee-112",
+ "name": "Marble Tee",
+ "description": "\n\n \n\n\n\n\nFree UAE delivery\nFree returns and exchanges\n\n\nRagged Jeans mens black &amp; blue marble print short sleeve tee\n100% Cotton\nMachine wash inside out on a cool wash at 30 Degrees\nModel is 183 cm and wears a size M\n\nSize Chart\n\n\nThe Ragged Priest is a brand from the UK, established in 2007. The",
+ "category": "",
+ "url": "https://good-times.ae/products/marble-tee",
+ "mpn": "ma-Tee-112",
+ "productId": "ma-Tee-112",
+ "image": {
+  "@type": "ImageObject",
+  "url": "https://good-times.ae/cdn/shop/products/RP_Mens_ACC_19.043797_1024x1024.jpg?v=1639206242",
+  "image": "https://good-times.ae/cdn/shop/products/RP_Mens_ACC_19.043797_1024x1024.jpg?v=1639206242",
+  "name": "Marble Tee",
+  "width": 1024,
+  "height": 1024
+ }
+}

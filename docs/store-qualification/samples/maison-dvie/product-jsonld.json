@@ -1,0 +1,41 @@
+{
+ "@context": "http://schema.org/",
+ "@type": "Product",
+ "name": "Pamplona Men Shirt White",
+ "url": "https://maisondvie.com/products/pamplona-men-shirt-white",
+ "image": [
+  "https://maisondvie.com/cdn/shop/products/mc2-saint-barth-male-pamplona-shirt-white-main.jpg?v=1658141136&width=960"
+ ],
+ "description": "Man linen light shirt with long sleeves. White color, regular fit, buttoned in the front",
+ "sku": "MC22PAM-WH-S",
+ "brand": {
+  "@type": "Brand",
+  "name": "MC2 Saint Barth"
+ },
+ "offers": [
+  {
+   "@type": "Offer",
+   "sku": "MC22PAM-WH-S",
+   "availability": "http://schema.org/InStock",
+   "price": 610.0,
+   "priceCurrency": "AED",
+   "url": "https://maisondvie.com/products/pamplona-men-shirt-white?variant=42990442316026"
+  },
+  {
+   "@type": "Offer",
+   "sku": "MC22PAM-WH-M",
+   "availability": "http://schema.org/InStock",
+   "price": 610.0,
+   "priceCurrency": "AED",
+   "url": "https://maisondvie.com/products/pamplona-men-shirt-white?variant=42990442348794"
+  },
+  {
+   "@type": "Offer",
+   "sku": "MC22PAM-WH-L",
+   "availability": "http://schema.org/InStock",
+   "price": 610.0,
+   "priceCurrency": "AED",
+   "url": "https://maisondvie.com/products/pamplona-men-shirt-white?variant=42990442381562"
+  }
+ ]
+}
