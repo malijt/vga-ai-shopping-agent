@@ -1,16 +1,16 @@
-"""Sidebar settings: the price-range mix presets and an optional budget (plan 10.1.3).
+"""Sidebar settings: the price-range mix presets (plan 10.1.3).
 
 Only the three presets from the PRD, no custom sliders and no result-count control (those are on
-the deferred list until a stakeholder asks for them). The choice is returned as a
+the deferred list until a stakeholder asks for them). There is no budget here: a request has one
+budget, and it lives in the "Detected by AI" chips, where it is shown and editable after a search.
+The shopper can also state a budget in the request text. The choice is returned as a
 ``SettingsOverride`` that goes to the pipeline with the next search.
 """
 
 import streamlit as st
 
 from app import state
-from vga.models import DEFAULT_CURRENCY, Budget, MixPreset, SettingsOverride, TierMix
-
-BUDGET_MAX = 1_000_000.0
+from vga.models import MixPreset, SettingsOverride, TierMix
 
 
 def preset_caption(mix: TierMix) -> str:
@@ -35,19 +35,5 @@ def render_sidebar(*, disabled: bool) -> SettingsOverride:
             key=state.MIX_KEY,
             disabled=disabled,
         )
-        budget = st.number_input(
-            f"Budget for your next search in {DEFAULT_CURRENCY} (optional)",
-            min_value=1.0,
-            max_value=BUDGET_MAX,
-            value=None,
-            step=10.0,
-            format="%g",
-            placeholder="For example: 400",
-            key=state.SIDEBAR_BUDGET_KEY,
-            disabled=disabled,
-        )
-        st.markdown("These settings apply to your next search.")
-    return SettingsOverride(
-        tier_mix=preset.mix,
-        budget=Budget(max_price=budget, currency=DEFAULT_CURRENCY) if budget else None,
-    )
+        st.markdown("This applies to your next search.")
+    return SettingsOverride(tier_mix=preset.mix)

@@ -1,4 +1,4 @@
-"""The input panel: a photo, a description, or both, and the "Search stores" button.
+"""The input panel: a photo, a one-line description, or both, and the "Search stores" button.
 
 The button is disabled until there is valid input and while a search runs, so an empty or broken
 request cannot be sent (prevent the error rather than report it). The browser already limits the
@@ -18,6 +18,12 @@ from vga.models import MAX_TEXT_CHARS
 MAX_PHOTO_MB = 8
 """Largest photo accepted. ``.streamlit/config.toml`` sets the same number for the server."""
 ALLOWED_PHOTO_TYPES = ["png", "jpg", "jpeg", "webp"]
+
+TEXT_COMMIT_PAUSE = "250ms"
+"""The description box sends what is typed after this pause, so the button enables as soon as the
+shopper has typed something. A text area would only send on blur or Ctrl+Enter, and a click on
+the still-disabled button would be lost (seen in a browser). A request is short, so one line is
+enough."""
 
 MESSAGE_WRONG_TYPE = "That file is not a PNG, JPG or WebP photo. Choose another file."
 MESSAGE_TOO_LARGE = (
@@ -83,17 +89,15 @@ def render_input_panel(*, disabled: bool) -> InputState:
             st.error(photo_error)
 
     with text_column:
-        raw_text = st.text_area(
+        raw_text = st.text_input(
             "Description (optional)",
             key=state.TEXT_KEY,
             max_chars=MAX_TEXT_CHARS,
-            height=140,
+            live=TEXT_COMMIT_PAUSE,
             placeholder="For example: black oversized blazer for men under 400 AED",
             disabled=disabled,
         )
-        st.markdown(
-            "English or Arabic. Press Ctrl+Enter or click outside the box to confirm your text."
-        )
+        st.markdown("English or Arabic. Add a photo, a description, or both.")
 
     inputs = InputState(text=(raw_text or "").strip() or None, photo=photo, photo_error=photo_error)
     st.button(

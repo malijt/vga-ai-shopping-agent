@@ -1,7 +1,8 @@
 """Chips: what the AI detected, shown so the shopper can fix it (plan 10.2.1, PRD R3).
 
 Per detected item the shopper can change the category, the colour and the gender; the budget is
-one value for the whole request (``ChipEdits`` has one budget). Two rules matter here:
+one value for the whole request (``ChipEdits`` has one budget). It is the only budget box on the
+page; a shopper can also state one in the request text. Two rules matter here:
 
 - A gender the AI only guessed is shown as "not confirmed" and stays unset until the shopper
   chooses one (BRD Rule 8, assumption A3). Choosing it is the confirmation.

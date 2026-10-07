@@ -14,7 +14,7 @@ from streamlit.testing.v1 import AppTest
 
 from tests.factories import make_image_bytes
 from tests.ui.conftest import InstallPipeline
-from tests.ui.helpers import PHOTO, SEARCH_BUTTON, TEXT_AREA, search
+from tests.ui.helpers import PHOTO, SEARCH_BUTTON, TEXT_BOX, search
 from vga.errors import InvalidInputError
 from vga.models import MAX_TEXT_CHARS
 
@@ -35,7 +35,7 @@ class TestSearchButton:
     def test_typing_a_description_enables_the_button(self, at: AppTest) -> None:
         at.run()
 
-        at.text_area(key=TEXT_AREA).set_value("black blazer").run()
+        at.text_input(key=TEXT_BOX).set_value("black blazer").run()
 
         assert search_button(at).disabled is False
 
@@ -43,15 +43,15 @@ class TestSearchButton:
     def test_blank_text_does_not_count_as_input(self, at: AppTest, blank: str) -> None:
         at.run()
 
-        at.text_area(key=TEXT_AREA).set_value(blank).run()
+        at.text_input(key=TEXT_BOX).set_value(blank).run()
 
         assert search_button(at).disabled is True
 
     def test_clearing_the_text_disables_the_button_again(self, at: AppTest) -> None:
         at.run()
-        at.text_area(key=TEXT_AREA).set_value("black blazer").run()
+        at.text_input(key=TEXT_BOX).set_value("black blazer").run()
 
-        at.text_area(key=TEXT_AREA).set_value("").run()
+        at.text_input(key=TEXT_BOX).set_value("").run()
 
         assert search_button(at).disabled is True
 
@@ -80,8 +80,36 @@ class TestSearchButton:
         at = AppTest.from_function(script).run()
 
         assert at.button(key=SEARCH_BUTTON).disabled is True
-        assert at.text_area(key=TEXT_AREA).disabled is True
+        assert at.text_input(key=TEXT_BOX).disabled is True
         assert at.file_uploader(key=PHOTO).disabled is True
+
+
+class TestDescriptionBox:
+    """A one-line box that sends what is typed after a short pause (plan 10.1.2). A text area only
+    sends on blur or Ctrl+Enter, so the first click on the still-disabled button was lost."""
+
+    def test_it_is_a_single_line_input_not_a_text_area(self, at: AppTest) -> None:
+        at.run()
+
+        assert not at.text_area
+        assert at.text_input(key=TEXT_BOX).label == "Description (optional)"
+
+    def test_it_sends_the_text_while_typing_after_a_short_pause(self, at: AppTest) -> None:
+        at.run()
+
+        assert 0 < at.text_input(key=TEXT_BOX).proto.live_debounce_ms <= 500
+
+    def test_the_old_confirm_hint_is_gone_because_it_is_no_longer_needed(self, at: AppTest) -> None:
+        at.run()
+
+        assert not any("Ctrl+Enter" in markdown.value for markdown in at.markdown)
+
+    def test_the_text_direction_rule_covers_the_box_so_arabic_lines_up(self, at: AppTest) -> None:
+        at.run()
+
+        (rule,) = [str(node.proto.body) for node in at.get("html")]
+        assert 'input[type="text"]' in rule
+        assert "unicode-bidi: plaintext" in rule
 
 
 class TestPhotoChecks:
@@ -132,12 +160,12 @@ class TestPhotoChecks:
 
     def test_a_bad_photo_blocks_search_even_when_there_is_text(self, at: AppTest) -> None:
         at.run()
-        at.text_area(key=TEXT_AREA).set_value("black blazer").run()
+        at.text_input(key=TEXT_BOX).set_value("black blazer").run()
 
         at.file_uploader(key=PHOTO).set_value(("x.jpg", b"hello", "image/jpeg")).run()
 
         assert search_button(at).disabled is True
-        assert at.text_area(key=TEXT_AREA).value == "black blazer"
+        assert at.text_input(key=TEXT_BOX).value == "black blazer"
 
     def test_a_png_renamed_to_jpg_is_accepted_because_the_bytes_decide_not_the_name(
         self, at: AppTest
@@ -193,13 +221,13 @@ class TestInputSurvivesErrors:
 
         search(at, "black oversized blazer")
 
-        assert at.text_area(key=TEXT_AREA).value == "black oversized blazer"
+        assert at.text_input(key=TEXT_BOX).value == "black oversized blazer"
         assert search_button(at).disabled is False
 
     def test_long_text_at_the_limit_is_accepted_by_the_box(self, at: AppTest) -> None:
         at.run()
 
-        assert at.text_area(key=TEXT_AREA).max_chars == MAX_TEXT_CHARS
+        assert at.text_input(key=TEXT_BOX).max_chars == MAX_TEXT_CHARS
 
     def test_arabic_text_round_trips_unchanged(
         self, at: AppTest, install_pipeline: InstallPipeline
@@ -210,5 +238,5 @@ class TestInputSurvivesErrors:
 
         search(at, arabic)
 
-        assert at.text_area(key=TEXT_AREA).value == arabic
+        assert at.text_input(key=TEXT_BOX).value == arabic
         assert fake.calls[-1].req.text == arabic

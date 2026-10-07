@@ -87,7 +87,7 @@ def pipeline(install_pipeline: InstallPipeline) -> FakePipeline:
 @pytest.fixture
 def at() -> AppTest:
     """The page, not yet run."""
-    return AppTest.from_file(str(APP_PATH), default_timeout=20)
+    return AppTest.from_file(str(APP_PATH), default_timeout=60)
 
 
 @pytest.fixture

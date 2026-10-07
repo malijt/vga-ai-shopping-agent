@@ -25,7 +25,7 @@ from tests.factories import (
 )
 from tests.fakes import FakePipeline
 from tests.ui.conftest import InstallPipeline
-from tests.ui.helpers import SEARCH_BUTTON, TEXT_AREA, plain_texts, search, visible_strings
+from tests.ui.helpers import SEARCH_BUTTON, TEXT_BOX, plain_texts, search, visible_strings
 from vga.errors import GENERIC_USER_MESSAGE, InvalidInputError, LlmError
 from vga.models import Category, Gender, Step, StepTiming, StoreStatus
 
@@ -89,7 +89,7 @@ class TestErrorBoundary:
         search(at)
 
         assert at.button(key=SEARCH_BUTTON).disabled is False
-        assert at.text_area(key=TEXT_AREA).disabled is False
+        assert at.text_input(key=TEXT_BOX).disabled is False
 
     def test_the_error_goes_away_when_the_next_search_succeeds(
         self, at: AppTest, install_pipeline: InstallPipeline
