@@ -72,14 +72,23 @@ def two_stores(world: StoreWorld) -> list[StoreConfig]:
 
 
 async def run_inline[T](function: Callable[..., T], /, *args: Any, **kwargs: Any) -> T:
-    """``asyncio.to_thread`` without the thread.
-
-    The real FashionSigLIP ranker hands its model work to a worker thread. The ``FakeClock`` moves
-    time on whenever the event loop looks idle, and a loop waiting for a thread looks idle, so
-    virtual time would race to the 30 s deadline while the (instant) fake model "runs". With a fake
-    embedder there is nothing to offload, so the tests run it in place.
-    """
+    """``asyncio.to_thread`` without the thread."""
     return function(*args, **kwargs)
+
+
+@pytest.fixture(autouse=True)
+def _no_worker_threads(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Run work that would be handed to a worker thread in place, in every test here.
+
+    The ``FakeClock`` moves virtual time on once the event loop has run a few hundred iterations
+    with nothing to do, and a loop that is waiting for a worker thread looks exactly like that:
+    the pipeline's 30 s deadline would then be reached while the thread is still starting up (the
+    main thread holds the interpreter for up to 5 ms before the worker gets a turn). It happens
+    whether a fake model embeds an image (the FashionSigLIP ranker uses ``asyncio.to_thread``) or
+    the OpenAI SDK reads the platform name before its first request. Nothing here does real
+    blocking work, so there is nothing to offload.
+    """
+    monkeypatch.setattr(asyncio, "to_thread", run_inline)
 
 
 class PipelineMaker:
@@ -91,17 +100,10 @@ class PipelineMaker:
     real requests to the fake CDN and can be counted.
     """
 
-    def __init__(
-        self,
-        world: StoreWorld,
-        clock: FakeClock,
-        settings: Settings,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
+    def __init__(self, world: StoreWorld, clock: FakeClock, settings: Settings) -> None:
         self._world = world
         self._clock = clock
         self._settings = settings
-        self._monkeypatch = monkeypatch
         self.engines: list[StoreSearchEngine] = []
         self.spy: SpySearcher | None = None
         self.ranker_spy: SpyImageRanker | None = None
@@ -127,7 +129,6 @@ class PipelineMaker:
             searcher = wrap_searcher(searcher)
         ranker = image_ranker or FakeImageRanker()
         if thumbnails:
-            self._monkeypatch.setattr(asyncio, "to_thread", run_inline)
             self.embedder = ColourEmbedder()
             embedder = self.embedder
             ranker = SiglipImageRanker(
@@ -152,8 +153,8 @@ class PipelineMaker:
 
 @pytest.fixture
 async def make_pipeline(
-    world: StoreWorld, clock: FakeClock, settings: Settings, monkeypatch: pytest.MonkeyPatch
+    world: StoreWorld, clock: FakeClock, settings: Settings
 ) -> AsyncIterator[PipelineMaker]:
-    maker = PipelineMaker(world, clock, settings, monkeypatch)
+    maker = PipelineMaker(world, clock, settings)
     yield maker
     await maker.aclose()
