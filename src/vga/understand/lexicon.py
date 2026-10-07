@@ -74,9 +74,21 @@ _CURRENCY = (
 _NUMBER = r"\d[\d,.٫٬]{0,14}k?"  # bounded: a long run of digits cannot make a match slow
 _TRAILING_LIMIT = r"(?:\s+(?:or|and)\s+(?:less|under|below|lower|fewer)|\s+max(?:imum)?|\s+tops?)"
 
+_PERCENT = r"(?:%|\u066a|percent|per\s?cent|pct)"
+_OFF = r"(?:off|discount|reduction)(?![-\w])"  # not "off-white", "off-shoulder"
+_AR_DISCOUNT = rf"{_AR_PREFIX}(?:خصم|تخفيض|حسم)"
+
 _PRICE_PHRASES = re.compile(
     "|".join(
         [
+            # "70 percent off", "70% off", "up to 70% off", "50 percent discount", "off 50%"
+            rf"(?<!\w){_ANY_QUALIFIER}?\s*{_NUMBER}\s*{_PERCENT}\s*{_OFF}",
+            rf"(?<!\w)off\s+{_NUMBER}\s*{_PERCENT}(?!\w)",
+            # "100 AED off", "AED 100 off" (this must go before the plain currency phrases below)
+            rf"(?<!\w)(?:{_CURRENCY}\s*{_NUMBER}|{_NUMBER}\s*{_CURRENCY})\s+off(?![-\w])",
+            # Arabic: "70٪ خصم", "خصم 70%", "خصم بنسبة 70%"
+            rf"(?<!\w){_NUMBER}\s*{_PERCENT}\s*{_AR_DISCOUNT}(?!\w)",
+            rf"(?<!\w){_AR_DISCOUNT}\s*(?:بنسبه|بنسبة|حتى|حتي|الى|إلى)?\s*{_NUMBER}\s*{_PERCENT}",
             # Arabic "at a suitable price" must go before the single words below it.
             rf"(?<!\w){_AR_PREFIX}سعر(?:ه|ها)?\s+(?:ال)?مناسب(?:ه|ة)?(?!\w)",
             # "AED 400", "under $300"
@@ -95,18 +107,20 @@ _PRICE_PHRASES = re.compile(
 )
 
 _LOWER_PRICE_EN = (
-    r"cheap(?:er|est)?|budget|affordable|inexpensive|economical|economy|bargains?"
-    r"|discount(?:ed)?|sale|deals?|clearance|offers?"
+    r"cheap(?:er|est|ly)?|budgets?|affordable|inexpensive|economical|economy|bargains?"
+    r"|discount(?:s|ed)?|sales?|mark[-\s]?downs?|marked[-\s]?down|deals?|clearance|offers?"
+    r"|half[-\s]?price|price[-\s]?(?:cuts?|drops?|reductions?)"
     r"|(?:less|not\s+(?:too|so|that|as))\s+(?:expensive|pricey|costly)"
     r"|low(?:er)?[-\s]?(?:price|cost|priced)|(?:best|good|great|lowest)\s+price"
     r"|value\s+for\s+money|on\s+a\s+budget"
 )
 _HIGHER_PRICE_EN = r"expensive|pricey|pricier|costly|luxury|premium|high[-\s]?end"
-_NEUTRAL_PRICE_EN = r"price[sd]?"
+_NEUTRAL_PRICE_EN = r"pric(?:e[sd]?|ing)"
 
 _LOWER_PRICE_AR = (
     r"رخيص(?:ه|ة|ين)?|ارخص|أرخص|اوفر|أوفر|اقتصادي(?:ه|ة)?|ميزانيه|ميزانية|تخفيضات?|خصم|خصومات"
-    r"|عروض|(?:اقل|أقل)\s+(?:سعرا|تكلفه|تكلفة)|سعر\s+(?:اقل|أقل)"
+    r"|عروض|تنزيلات?|حسم|حسومات|تصفيه|تصفية|اوكازيون|أوكازيون"
+    r"|(?:اقل|أقل)\s+(?:سعرا|تكلفه|تكلفة)|سعر\s+(?:اقل|أقل)"
 )
 _HIGHER_PRICE_AR = r"غالي(?:ه|ة)?|فاخر(?:ه|ة)?"
 _NEUTRAL_PRICE_AR = r"سعر|اسعار|أسعار"

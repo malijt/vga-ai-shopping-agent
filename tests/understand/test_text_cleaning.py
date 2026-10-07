@@ -45,6 +45,96 @@ def test_price_words_and_phrases_are_removed_from_keywords(raw: str, expected: s
 
 
 @pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        # plurals and inflections of words the lexicon already knew
+        ("black leather jacket discounts", "black leather jacket"),
+        ("black leather jacket discounted", "black leather jacket"),
+        ("black leather jacket sales", "black leather jacket"),
+        ("sale black leather jacket", "black leather jacket"),
+        ("black leather jacket budgets", "black leather jacket"),
+        ("black leather jacket cheaply", "black leather jacket"),
+        ("black leather jacket pricing", "black leather jacket"),
+        ("black leather jacket deals and offers", "black leather jacket"),
+        # markdowns, clearance, price cuts
+        ("black leather jacket markdown", "black leather jacket"),
+        ("black leather jacket markdowns", "black leather jacket"),
+        ("black leather jacket mark down", "black leather jacket"),
+        ("black leather jacket mark-down", "black leather jacket"),
+        ("black leather jacket marked down", "black leather jacket"),
+        ("black leather jacket clearance", "black leather jacket"),
+        ("black leather jacket half price", "black leather jacket"),
+        ("black leather jacket half-price", "black leather jacket"),
+        ("black leather jacket price cut", "black leather jacket"),
+        ("black leather jacket price drops", "black leather jacket"),
+        # "NN percent off" and its relatives are phrases, so no number or "off" is left behind
+        ("black leather jacket 70 percent off", "black leather jacket"),
+        ("black leather jacket 70% off", "black leather jacket"),
+        ("black leather jacket 70%off", "black leather jacket"),
+        ("black leather jacket 70 per cent off", "black leather jacket"),
+        ("black leather jacket 70 pct off", "black leather jacket"),
+        ("black leather jacket up to 70% off", "black leather jacket"),
+        ("black leather jacket 25.5% off", "black leather jacket"),
+        ("black leather jacket 50 percent discount", "black leather jacket"),
+        ("black leather jacket off 50%", "black leather jacket"),
+        ("black leather jacket 100 AED off", "black leather jacket"),
+        ("black leather jacket AED 100 off", "black leather jacket"),
+        # Arabic
+        ("جاكيت جلد أسود تنزيلات", "جاكيت جلد أسود"),
+        ("جاكيت جلد أسود تصفية", "جاكيت جلد أسود"),
+        ("جاكيت جلد أسود أوكازيون", "جاكيت جلد أسود"),
+        ("جاكيت جلد أسود حسومات", "جاكيت جلد أسود"),
+        ("جاكيت جلد أسود خصومات", "جاكيت جلد أسود"),
+        ("جاكيت جلد أسود تخفيضات", "جاكيت جلد أسود"),
+        ("جاكيت جلد أسود خصم 70%", "جاكيت جلد أسود"),
+        ("جاكيت جلد أسود خصم \u0667\u0660\u066a", "جاكيت جلد أسود"),  # Arabic-Indic 70 and percent
+        ("جاكيت جلد أسود 70٪ خصم", "جاكيت جلد أسود"),
+        ("جاكيت جلد أسود خصم بنسبة 70%", "جاكيت جلد أسود"),
+        ("جاكيت جلد أسود بأسعار أوفر", "جاكيت جلد أسود"),
+        ("جاكيت جلد أسود بسعر أقل", "جاكيت جلد أسود"),
+        ("جاكيت جلد أسود الأرخص", "جاكيت جلد أسود"),
+        # diacritics and tatweel do not hide a price word
+        ("رَخِيص جاكيت أسود", "جاكيت أسود"),
+        ("رخـــيص جاكيت أسود", "جاكيت أسود"),
+        # whole directions of price
+        ("black leather jacket less expensive", "black leather jacket"),
+        ("black leather jacket not too pricey", "black leather jacket"),
+        ("black leather jacket pricier costly", "black leather jacket"),
+        ("black leather jacket lower price", "black leather jacket"),
+    ],
+)
+def test_more_price_words_and_phrases_are_removed_from_keywords(raw: str, expected: str) -> None:
+    assert clean_keyword(raw, allow_gender=True) == expected
+
+
+@pytest.mark.parametrize(
+    "kept",
+    [
+        "off-white sneakers",
+        "off white sneakers",
+        "Off-White hoodie",
+        "off-shoulder dress",
+        "off the shoulder top",
+        "Salewa jacket",  # "sale" inside a brand name
+        "wholesale denim jacket",  # ... and inside another word
+        "salesman shirt",
+        "resale vintage jacket",
+        "100% cotton shirt",
+        "70% cotton 30% polyester jumper",
+        "half sleeve shirt",
+        "half zip sweater",
+        "cut out dress",
+        "mark twain t-shirt",  # "mark" alone is not a markdown
+        "marked stripe shirt",
+        "70% off-white cotton shirt",  # "off" joined to "white" is a colour, not "70% off"
+        "قميص قطن 100%",
+    ],
+)
+def test_garment_words_that_look_like_price_words_are_kept(kept: str) -> None:
+    assert strip_price_words(kept).split() == kept.split()
+
+
+@pytest.mark.parametrize(
     "kept", ["501 jeans", "size 42 sneakers", "2 pack t-shirt", "slim fit chinos", "wide leg jeans"]
 )
 def test_numbers_and_ordinary_words_without_a_price_meaning_survive(kept: str) -> None:

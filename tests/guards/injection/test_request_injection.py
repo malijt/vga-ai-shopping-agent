@@ -427,14 +427,6 @@ async def test_an_edit_that_only_a_sign_asked_for_is_not_applied(make_rig: RigFa
     assert messages.CHEAPER_WITHOUT_BUDGET not in outcome.response.warnings
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "FINDING (low): the Rule 7 price lexicon lists 'discount(ed)' and 'sale' but not "
-        "'discounts', 'sales', 'markdown' or 'NN percent off', so they reach a store search. "
-        "See src/vga/understand/lexicon.py _PRICE_WORDS (its docstring says to extend it)."
-    ),
-)
 @pytest.mark.parametrize("phrase", ["discounts", "sales", "markdown", "70 percent off"])
 async def test_price_words_beyond_the_lexicon_do_not_reach_a_store(
     make_rig: RigFactory, phrase: str
