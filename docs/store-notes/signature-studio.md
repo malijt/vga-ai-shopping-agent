@@ -7,8 +7,8 @@ Adapter notes for plan feature 12.x.4. Written 2026-10-08, after the live smoke 
 - Config: `config/stores/signature-studio.yaml`. Tests and fixtures: `tests/stores/signature-studio/`.
 - Qualification (2026-10-08): `docs/store-qualification/signature-studio.md`; the dress and modest-wear
   pass it belongs to: `docs/store-qualification/dress-store-discovery.md`.
-- **Status: built, held disabled.** The live smoke test passed on 2026-10-08 (see "Observed live
-  today"), but the file says `enabled: false` until the store set for the demo is decided.
+- **Status: enabled.** The live smoke test passed on 2026-10-08 (see "Observed live today"), and
+  the store was enabled the same day when the user raised the store limit (plan A25).
 - **This adapter needed one change to shared code.** The `shopify` extractor now reads the words
   `menswear` and `womenswear` as gender cues (`src/vga/stores/extractors/shopify.py`); see "Gender".
 

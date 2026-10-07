@@ -37,6 +37,9 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 - Acceptance harness (Phase 11): runs the 10 frozen queries, checks the BRD pass rule, exports a labelling sheet, and can record a live run and replay it offline.
 
 **Fixed**
+- **An outfit photo no longer runs image comparison** (plan A26). The same real search, a black dress with heels, went from 30.3 s and a timeout warning to 9.4 s, with 24 results from 5 stores.
+- **A product the photo was not compared with no longer outranks one that was.** Only the top 40 candidates get an image score; the rest are now totalled with the average image score of that search, so being compared is no longer a penalty.
+- **A store is searched only for the categories it sells** (plan A27, a new optional `categories` field on a store config). Hanayen, Maison Arabelle, Nishat Linen UAE and Signature Studio are searched for dresses only. The abaya that had appeared under shoes is gone, and those stores get no request at all for a shoes or jeans search.
 - Trousers titled "khakis" no longer pass a request for another category ("khaki" as a colour still does).
 - A children's item (boys, girls, kids, baby, toddler, infant, junior) is dropped when the shopper states men or women.
 - Default tests no longer read the developer's real `.env` or see real credentials: one shared fixture hides the file and removes every `OPENAI_*` and `VGA_*` variable for any test not marked `live`. With the user's `.env` in place the suite went from 62 failures and 50 errors to 5,595 passed. Regression tests reproduce the failure against a hostile `.env`.
@@ -65,7 +68,7 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 - **First real photo searches (ten stores, image similarity on real data).**
   - Gown photo: 30 results from 7 stores, every price range full. It took 29.5 s from a cold start, of which 10.4 s was loading the image model once and about 11 s fetching and comparing 40 thumbnails. With the model already loaded, as on the running page, that is about 19 s.
   - Outfit photo (black dress and heels), model already loaded: 24 results from 6 stores, but it hit the 30 s limit during image comparison and returned what it had, with a plain warning. The deadline handling worked as designed.
-- Three problems from those runs, being fixed: products the photo was compared with ranked below ones it was not compared with; an abaya with no garment word in its title appeared under shoes; outfit searches cannot fit image comparison into 30 s.
+- Three problems from those runs, fixed the same day (see Fixed): products the photo was compared with ranked below ones it was not compared with; an abaya with no garment word in its title appeared under shoes; outfit searches cannot fit image comparison into 30 s.
 - Not fixed, left for tuning with labels: because an inferred gender is not applied until the shopper confirms it (product rule 8), a women's outfit photo also returns men's shoes; and weak matches (text score under 0.3) still fill thin price ranges.
 - A title with no recognised garment word is kept for every request. Most Signature Studio titles are designer and collection names, so they depend on the store-level category rule above.
 - What the four new stores' data looks like: Hanayen's `kaftan` search also returns sheilas (scarves) and under-abaya inner dresses; Maison Arabelle's compare-at price is sometimes at or below the price, so it is never read; Nishat Linen's titles are codes with the colour only in the description, and every price is a 50% sale price, so its budget band will rise when the sale ends; `kurta` returns only men's items at Nishat Linen and Signature Studio.
