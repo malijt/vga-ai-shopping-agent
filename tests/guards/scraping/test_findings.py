@@ -12,7 +12,8 @@ is a gap that is still open. They sit together so they can be routed as a list.
    Fixed: the store's own hosts share one rate-limit queue, an image CDN keeps its own.
 3. A product link is not accepted on the shared image CDN, which is on ``allowed_hosts`` but is
    not the store's product page (BRD Rule 1: every result links to the original store's product
-   page).
+   page). Fixed: a product link must be on the store's own site; image links still use the whole
+   allow-list.
 4. Thumbnails on the store's own host are not fetched while the store is in cooldown after a block
    (BRD Rule 2: a store that blocks is not contacted again during its cooldown).
 """
@@ -77,14 +78,6 @@ async def test_a_store_that_redirects_to_its_other_host_is_still_asked_once_a_se
     assert all(gap >= MIN_GAP_S for gap in gaps(times))
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "FINDING 3: Product.product_url is checked against all of the store's allowed_hosts "
-        "(vga.stores.normalise._checked_url), and the image CDN is one of them, so a store "
-        "response can name a file on cdn.shopify.com as the product page the shopper is sent to"
-    ),
-)
 async def test_a_product_link_on_the_image_host_is_not_shown_as_a_product_page(
     world: GuardWorld, build: GuardPipelines, settings: Settings
 ) -> None:

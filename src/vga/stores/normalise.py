@@ -8,7 +8,8 @@ with a counted and logged reason, when:
 - the price is not one of the formats we have seen, is zero or negative, or is written in a
   currency other than the store's;
 - a link is not https, not valid, or not on the store's ``allowed_hosts`` (relative links are made
-  absolute against the page they came from first);
+  absolute against the page they came from first); a *product* link must also be on the store's
+  own site, never on a shared image host that ``allowed_hosts`` lists for the thumbnails;
 - it repeats an earlier record: the same ``product_url``, or the same normalised title at the same
   price (stores list one shirt under several handles, and the per-store cap would be spent on
   repeats).
@@ -26,7 +27,7 @@ from urllib.parse import urldefrag, urljoin
 
 from pydantic import ValidationError
 
-from vga.fetch.allowlist import check_url
+from vga.fetch.allowlist import belongs_to_store_site, check_url
 from vga.fetch.errors import UrlNotAllowedError
 from vga.log import get_logger
 from vga.models import Gender, Product, StoreConfig
@@ -146,15 +147,30 @@ def _clean_text(value: object) -> str:
 
 
 def _checked_url(
-    raw: object, base_url: str, store: StoreConfig, missing: DropReason, refused: DropReason
+    raw: object,
+    base_url: str,
+    store: StoreConfig,
+    missing: DropReason,
+    refused: DropReason,
+    *,
+    own_site_only: bool = False,
 ) -> str | DropReason:
-    """An absolute https URL on one of the store's hosts, or the reason it is not one."""
+    """An absolute https URL on one of the store's hosts, or the reason it is not one.
+
+    With ``own_site_only`` the host must also belong to the store's own site (see
+    ``belongs_to_store_site``): a link the shopper is sent to is the store's page, and
+    ``allowed_hosts`` also lists hosts, such as ``cdn.shopify.com``, that only serve its files.
+    """
     text = _clean_text(raw)
     if not text:
         return missing
     url, _fragment = urldefrag(urljoin(base_url, text))
     try:
-        check_url(url, store.allowed_hosts)
+        host = check_url(url, store.allowed_hosts)
+        if own_site_only and not belongs_to_store_site(store, host):
+            raise UrlNotAllowedError(
+                detail=f"host {host!r} is not part of the store's own site: {url[:200]}"
+            )
     except UrlNotAllowedError as exc:
         log.info(
             "record link refused",
@@ -200,6 +216,7 @@ def _to_product(record: RawRecord, store: StoreConfig, base_url: str) -> Product
         store,
         DropReason.MISSING_PRODUCT_URL,
         DropReason.PRODUCT_URL_NOT_ALLOWED,
+        own_site_only=True,
     )
     if isinstance(product_url, DropReason):
         return product_url

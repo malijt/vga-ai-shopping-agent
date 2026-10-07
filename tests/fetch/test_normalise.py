@@ -188,6 +188,83 @@ def test_an_image_on_the_stores_own_second_host_is_fine() -> None:
     assert len(batch.products) == 1
 
 
+# A Shopify store: its own domain, plus the CDN that hosts the images of every Shopify shop.
+SHOPIFY_HOSTS = {"allowed_hosts": [HOST, "cdn.shopify.com"]}
+SHARED_CDN_FILE = "https://cdn.shopify.com/s/files/1/0001/0002/files/lookbook.pdf"
+
+
+def shopify_record(index: int = 1, **overrides: Any) -> dict[str, Any]:
+    """A record whose image is on the shared image host, as every Shopify record's is."""
+    image = f"https://cdn.shopify.com/s/files/1/0001/0002/files/blazer-{index}.jpg"
+    return record(index, image_url=image, **overrides)
+
+
+def test_a_product_link_on_a_listed_image_host_is_dropped() -> None:
+    batch = normalise(
+        shopify_record(1, product_url=SHARED_CDN_FILE), shopify_record(2), **SHOPIFY_HOSTS
+    )
+
+    assert [p.title for p in batch.products] == ["Blazer 2"]
+    assert batch.dropped == {"product_url_not_allowed": 1}
+
+
+def test_an_image_on_the_shared_image_host_is_kept() -> None:
+    [product] = normalise(shopify_record(1), **SHOPIFY_HOSTS).products
+
+    assert str(product.image_url).startswith("https://cdn.shopify.com/")
+    assert str(product.product_url) == f"https://{HOST}/products/blazer-1"
+
+
+def test_a_protocol_relative_product_link_to_the_shared_image_host_is_dropped() -> None:
+    batch = normalise(shopify_record(1, product_url="//cdn.shopify.com/p/1"), **SHOPIFY_HOSTS)
+
+    assert batch.products == []
+    assert batch.dropped == {"product_url_not_allowed": 1}
+
+
+@pytest.mark.parametrize(
+    ("search_host", "link_host"),
+    [
+        ("www.shop.example", "shop.example"),  # searches on www., links on the bare domain
+        ("shop.example", "www.shop.example"),  # searches on the bare domain, links on www.
+        ("shop.example", "uae.shop.example"),  # a market sub-domain of the same site
+    ],
+)
+def test_a_product_link_on_another_host_of_the_stores_own_site_is_kept(
+    search_host: str, link_host: str
+) -> None:
+    store = {
+        "search_url_template": f"https://{search_host}/search?q={{query}}",
+        "allowed_hosts": [search_host, link_host, "cdn.shopify.com"],
+    }
+    link = f"https://{link_host}/products/x"
+
+    [product] = normalise(shopify_record(1, product_url=link), **store).products
+
+    assert str(product.product_url) == link
+
+
+def test_a_listed_host_of_another_domain_is_not_the_stores_product_page() -> None:
+    store = {"allowed_hosts": [HOST, "shop.otherbrand.example", "cdn.shopify.com"]}
+
+    batch = normalise(shopify_record(1, product_url="https://shop.otherbrand.example/p/1"), **store)
+
+    assert batch.products == []
+    assert batch.dropped == {"product_url_not_allowed": 1}
+
+
+def test_a_product_link_on_the_shared_image_host_is_refused_with_its_reason_logged(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level(logging.INFO)
+
+    normalise(shopify_record(1, product_url=SHARED_CDN_FILE), **SHOPIFY_HOSTS)
+
+    refused = [r for r in caplog.records if r.getMessage() == "record link refused"]
+    assert [r.reason for r in refused] == ["product_url_not_allowed"]  # type: ignore[attr-defined]
+    assert "own site" in refused[0].detail  # type: ignore[attr-defined]
+
+
 # --------------------------------------------------------------------------------------------
 # Other fields
 # --------------------------------------------------------------------------------------------
