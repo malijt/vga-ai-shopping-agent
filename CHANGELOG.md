@@ -11,7 +11,8 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 **Decided**
 - **Scope change: dresses are now a fifth category** (dresses, gowns, kaftans, abayas, kurtas and similar). The user supplied five test photos and all five show a dress or ethnic wear, which the original scope excluded. The BRD, PRD, plan (A23, A24) and `CLAUDE.md` are updated; the code change follows. The five photo-based acceptance queries will be rewritten around the supplied photos before any acceptance run.
 - A further store discovery pass (plan Module 2.5) looks for Shopify stores that sell dresses and modest or ethnic wear, because the six demo stores were chosen before dresses were in scope.
-- OpenAI model: `gpt-6-luna`, chosen by the user. It replaces the earlier pin `gpt-5-mini-2025-08-07`. The switch and the first real run of the Understand step are in progress.
+- OpenAI model: `gpt-6-luna`, chosen by the user. It replaces the earlier pin `gpt-5-mini-2025-08-07`. OpenAI lists no dated variant, so the settings allow this one id by name and still reject aliases such as `gpt-6-luna-latest`. Reasoning effort stays `low`.
+- Live runs that need the API key are run by the orchestrator from the main checkout, where the app reads `.env` itself. An agent's worktree has no `.env`, and the eval agent got round a worktree-guard refusal by putting the key-loading command in a script. The script was checked and no key was printed, logged or committed, but agents should not work round a guard.
 - This changelog is maintained from now on (user request).
 
 **Added**
@@ -21,6 +22,10 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 - Store adapters for all six demo stores, each enabled only after a live smoke test through the project's own engine: Sacoor Brothers UAE, Giordano UAE, Club L London UAE, Oh Polly UAE, Maison D'Vie, Nautica UAE. Every live response was HTTP 200, with no block or challenge.
 - The OpenAI understanding step (Phase 5): one structured call turns a photo and/or text into what to search for, with output validation, one corrective retry, a raw-text fallback and a daily call cap. Tested with fakes only at merge time.
 - Acceptance harness (Phase 11): runs the 10 frozen queries, checks the BRD pass rule, exports a labelling sheet, and can record a live run and replay it offline.
+
+**Fixed**
+- Default tests no longer read the developer's real `.env` or see real credentials: one shared fixture hides the file and removes every `OPENAI_*` and `VGA_*` variable for any test not marked `live`. With the user's `.env` in place the suite went from 62 failures and 50 errors to 5,595 passed. Regression tests reproduce the failure against a hostile `.env`.
+- A variable the shell sets to empty no longer blocks the same variable in `.env`.
 
 **Changed**
 - Thumbnails now pass the same robots.txt check as search pages, and Shopify images are requested at 400 px wide (a real image went from 108 KB to 20 KB).
@@ -33,7 +38,9 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 - Six stores cannot serve both the men's queries and the dress queries: three stores carry menswear, so at most three are left for dresses, and three stores at six results each is 18, below the 20-result bar.
 - Shopify's older default robots.txt disallows `/search` and the newer one leaves it open. Five of the eight abaya or kaftan sellers checked close search, so robots.txt has to be the first request to any new store.
 - Rejected in discovery: Lamis Abaya, Basic Abaya, KMansoori, Bousni and CAS Basics (robots.txt), Boksha (its search endpoint redirects to an HTML page), East Essence (priced in USD). The discovery agent sent Boksha 4 requests where its limit for an early rejection was 2, because its script followed two redirects; it fixed the script before the next store.
-- The default test suite reads the developer's real `.env`: with the user's `.env` in place, 112 UI tests fail or error in the main checkout, and the real API key is copied into the test process. With `.env` moved aside the same suite passes. Agents never saw it because their worktrees have no `.env`. A fix (tests isolated from the real `.env`) is in progress.
+- First real run of the Understand step on `gpt-6-luna`: 20 of 20 runnable cases passed in each of three full runs (49 calls, no errors or retries), with no prompt change. Every injection case held, including text printed inside a photo. A typical answer takes about 3.0 s (worst 6.3 s) and costs about $0.0003. Not yet tested: real shopper photos (3 cases skipped because the photo queries are being rewritten), and keyword quality, which the eval does not judge.
+- `gpt-6-luna` has no dated snapshot, so OpenAI can change it behind the name. Recorded as a known limitation.
+- The default test suite read the developer's real `.env`: with the user's `.env` in place, 112 UI tests failed or errored in the main checkout, and the real API key was copied into the test process. Agents never saw it because their worktrees have no `.env`. Fixed the same day (see Fixed).
 - Sacoor's women's suit blazers are tagged "Formalwear Men", so `type` has to outrank `tags` when reading gender.
 - Nautica UAE sells women's clothing as well as men's. The qualification pass had seen only women's accessories.
 - Giordano UAE repeats one title under several listings, so only 4 to 6 distinct products survive per search.
