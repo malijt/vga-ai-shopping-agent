@@ -21,6 +21,7 @@ from eval.harness.criteria import (
     Status,
     failure_rows,
 )
+from eval.harness.notrun import NotRun, describe_wait
 from eval.harness.runstore import LoadedRun
 from eval.harness.scoring import ScoredRun
 from eval.harness.stages import (
@@ -146,7 +147,12 @@ def _verdict_lines(scored: ScoredRun) -> list[str]:
         "(the rule in `rubric.md`).",
         "",
     ]
-    if verdict.status is Status.PENDING:
+    if verdict.not_run:
+        lines.append(
+            f"Verdict: INCOMPLETE ({len(verdict.not_run)} of {total} queries did not run, so the "
+            'demo cannot be judged yet; see "Queries not run" below)'
+        )
+    elif verdict.status is Status.PENDING:
         lines.append(
             f"Verdict: PENDING (not final: {len(verdict.pending)} of {total} queries are still "
             f"undecided ({_pending_reasons(scored.evaluations)}); {len(verdict.failed)} have "
@@ -165,6 +171,71 @@ def _pending_reasons(evaluations: tuple[QueryEvaluation, ...]) -> str:
                 counts[result.criterion] += 1
     parts = [f"{criterion.value} for {count}" for criterion, count in counts.items()]
     return "; ".join(parts) or "nothing"
+
+
+NOT_RUN_COLUMNS = ("Query", "What happened")
+
+
+def _stores_turned_away(not_run: NotRun) -> str:
+    """The stores that could not be asked, grouped by what the response said about them."""
+    groups: dict[tuple[str, str], list[str]] = {}
+    for store in not_run.stores:
+        key = (store.status.value, store.reason or "no reason given")
+        groups.setdefault(key, []).append(store.store_id)
+    return "; ".join(
+        f"{status} ({reason}): {', '.join(ids)}" for (status, reason), ids in groups.items()
+    )
+
+
+def _not_run_section(scored: ScoredRun) -> list[str]:
+    """Which queries ran and which did not, and why: neither a pass nor a fail."""
+    runs = [e.run for e in scored.evaluations]
+    skipped = [(run.query.id, run.not_run) for run in runs if run.not_run is not None]
+    if not skipped:
+        return []
+    ran = [run.query.id for run in runs if run.not_run is None]
+    rows: list[list[str]] = []
+    cooldowns: list[int] = []
+    for query_id, not_run in skipped:
+        what = not_run.reason
+        if not_run.stores:
+            what += " " + _stores_turned_away(not_run) + "."
+        if not_run.cooldown_s is not None:
+            cooldowns.append(not_run.cooldown_s)
+        rows.append([query_id, escape(what)])
+    names = [query_id for query_id, _ in skipped]
+    lines = [
+        "",
+        "## Queries not run",
+        "",
+        "A query that did not run is neither a pass nor a fail: it has no row in the labelling "
+        "sheet and does not count towards the pass rule. "
+        f"Ran ({len(ran)}): {', '.join(ran) or 'none'}. "
+        f"Did not run ({len(names)}): {', '.join(names)}.",
+        "",
+        *_table(NOT_RUN_COLUMNS, rows),
+        "",
+    ]
+    if cooldowns:
+        lines += [
+            f"A store that turns a search away is left alone for {describe_wait(max(cooldowns))} "
+            "(the `store_cooldown_s` setting). The responses do not say how much of that is "
+            "left, and a new run does not remember it, so wait at least that long.",
+            "",
+        ]
+    if scored.loaded.meta.mode == "replay":
+        lines += [
+            "This replay is incomplete because the recording is: finish the live run for the "
+            f"queries above (`--only {','.join(names)}` on the same `--record` folder), then "
+            "replay again."
+        ]
+    else:
+        lines += [
+            "This run is incomplete and must be repeated later for the queries above: run the "
+            f"same command again with `--only {','.join(names)}` (the same `--record` folder), "
+            "then label the sheet."
+        ]
+    return lines
 
 
 def _failures(scored: ScoredRun) -> list[str]:
@@ -362,6 +433,13 @@ def _notes(scored: ScoredRun) -> list[str]:
         "targets."
     )
     notes.append(_link_note(scored))
+    unchecked = sum(1 for checks in loaded.links.values() for check in checks if check.not_checked)
+    if unchecked:
+        notes.append(
+            f"{unchecked} link(s) were not checked because their store turned the request away "
+            "(blocked, or in the cooldown that follows). They are not counted as broken: the "
+            "queries they belong to stay undecided on Links ok."
+        )
     notes.append(
         "good@10 comes from the labelling sheet you imported."
         if scored.labelled
@@ -428,6 +506,7 @@ def render_report(scored: ScoredRun) -> str:
     lines += _table(RESULT_COLUMNS, _results_rows(scored))
     lines += [""]
     lines += _verdict_lines(scored)
+    lines += _not_run_section(scored)
     lines += ["", "## Failures", "", *_failures(scored)]
     fetch_intro = "What each store returned, per query."
     if _question_was_asked(scored):

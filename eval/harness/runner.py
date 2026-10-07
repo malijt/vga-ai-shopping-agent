@@ -18,11 +18,13 @@ sees anything; the second search's time is kept beside it.
 """
 
 import re
-from collections.abc import Callable
-from dataclasses import dataclass
+from collections.abc import Awaitable, Callable, Sequence
+from dataclasses import dataclass, replace
 from typing import Literal, Protocol
 
 from eval.harness.confirm import GenderAnswer, read_question, rerun_overrides, rerun_request
+from eval.harness.errors import QueryNotReachedError
+from eval.harness.notrun import NotRun, not_sent, stores_unavailable
 from eval.harness.queries import AcceptanceQuery
 from vga.errors import VgaError
 from vga.interfaces import Clock, Pipeline
@@ -31,6 +33,11 @@ from vga.settings import Settings
 
 ImageLoader = Callable[[AcceptanceQuery], bytes | None]
 """Gives the photo's bytes for a query, or ``None`` for a text-only query."""
+
+AfterQuery = Callable[[Sequence["QueryRun"]], Awaitable[None]]
+"""Called after each query with every run so far (the one just finished is the last). The live
+run saves it here and checks that query's links, so the next query starts only when this one is
+on disk and its links are checked."""
 
 DurationSource = Literal["measured", "recorded", "unavailable"]
 
@@ -46,6 +53,20 @@ class QueryScope(Protocol):
         """``duration_ms`` is the first search; ``confirm_ms`` the search after the gender question
         was answered, or ``None`` when there was none."""
         ...
+
+
+@dataclass(frozen=True)
+class Pacing:
+    """How a live run treats the stores between queries."""
+
+    pause_s: float = 0.0
+    """Rest between one query's end (its link checks included) and the next query's start. It is
+    outside every query's time: a query is timed around its own ``Pipeline.run`` only."""
+    say: Callable[[str], None] | None = None
+    """Told, as it happens, what the runner is about to wait for."""
+    stop_when_throttled: bool = False
+    """Stop at the first query whose stores were all blocked or in cooldown, and send none of the
+    others: asking stores that have just said "too many requests" only asks them again."""
 
 
 @dataclass(frozen=True)
@@ -77,6 +98,10 @@ class QueryRun:
     gender: GenderAnswer | None = None
     """What happened to the "Who is this for?" question; ``None`` when the query records no
     answer."""
+    not_run: NotRun | None = None
+    """Set when the query has no verdict of its own: its stores were not available, or it was
+    never sent (``eval.harness.notrun``). Such a query is neither a pass nor a fail. A throttled
+    query keeps its ``response``, which lists the stores and their reasons."""
 
     @property
     def first_timings(self) -> list[StepTiming]:
@@ -159,14 +184,35 @@ async def run_query(
     clock: Clock,
     image: bytes | None,
 ) -> QueryRun:
-    """Run one query and time it. A failing pipeline becomes a ``PipelineFailure``.
+    """Run one query and time it. A failing pipeline becomes a ``PipelineFailure``; a search
+    whose stores were all unavailable becomes a query that was *not run* (``QueryRun.not_run``).
 
     When the query records the shopper's answer to "Who is this for?" and the app would ask, the
     answer is given as the page gives it (see ``eval.harness.confirm``) and the second response
     is the one returned."""
+    run = await _search_and_answer(query, pipeline, settings, clock=clock, image=image)
+    if run.response is not None and run.failure is None:
+        not_run = stores_unavailable(run.response, settings.store_cooldown_s)
+        if not_run is not None:
+            return replace(run, not_run=not_run)
+    return run
+
+
+async def _search_and_answer(
+    query: AcceptanceQuery,
+    pipeline: Pipeline,
+    settings: Settings,
+    *,
+    clock: Clock,
+    image: bytes | None,
+) -> QueryRun:
     first = await _timed_run(pipeline, build_request(query, image), settings, None, clock)
     if first.response is None or query.shopper_gender is None:
         return QueryRun(query, first.response, first.failure, first.wall_ms, first.duration_ms)
+    if stores_unavailable(first.response, settings.store_cooldown_s) is not None:
+        # Nothing was found, so there is nothing to ask the shopper about, and a second search
+        # would only ask the same stores again.
+        return QueryRun(query, first.response, None, first.wall_ms, first.duration_ms)
 
     question = read_question(first.response.understood, query.shopper_gender)
     if question.edits is None:
@@ -224,14 +270,27 @@ async def run_queries(
     load_image: ImageLoader,
     scope: QueryScope | None = None,
     progress: Callable[[QueryRun], None] | None = None,
+    after_query: AfterQuery | None = None,
+    pacing: Pacing | None = None,
 ) -> list[QueryRun]:
-    """Run ``queries`` in order, one at a time, and return one ``QueryRun`` each."""
+    """Run ``queries`` in order, one at a time, and return one ``QueryRun`` each.
+
+    ``pacing`` (a live run only) makes the runner rest between queries, on ``clock``."""
     runs: list[QueryRun] = []
-    for query in queries:
+    for position, query in enumerate(queries):
+        if position > 0 and pacing is not None and pacing.pause_s > 0:
+            if pacing.say is not None:
+                pacing.say(
+                    f"Pausing {pacing.pause_s:g} s before {query.id} to give the stores a rest."
+                )
+            await clock.sleep(pacing.pause_s)
         image = load_image(query)
         try:
             if scope is not None:
                 scope.begin_query(query.id)
+        except QueryNotReachedError as exc:
+            # The live run that was recorded stopped before this query.
+            run = unsent(query, exc.user_message)
         except VgaError as exc:
             # A replay cannot serve this query (not recorded, or recorded incompletely). That is
             # this query's failure, reported as such; the other queries still run.
@@ -243,4 +302,48 @@ async def run_queries(
         runs.append(run)
         if progress is not None:
             progress(run)
+        if after_query is not None:
+            await after_query(runs)
+        if _stops_the_run(run, pacing):
+            runs.extend(unsent(later, _stopped_after(run)) for later in queries[position + 1 :])
+            break
     return runs
+
+
+def unsent(query: AcceptanceQuery, reason: str) -> QueryRun:
+    """A query that was never sent: nothing was asked, so nothing failed."""
+    return QueryRun(query, None, None, 0.0, 0.0, not_run=not_sent(reason))
+
+
+NOT_REACHED = (
+    "Not sent yet: the run had not reached this query when these results were saved (it was "
+    "interrupted, or is still going)."
+)
+
+
+def in_query_order(
+    queries: Sequence[AcceptanceQuery], earlier: Sequence[QueryRun], new: Sequence[QueryRun]
+) -> list[QueryRun]:
+    """One run for every query, in the order of the query file: ``new`` where the query was run
+    this time, else ``earlier`` (the same run folder's earlier session), else a query that was not
+    reached yet. What is saved after every query is this view, so a run that is interrupted, or
+    stopped, can always be finished later."""
+    known = {run.query.id: run for run in earlier}
+    known.update({run.query.id: run for run in new})
+    return [known.get(query.id) or unsent(query, NOT_REACHED) for query in queries]
+
+
+def _stops_the_run(run: QueryRun, pacing: Pacing | None) -> bool:
+    return (
+        pacing is not None
+        and pacing.stop_when_throttled
+        and run.not_run is not None
+        and run.not_run.kind == "stores_unavailable"
+    )
+
+
+def _stopped_after(run: QueryRun) -> str:
+    return (
+        f"Not sent: the run stopped after {run.query.id} because the stores were blocked or in "
+        "cooldown. Repeat it later."
+    )

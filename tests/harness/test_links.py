@@ -6,6 +6,7 @@ from collections.abc import Awaitable, Callable
 import pytest
 
 from eval.harness.links import (
+    THROTTLED_LINK_NOTE,
     LinkChecker,
     LinkResult,
     LinkRules,
@@ -318,6 +319,34 @@ class TestTheChecker:
             "Alpha Store",
             "Oversized Wool Blazer",
         )
+
+
+class TestALinkAStoreTurnedAway:
+    """A store that answered 429 (or is cooling down after it did) said nothing about the link."""
+
+    async def test_it_is_not_checked_and_not_broken(self) -> None:
+        turned_away = LinkResult(url=URL, error="store_blocked (HTTP 429)", throttled=True)
+        checker = LinkChecker(fetching(turned_away), ALLOWED)
+
+        checked = await checker.check(product())
+
+        assert checked.not_checked is True
+        assert checked.ok is False
+        assert checked.problems == [THROTTLED_LINK_NOTE]
+        assert "not checked" in checked.problems[0]
+
+    async def test_a_link_that_is_broken_is_still_broken(self) -> None:
+        checker = LinkChecker(fetching(opens(status=404)), ALLOWED)
+
+        checked = await checker.check(product())
+
+        assert checked.not_checked is False
+        assert checked.ok is False
+
+    async def test_a_good_link_is_not_marked(self) -> None:
+        checked = await LinkChecker(fetching(opens()), ALLOWED).check(product())
+
+        assert (checked.ok, checked.not_checked) == (True, False)
 
 
 class TestWhichLinksAreChecked:

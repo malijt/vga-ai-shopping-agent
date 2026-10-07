@@ -31,7 +31,10 @@ Layout of a recording directory
 
     <dir>/manifest.json     format, the query ids in order, model and prompt version, and each
                             query's live duration in milliseconds (the first search), plus
-                            ``live_confirm_ms`` when the gender question was answered
+                            ``live_confirm_ms`` when the gender question was answered; and
+                            ``planned``, every query the live run set out to send, so a replay
+                            can tell a query the run stopped before (not run) from one the
+                            recording simply lacks (an error)
     <dir>/<query_id>.json   {"understand": [...], "search": [...], "image_scores": [...]}, one
                             entry per call in the order the calls were made
 
@@ -53,7 +56,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from eval.harness.errors import RecordingError, RecordingMismatchError
+from eval.harness.errors import QueryNotReachedError, RecordingError, RecordingMismatchError
 from eval.harness.wiring import Boundaries
 from vga.errors import (
     CallBudgetExceededError,
@@ -140,6 +143,27 @@ def _read_json(path: Path, what: str) -> dict[str, Any]:
     return data
 
 
+def _read_manifest(directory: Path) -> dict[str, Any]:
+    """The manifest of the recording in ``directory``, checked to be one this harness reads."""
+    manifest = _read_json(directory / MANIFEST_FILE, "The recording manifest")
+    if manifest.get("format") != RECORDING_FORMAT:
+        msg = (
+            f"The recording in {directory} has format {manifest.get('format')!r}, but this "
+            f"harness reads format {RECORDING_FORMAT}. Record the run again."
+        )
+        raise RecordingError(msg)
+    if not isinstance(manifest.get("queries"), dict):
+        msg = f"The recording manifest in {directory} has no 'queries'. Record the run again."
+        raise RecordingError(msg)
+    return manifest
+
+
+def _planned_of(manifest: dict[str, Any]) -> list[str]:
+    """The queries the recorded live run set out to send; empty for an older recording."""
+    planned = manifest.get("planned", [])
+    return [str(item) for item in planned] if isinstance(planned, list) else []
+
+
 # --------------------------------------------------------------------------------------------
 # Recording
 # --------------------------------------------------------------------------------------------
@@ -161,8 +185,23 @@ class RecordingSession:
     and is never overwritten silently.
     """
 
-    def __init__(self, directory: Path | str) -> None:
+    def __init__(
+        self, directory: Path | str, *, planned: Sequence[str] = (), resume: bool = False
+    ) -> None:
+        """``planned`` lists every query the live run set out to send. ``resume`` opens the
+        recording of an earlier session to add queries to it (``--only``): what it holds is kept,
+        and a query recorded again replaces its earlier recording."""
         self._dir = Path(directory)
+        self._planned = list(planned)
+        self._bucket: _Bucket | None = None
+        self._queries: dict[str, dict[str, Any]] = {}
+        self._models: list[str] = []
+        self._prompt_versions: list[str] = []
+        self.incomplete: list[str] = []
+        """Query ids whose recording lacks a call because a boundary raised mid-call."""
+        if resume:
+            self._load_earlier_session()
+            return
         if (self._dir / MANIFEST_FILE).exists():
             msg = (
                 f"{self._dir} already holds a recording. Choose a new folder for --record, "
@@ -170,12 +209,18 @@ class RecordingSession:
             )
             raise RecordingError(msg)
         self._dir.mkdir(parents=True, exist_ok=True)
-        self._bucket: _Bucket | None = None
-        self._queries: dict[str, dict[str, Any]] = {}
-        self._models: list[str] = []
-        self._prompt_versions: list[str] = []
-        self.incomplete: list[str] = []
-        """Query ids whose recording lacks a call because a boundary raised mid-call."""
+
+    def _load_earlier_session(self) -> None:
+        manifest = _read_manifest(self._dir)
+        self._queries = dict(manifest["queries"])
+        self._models = [str(item) for item in manifest.get("models", [])]
+        self._prompt_versions = [str(item) for item in manifest.get("prompt_versions", [])]
+        earlier_plan = _planned_of(manifest)
+        self._planned = earlier_plan + [item for item in self._planned if item not in earlier_plan]
+        for query_id in self._queries:
+            data = _read_json(self._dir / f"{query_id}.json", f"The recording of {query_id}")
+            if data.get("incomplete"):
+                self.incomplete.append(query_id)
 
     def wrap(self, boundaries: Boundaries) -> Boundaries:
         """Recorders around the live boundaries; hand these to the pipeline factory."""
@@ -206,6 +251,8 @@ class RecordingSession:
         bucket = self.bucket()
         calls = (bucket.understand, bucket.search, bucket.image_scores)
         incomplete = any(entry is None for entries in calls for entry in entries)
+        if query_id in self.incomplete:
+            self.incomplete.remove(query_id)  # this recording replaces the earlier one
         if incomplete:
             self.incomplete.append(query_id)
         _write_json(
@@ -224,15 +271,15 @@ class RecordingSession:
             entry["live_confirm_ms"] = confirm_ms
         self._queries[query_id] = entry
         self._bucket = None
-        _write_json(
-            self._dir / MANIFEST_FILE,
-            {
-                "format": RECORDING_FORMAT,
-                "queries": self._queries,
-                "models": self._models,
-                "prompt_versions": self._prompt_versions,
-            },
-        )
+        manifest: dict[str, Any] = {
+            "format": RECORDING_FORMAT,
+            "queries": self._queries,
+            "models": self._models,
+            "prompt_versions": self._prompt_versions,
+        }
+        if self._planned:
+            manifest["planned"] = self._planned
+        _write_json(self._dir / MANIFEST_FILE, manifest)
 
 
 class _RecordingUnderstander:
@@ -344,19 +391,10 @@ class ReplaySession:
 
     def __init__(self, directory: Path | str) -> None:
         self._dir = Path(directory)
-        manifest = _read_json(self._dir / MANIFEST_FILE, "The recording manifest")
-        if manifest.get("format") != RECORDING_FORMAT:
-            msg = (
-                f"The recording in {self._dir} has format {manifest.get('format')!r}, but this "
-                f"harness reads format {RECORDING_FORMAT}. Record the run again."
-            )
-            raise RecordingError(msg)
-        queries = manifest.get("queries")
-        if not isinstance(queries, dict):
-            msg = f"The recording manifest in {self._dir} has no 'queries'. Record the run again."
-            raise RecordingError(msg)
+        manifest = _read_manifest(self._dir)
         self._manifest = manifest
-        self._queries: dict[str, dict[str, Any]] = queries
+        self._queries: dict[str, dict[str, Any]] = manifest["queries"]
+        self._planned: list[str] = _planned_of(manifest)
         self._current: _Replay | None = None
         self.notes: list[str] = []
         """Plain notes for the report: calls the pipeline did not use, scores that were missing."""
@@ -410,6 +448,12 @@ class ReplaySession:
         self._missing_scores += count
 
     def begin_query(self, query_id: str) -> None:
+        if query_id not in self._queries and query_id in self._planned:
+            msg = (
+                "The live run that made this recording stopped before this query ran, so there is "
+                "nothing to replay for it. Finish the live run (--only), then replay again."
+            )
+            raise QueryNotReachedError(msg)
         if query_id not in self._queries:
             msg = (
                 f"The recording in {self._dir} has no query {query_id!r}. It holds: "

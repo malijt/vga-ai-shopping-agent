@@ -82,13 +82,14 @@ class Cli:
         wiring: WiringFactory | None = None,
         settings: Settings | None = None,
         clock: Clock | None = None,
+        today: date | None = None,
     ) -> int:
         return main(
             list(argv),
             wiring_factory=wiring,
             settings=settings or make_settings(),
             clock=clock or FakeClock(),
-            today=lambda: TODAY,
+            today=lambda: today or TODAY,
             root=self.root,
             stdout=self.out,
             stderr=self.err,

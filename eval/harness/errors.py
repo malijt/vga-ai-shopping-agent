@@ -33,6 +33,13 @@ class RecordingError(HarnessError):
     default_code = "recording"
 
 
+class QueryNotReachedError(RecordingError):
+    """The recording ends before this query: the live run that made it stopped (or was
+    interrupted) before sending it. The query is *not run*, not broken."""
+
+    default_code = "recording_not_reached"
+
+
 class RecordingMismatchError(RecordingError):
     """The pipeline asked a replayed boundary for something the recording does not hold."""
 
@@ -49,6 +56,13 @@ class LabelSheetError(HarnessError):
     """The labelling sheet does not follow the format, or does not match this run."""
 
     default_code = "label_sheet"
+
+
+class ResumeError(HarnessError):
+    """``--only`` cannot finish this run: the folder is not a live run, a query is unknown or
+    already has a result, or a setting differs from the run's."""
+
+    default_code = "resume"
 
 
 class WiringError(HarnessError):

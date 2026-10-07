@@ -122,8 +122,8 @@ def label_rows(runs: Sequence[QueryRun]) -> list[LabelRow]:
     """The blank rows of the sheet: the top 10 of every group of every answered query."""
     rows: list[LabelRow] = []
     for run in runs:
-        if run.response is None:
-            continue
+        if run.response is None or run.not_run is not None:
+            continue  # a query that was not run has nothing to label
         photo = PurePosixPath(run.query.image).name if run.query.image else ""
         for name, group in zip(group_names(run.response), run.response.groups, strict=True):
             ranges = price_range_labels(group)

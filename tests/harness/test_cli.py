@@ -187,7 +187,7 @@ class TestLabellingThroughTheCommandLine:
 class TestWorkIsNotLost:
     """The expensive part of a run, and a person's labels and notes, survive mistakes."""
 
-    def test_an_interrupt_during_the_link_phase_leaves_the_finished_run_on_disk(
+    def test_an_interrupt_during_a_links_phase_leaves_the_queries_searched_so_far_on_disk(
         self, cli: Cli
     ) -> None:
         calls = 0
@@ -205,11 +205,56 @@ class TestWorkIsNotLost:
         with pytest.raises(KeyboardInterrupt):
             cli.run("--record", str(run_dir / "recording"), wiring=wiring_over(LiveParts(), fetch))
 
-        assert len(list((run_dir / "responses").glob("*.json"))) == 10
+        # The first query's search was saved before its first link was fetched.
+        assert len(list((run_dir / "responses").glob("*.json"))) == 1
         assert (run_dir / LABELS_FILE).is_file()
         text = (run_dir / REPORT_FILE).read_text(encoding="utf-8")
-        assert "| not checked |" in text  # links had not run yet; the report says so
-        assert len(load_run(run_dir).runs) == 10
+        assert "| not checked |" in text  # its links had not run yet; the report says so
+        saved = load_run(run_dir).runs
+        assert [run.query.id for run in saved if run.response is not None] == ["q01_product_gown"]
+        assert len(saved) == 10  # the other nine are saved as "not sent yet", to be finished later
+
+    def test_a_querys_links_are_checked_before_the_next_query_is_searched(self, cli: Cli) -> None:
+        events: list[str] = []
+        live = LiveParts()
+
+        def understand(req: SearchRequest) -> UnderstandResult:
+            events.append("search")
+            return understand_for(req)
+
+        async def fetch(url: str) -> LinkResult:
+            events.append("link")
+            return await ok_link_fetch(url)
+
+        live.understander = FakeUnderstander(understand)
+        put_photos(cli.root)
+
+        cli.run("--record", str(cli.root / "rec"), wiring=wiring_over(live, fetch))
+
+        first_link = events.index("link")
+        # Before the first link only the first query has been searched (its search, then the
+        # re-search after the shopper's answer); the other nine come after.
+        assert events[:first_link].count("search") == 2
+        assert events[first_link:].count("search") >= 9
+
+    def test_every_finished_query_is_saved_before_the_next_one_starts(self, cli: Cli) -> None:
+        saved_when_each_query_starts: list[int] = []
+        live = LiveParts()
+        run_dir = cli.root / "eval" / "results" / "run-1"
+
+        def understand_and_look(req: SearchRequest) -> UnderstandResult:
+            saved_when_each_query_starts.append(len(list((run_dir / "responses").glob("*.json"))))
+            return understand_for(req)
+
+        live.understander = FakeUnderstander(understand_and_look)
+        put_photos(cli.root)
+
+        cli.run("--record", str(run_dir / "recording"), wiring=wiring_over(live))
+
+        # Queries 2, 3, ... find the earlier ones already on disk (a gender re-search of the same
+        # query asks again at the same count).
+        assert saved_when_each_query_starts[0] == 0
+        assert max(saved_when_each_query_starts) == 9
 
     def test_rerunning_mock_never_replaces_a_labelling_sheet_that_has_labels(
         self, cli: Cli
@@ -528,6 +573,7 @@ class TestRecordThenReplayThroughTheCommandLine:
         manifest = cli.root / "rec" / "manifest.json"
         data = json.loads(manifest.read_text(encoding="utf-8"))
         del data["queries"]["q03_product_skinny_jeans"]
+        del data["planned"]  # as in a recording made before the plan was kept, or edited by hand
         manifest.write_text(json.dumps(data), encoding="utf-8")
 
         code = cli.run("--replay", str(cli.root / "rec"), wiring=wiring_over(LiveParts()))

@@ -20,7 +20,7 @@ Point 4 (the page shows the same product as the card) is left to the human label
 """
 
 import re
-from collections.abc import Awaitable, Callable, Collection, Mapping, Sequence
+from collections.abc import Awaitable, Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from urllib.parse import parse_qs, urlsplit
@@ -58,6 +58,9 @@ class LinkResult(VgaModel):
     error: str | None = None
     """Set instead of a status when there was no page: ``timeout``, ``connection error``, a
     robots.txt refusal, and so on."""
+    throttled: bool = False
+    """True when the store turned the request away (blocked, or in its cooldown after it did). The
+    link was not looked at, so it is *not checked*, not a broken link."""
 
 
 LinkFetch = Callable[[str], Awaitable[LinkResult]]
@@ -71,7 +74,11 @@ class LinkCheck(VgaModel):
     product_title: str
     ok: bool
     problems: list[str] = Field(default_factory=list)
-    """Plain sentences saying why the link failed. Empty when ``ok``."""
+    """Plain sentences saying why the link failed (or, when ``not_checked``, why it was not
+    looked at). Empty when ``ok``."""
+    not_checked: bool = False
+    """True when the store turned the request away (blocked or in cooldown): the link is neither
+    good nor broken, and the query's links stay undecided."""
     result: LinkResult | None = None
     """What the fetch function returned. ``None`` when it raised instead."""
 
@@ -85,6 +92,10 @@ class LinkRules:
     min_title_overlap: float = 0.5
     """Share of the product title's words that must appear in the page title."""
 
+
+THROTTLED_LINK_NOTE = (
+    "the store turned the request away (blocked or in cooldown), so this link was not checked"
+)
 
 _LANGUAGE_HOME = re.compile(r"^[a-z]{2}(?:[-_][a-z]{2})?$", re.IGNORECASE)
 _SEARCH_KEYS = frozenset({"q", "query", "search", "s", "keyword", "keywords", "term", "text"})
@@ -239,11 +250,14 @@ class LinkChecker:
         fetch: LinkFetch,
         allowed_hosts: Mapping[str, Collection[str]],
         rules: LinkRules | None = None,
+        known: Iterable[LinkCheck] = (),
     ) -> None:
+        """``known`` are checks an earlier session of the same run already made: those URLs are
+        not asked again."""
         self._fetch = fetch
         self._allowed_hosts = allowed_hosts
         self._rules = rules or LinkRules()
-        self._seen: dict[str, LinkCheck] = {}
+        self._seen: dict[str, LinkCheck] = {check.url: check for check in known}
 
     @property
     def requests_made(self) -> int:
@@ -260,8 +274,12 @@ class LinkChecker:
         except Exception as exc:  # any failure of the fetch is a failed link
             problems = [f"the request failed ({type(exc).__name__})"]
         else:
-            problems = evaluate_link(
-                product, result, self._allowed_hosts.get(product.store), self._rules
+            problems = (
+                [THROTTLED_LINK_NOTE]
+                if result.throttled
+                else evaluate_link(
+                    product, result, self._allowed_hosts.get(product.store), self._rules
+                )
             )
         checked = LinkCheck(
             url=product.product_url,
@@ -269,6 +287,7 @@ class LinkChecker:
             product_title=product.title,
             ok=not problems,
             problems=problems,
+            not_checked=result is not None and result.throttled,
             result=result,
         )
         self._seen[product.product_url] = checked
