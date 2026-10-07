@@ -1,0 +1,108 @@
+{
+ "resources": {
+  "results": {
+   "products": [
+    {
+     "available": true,
+     "body": "<p data-start=\"157\" data-end=\"542\">The <strong data-start=\"161\" data-end=\"192\">ZAHRA Gold Structured Dress</strong> is a standout statement of elegance and refinement. Crafted from a rich, shimmering gold fabric with a smooth structured finish, it beautifully contours the silhouette while offering a",
+     "compare_at_price_max": "0.00",
+     "compare_at_price_min": "0.00",
+     "handle": "zahra-gold-dress-with-cape",
+     "id": 9217871708397,
+     "image": "https://cdn.shopify.com/s/files/1/0747/8444/0557/files/1_a8d39461-1441-4733-8f6c-556c6b9d9db3.jpg?v=1767167958",
+     "price": "1600.00",
+     "price_max": "1600.00",
+     "price_min": "1600.00",
+     "tags": [],
+     "title": "ZAHRA GOLD DRESS WITH CAPE",
+     "type": "Kaftans and Abayas",
+     "url": "/products/zahra-gold-dress-with-cape?_pos=1&_psq=dress&_psid=772b1a7f5&_ss=e",
+     "variants": [],
+     "vendor": "MAISON ARABELLE",
+     "featured_image": {
+      "alt": "ZAHRA GOLD DRESS WITH CAPE",
+      "aspect_ratio": 0.75,
+      "height": 2400,
+      "url": "https://cdn.shopify.com/s/files/1/0747/8444/0557/files/1_a8d39461-1441-4733-8f6c-556c6b9d9db3.jpg?v=1767167958",
+      "width": 1800
+     }
+    },
+    {
+     "available": true,
+     "body": "<h3>LARA GRAY EMBROIDERED ABAYA</h3>\n<p data-start=\"37\" data-end=\"377\">Handcrafted in premium satin silk, this exquisite 3-piece set includes a <strong>flowing open abaya, an elegant inner dress, and a matching sheila</strong> for a complete elevated look.</p>\n<p data-start=\"379\" data-end=\"677\">Desi",
+     "compare_at_price_max": "0.00",
+     "compare_at_price_min": "0.00",
+     "handle": "lara-gray-embroireded-abaya",
+     "id": 9373371269357,
+     "image": "https://cdn.shopify.com/s/files/1/0747/8444/0557/files/3_014db145-a059-447a-bbb5-f672eff8fccc.png?v=1779194513",
+     "price": "1800.00",
+     "price_max": "1800.00",
+     "price_min": "1800.00",
+     "tags": [],
+     "title": "LARA GRAY EMBROIREDED ABAYA",
+     "type": "Kaftans and Abayas",
+     "url": "/products/lara-gray-embroireded-abaya?_pos=2&_psq=dress&_psid=772b1a7f5&_ss=e",
+     "variants": [],
+     "vendor": "MAISON ARABELLE",
+     "featured_image": {
+      "alt": "LARA GRAY EMBROIREDED ABAYA",
+      "aspect_ratio": 0.75,
+      "height": 2400,
+      "url": "https://cdn.shopify.com/s/files/1/0747/8444/0557/files/3_014db145-a059-447a-bbb5-f672eff8fccc.png?v=1779194513",
+      "width": 1800
+     }
+    },
+    {
+     "available": true,
+     "body": "<p><strong>EMBROIDERY DETAILS:<span> <br></span></strong>MARWA in white features a black linen base accented by elegant white handmade embroidery along the front and cuffs. With its clean contrast and included inner, it’s ideal for both formal settings and casual family moments.With inner.</p>\n<p><s",
+     "compare_at_price_max": "890.00",
+     "compare_at_price_min": "890.00",
+     "handle": "marwa-white",
+     "id": 8977904173293,
+     "image": "https://cdn.shopify.com/s/files/1/0747/8444/0557/files/MARWA_WHITE1.jpg?v=1749107173",
+     "price": "1040.00",
+     "price_max": "1040.00",
+     "price_min": "1040.00",
+     "tags": [],
+     "title": "MARWA WHITE",
+     "type": "Kaftans and Abayas",
+     "url": "/products/marwa-white?_pos=3&_psq=dress&_psid=772b1a7f5&_ss=e",
+     "variants": [],
+     "vendor": "Maison Arabelle",
+     "featured_image": {
+      "alt": "MARWA WHITE",
+      "aspect_ratio": 0.75,
+      "height": 2400,
+      "url": "https://cdn.shopify.com/s/files/1/0747/8444/0557/files/MARWA_WHITE1.jpg?v=1749107173",
+      "width": 1800
+     }
+    },
+    {
+     "available": true,
+     "body": "<p><strong>EMBROIDERY DETAILS:<br></strong>SHIMMER dazzles with its soft shimmer silk fabric, detailed with delicate handmade embroidery. The flowy sleeves and V-neckline create an airy feel, while the knee slit adds a touch of ease and style ideal for special family gatherings and native celebratio",
+     "compare_at_price_max": "1600.00",
+     "compare_at_price_min": "1600.00",
+     "handle": "shimmer",
+     "id": 8977903059181,
+     "image": "https://cdn.shopify.com/s/files/1/0747/8444/0557/files/SHIMMER.jpg?v=1749107178",
+     "price": "1600.00",
+     "price_max": "1600.00",
+     "price_min": "1600.00",
+     "tags": [],
+     "title": "SHIMMER",
+     "type": "Kaftans and Abayas",
+     "url": "/products/shimmer?_pos=4&_psq=dress&_psid=772b1a7f5&_ss=e",
+     "variants": [],
+     "vendor": "Maison Arabelle",
+     "featured_image": {
+      "alt": "SHIMMER",
+      "aspect_ratio": 0.75,
+      "height": 2400,
+      "url": "https://cdn.shopify.com/s/files/1/0747/8444/0557/files/SHIMMER.jpg?v=1749107178",
+      "width": 1800
+     }
+    }
+   ]
+  }
+ }
+}
