@@ -53,6 +53,7 @@ def test_the_explanatory_comments_are_not_sent_to_the_model() -> None:
         "outerwear",
         "bottoms",
         "shoes",
+        "dresses",
         "at most 4",
         "Translate Arabic",
         "price words",
@@ -72,11 +73,74 @@ def test_the_prompt_stays_short_enough_to_be_cheap_on_every_call() -> None:
     assert len(system_prompt()) < 9000
 
 
+# --------------------------------------------------------------------------------------------
+# The fifth category: dresses and ethnic wear (assumption A23, prompt understand-v2)
+# --------------------------------------------------------------------------------------------
+
+
+def _line_starting_with(marker: str) -> str:
+    [line] = [line for line in system_prompt().splitlines() if line.startswith(marker)]
+    return line
+
+
+def test_the_old_prompt_file_is_kept_next_to_the_new_one_for_comparison() -> None:
+    assert PROMPT_VERSION == "understand-v2"
+    assert (PROMPTS_DIR / "understand-v1.md").is_file()
+    assert (PROMPTS_DIR / "understand-v2.md").is_file()
+
+
+def test_the_prompt_names_five_categories_and_defines_dresses_by_example() -> None:
+    prompt = system_prompt()
+
+    assert "Exactly five categories exist" in prompt
+    assert "Exactly four" not in prompt
+    dresses = _line_starting_with("- `dresses`")
+    for garment in ("dresses", "gowns", "kaftans", "abayas", "jalabiyas", "kurtas"):
+        assert garment in dresses
+
+
+def test_a_dress_is_no_longer_called_out_of_scope() -> None:
+    out_of_scope = _line_starting_with("- `out_of_scope`")
+
+    for now_in_scope in ("dress", "abaya", "kaftan", "kurta", "gown"):
+        assert now_in_scope not in out_of_scope
+    for still_out in ("jumpsuits", "bags", "sheilas", "hijabs", "swimwear", "nightwear"):
+        assert still_out in out_of_scope
+
+
+def test_a_dress_worn_with_shoes_is_two_items() -> None:
+    assert "dress worn with shoes is two items" in system_prompt()
+
+
+def test_the_prompt_asks_for_the_garments_own_english_word_in_the_keywords() -> None:
+    prompt = system_prompt()
+
+    assert "garment's own English word" in prompt
+    for word in ("abaya", "kaftan", "kurta", "jalabiya"):
+        assert f'"{word}"' in prompt
+
+
+@pytest.mark.parametrize(
+    ("arabic", "english"),
+    [("عباية", "abaya"), ("فستان", "dress"), ("قفطان", "kaftan"), ("جلابية", "jalabiya")],
+)
+def test_the_prompt_translates_the_arabic_garment_words_it_is_likeliest_to_meet(
+    arabic: str, english: str
+) -> None:
+    assert f"{arabic} is {english}" in system_prompt()
+
+
 def test_the_prompt_does_not_reuse_the_frozen_eval_cases() -> None:
     # The edge cases are a test of the prompt; copying them into it would make that test rigged.
     prompt = system_prompt().lower()
 
-    for leaked in ("handbag", "pwned", "red satin evening dress", "wide leg jeans in light blue"):
+    for leaked in (
+        "handbag",
+        "pwned",
+        "red satin evening dress",
+        "wide leg jeans in light blue",
+        "aviator sunglasses",
+    ):
         assert leaked not in prompt
 
 
@@ -160,7 +224,7 @@ def test_a_first_attempt_has_exactly_two_messages() -> None:
 
 
 def test_a_corrective_retry_adds_one_system_message_listing_the_problems_by_field() -> None:
-    problems = ["items[0].category: must be one of tops, outerwear, bottoms, shoes"]
+    problems = ["items[0].category: must be one of tops, outerwear, bottoms, shoes, dresses"]
 
     messages = _messages(problems=problems)
 

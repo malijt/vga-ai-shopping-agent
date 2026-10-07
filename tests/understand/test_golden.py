@@ -13,7 +13,7 @@ from tests.factories import make_image_bytes, make_search_request
 from tests.understand.conftest import RigFactory
 from tests.understand.eval_cases import GOLDEN_DIR, GoldenCase, golden_problems, load_golden_cases
 from tests.understand.fake_openai import answer
-from vga.models import GenderSource
+from vga.models import Category, GenderSource, InputType
 from vga.understand import FALLBACK_MARKER
 from vga.understand.schema import UnderstandReading
 
@@ -71,9 +71,39 @@ async def test_an_inferred_gender_in_the_outfit_photo_stays_out_of_every_keyword
         make_search_request(image=make_image_bytes(), text=None)
     )
 
-    assert [item.gender_source for item in result.items] == [GenderSource.INFERRED] * 3
+    assert [item.gender_source for item in result.items] == [GenderSource.INFERRED] * 2
     words = {word for item in result.items for kw in item.search_keywords for word in kw.split()}
     assert not words & {"men", "man", "women", "male", "female"}
+
+
+async def test_a_dress_worn_with_shoes_in_an_outfit_photo_is_two_items(rig: RigFactory) -> None:
+    case = GOLDEN["g2_outfit_photo"]
+    r = rig(answer(UnderstandReading.model_validate(case.model_output)))
+
+    result = await r.understander.understand(
+        make_search_request(image=make_image_bytes(), text=None)
+    )
+
+    assert result.input_type is InputType.OUTFIT_PHOTO
+    assert [item.category for item in result.items] == [Category.DRESSES, Category.SHOES]
+
+
+async def test_an_edit_to_a_gown_photo_changes_the_colour_and_keeps_the_garments_own_word(
+    rig: RigFactory,
+) -> None:
+    case = GOLDEN["g5_photo_and_text"]
+    r = rig(answer(UnderstandReading.model_validate(case.model_output)))
+
+    result = await r.understander.understand(
+        make_search_request(image=make_image_bytes(), text=case.text)
+    )
+
+    [item] = result.items
+    assert item.category is Category.DRESSES
+    assert item.colour == "dark green"
+    assert all("gown" in keyword for keyword in item.search_keywords)
+    assert "cheaper" not in " ".join(item.search_keywords)  # price words are filters, not searches
+    assert "cheaper" in result.edits
 
 
 async def test_a_stated_gender_goes_into_the_first_keyword_only(rig: RigFactory) -> None:

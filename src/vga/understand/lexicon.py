@@ -224,6 +224,13 @@ _GARMENT_WORDS: dict[Category, tuple[str, ...]] = {
         "oxford", "slipper", "footwear",
         "حذاء", "احذيه", "جزمه", "صندل", "بوت", "سنيكرز", "كوتشي", "كوتش", "نعال", "شبشب",
     ),
+    Category.DRESSES: (
+        "dress", "gown", "kaftan", "caftan", "abaya", "jalabiya", "kurta", "kurti", "kameez",
+        "lehenga",
+        # Arabic is folded before it is looked up (the final taa marbuta becomes haa), so the
+        # spellings below are the folded ones.
+        "فستان", "فساتين", "عبايه", "عبايات", "قفطان", "قفاطين", "جلابيه", "جلابيات",
+    ),
 }  # fmt: skip
 
 _GARMENT_LOOKUP: dict[str, Category] = {
@@ -260,6 +267,7 @@ CATEGORY_NOUN: dict[Category, str] = {
     Category.OUTERWEAR: "jacket",
     Category.BOTTOMS: "pants",
     Category.SHOES: "shoes",
+    Category.DRESSES: "dress",
 }
 """A plain English noun for a category, used to rebuild keywords when the item has no style."""
 

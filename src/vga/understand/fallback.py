@@ -5,9 +5,9 @@ control characters, no price words. It is a degraded answer and says so in ``war
 ``model`` and ``prompt_version`` are the marker ``FALLBACK_MARKER`` so no log or test can mistake it
 for the model's reading.
 
-There is no model to say which of the four categories the words mean, and ``ItemIntent`` needs one.
+There is no model to say which of the five categories the words mean, and ``ItemIntent`` needs one.
 The fallback reads it from a short garment word list (``lexicon.garment_category``). When the text
-names no garment from the four categories there is nothing to search for, and the shopper is told
+names no garment from the five categories there is nothing to search for, and the shopper is told
 what to type instead; a guessed category would send them to wrong results.
 """
 
@@ -38,7 +38,7 @@ _SENTENCES = re.compile(r"[\n.!?;:؟؛]+")
 def fallback_result(text: str, *, has_image: bool, usage: Usage) -> UnderstandResult:
     """The degraded ``UnderstandResult`` for ``text``.
 
-    Raises the invalid-input ``VgaError`` when the text names no garment from the four categories.
+    Raises the invalid-input ``VgaError`` when the text names no garment from the five categories.
     """
     item = _item_from_words(text)
     if item is None:

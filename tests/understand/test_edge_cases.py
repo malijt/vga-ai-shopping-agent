@@ -31,6 +31,7 @@ from tests.understand.readings import (
     make_reading_item,
 )
 from vga.models import Category, Gender, GenderSource, InputType
+from vga.understand.messages import COVERED
 from vga.understand.prompt import system_prompt
 from vga.understand.schema import Verdict
 
@@ -117,11 +118,26 @@ WELL_BEHAVED: dict[str, Step | None] = {
         )
     ),
     "e12_out_of_scope_handbag": _declined(Verdict.OUT_OF_SCOPE),
-    "e13_out_of_scope_dress": _declined(Verdict.OUT_OF_SCOPE),
+    "e13_dress_request": answer(
+        make_reading(
+            items=[
+                make_reading_item(
+                    category=Category.DRESSES,
+                    colour="red",
+                    style="satin evening dress",
+                    material="satin",
+                    gender=Gender.WOMEN,
+                    gender_source=GenderSource.EXPLICIT,
+                    search_keywords=["red satin evening dress", "evening dress"],
+                )
+            ]
+        )
+    ),
     "e14_nonsense_letters": _declined(Verdict.NOT_A_REQUEST),
     "e15_nonsense_symbols": None,
     "e16_price_words_only_english": _declined(Verdict.NOT_A_REQUEST),
     "e17_price_words_only_arabic": _declined(Verdict.NOT_A_REQUEST),
+    "e18_out_of_scope_sunglasses": _declined(Verdict.OUT_OF_SCOPE),
 }
 
 
@@ -146,6 +162,31 @@ def test_the_frozen_file_has_the_cases_this_suite_scripts() -> None:
 
 def test_the_long_text_case_really_is_over_the_limit() -> None:
     assert len(CASES["e10_very_long_text"].text or "") > 2000
+
+
+def test_there_are_two_out_of_scope_cases_and_a_dress_is_not_one_of_them() -> None:
+    # A dress was out of scope until 2026-10-08. The sunglasses case replaced it, so the file
+    # still holds two out-of-scope cases (a handbag and sunglasses): both accessories.
+    out_of_scope = {case.id for case in CASES.values() if "out_of_scope" in case.id}
+
+    assert out_of_scope == {"e12_out_of_scope_handbag", "e18_out_of_scope_sunglasses"}
+    assert {CASES[case_id].expected for case_id in out_of_scope} == {FRIENDLY_ERROR}
+    assert CASES["e13_dress_request"].expected == VALID_SCHEMA
+
+
+async def test_a_dress_request_comes_back_as_one_dresses_item_with_the_garments_own_word(
+    rig: RigFactory,
+) -> None:
+    case = CASES["e13_dress_request"]
+    r = rig(WELL_BEHAVED[case.id])
+
+    outcome = await run_edge_case(r.understander, case)
+
+    assert outcome.result is not None
+    [item] = outcome.result.items
+    assert item.category is Category.DRESSES
+    assert item.gender is Gender.WOMEN
+    assert any("dress" in keyword for keyword in item.search_keywords)
 
 
 # --------------------------------------------------------------------------------------------
@@ -177,14 +218,14 @@ async def test_a_well_behaved_model_gives_the_expected_outcome(
         "e05_injection_printed_in_photo_only",
         "e07_non_fashion_photo",
         "e12_out_of_scope_handbag",
-        "e13_out_of_scope_dress",
+        "e18_out_of_scope_sunglasses",
         "e14_nonsense_letters",
         "e16_price_words_only_english",
         "e17_price_words_only_arabic",
         "e15_nonsense_symbols",
     ],
 )
-async def test_nothing_to_shop_for_names_the_four_categories_and_starts_no_search(
+async def test_nothing_to_shop_for_names_the_five_categories_and_starts_no_search(
     rig: RigFactory, case_id: str
 ) -> None:
     case = CASES[case_id]
@@ -194,7 +235,8 @@ async def test_nothing_to_shop_for_names_the_four_categories_and_starts_no_searc
     outcome = await run_edge_case(r.understander, case)
 
     assert outcome.kind == FRIENDLY_ERROR
-    assert "tops, outerwear, bottoms and shoes" in (outcome.message or "")
+    assert COVERED in (outcome.message or "")
+    assert "dresses" in (outcome.message or "")
     assert outcome.result is None  # no UnderstandResult, so nothing to search
 
 

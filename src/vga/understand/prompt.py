@@ -23,7 +23,7 @@ from openai.types.responses import ResponseInputParam
 
 from vga.understand.text import neutralise_user_text
 
-PROMPT_VERSION = "understand-v1"
+PROMPT_VERSION = "understand-v2"
 """Name of the prompt file (``prompts/<PROMPT_VERSION>.md``). Change it with the file."""
 
 PROMPTS_DIR = Path(__file__).parent / "prompts"

@@ -3,8 +3,8 @@
   "provenance": "HAND-WRITTEN example of the parsed output we expect. NOT recorded from the OpenAI API.",
   "request": {
     "text": null,
-    "image": "private/outfit_casual.jpg",
-    "image_note": "Offline tests send a tiny generated image instead; the live eval needs the real photo from eval/data/ASSETS.md and skips this case without it."
+    "image": "private/outfit_black_dress_heels.png",
+    "image_note": "A black dress worn with heels, supplied by the business on 2026-10-08 (the same photo as acceptance query q05). A dress worn with shoes is two garments. Offline tests send a tiny generated image instead; the live eval needs the real photo from eval/data/ASSETS.md and skips this case without it."
   },
   "model_output": {
     "verdict": "ok",
@@ -12,31 +12,22 @@
     "language": "en",
     "items": [
       {
-        "category": "tops",
-        "colour": "white",
-        "style": "t-shirt",
+        "category": "dresses",
+        "colour": "black",
+        "style": "dress",
         "material": null,
-        "gender": "men",
+        "gender": "women",
         "gender_source": "inferred",
-        "search_keywords": ["white t-shirt", "white crew neck t-shirt"]
-      },
-      {
-        "category": "bottoms",
-        "colour": "blue",
-        "style": "straight jeans",
-        "material": "denim",
-        "gender": "men",
-        "gender_source": "inferred",
-        "search_keywords": ["blue straight jeans", "straight jeans"]
+        "search_keywords": ["black dress", "black midi dress"]
       },
       {
         "category": "shoes",
-        "colour": "white",
-        "style": "low-top sneakers",
+        "colour": "black",
+        "style": "heels",
         "material": null,
-        "gender": "men",
+        "gender": "women",
         "gender_source": "inferred",
-        "search_keywords": ["white sneakers", "white low-top sneakers"]
+        "search_keywords": ["black heels", "black high heels"]
       }
     ],
     "budget": null,
@@ -46,8 +37,7 @@
     "input_type": "outfit_photo",
     "budget": null,
     "items": [
-      {"category": "tops", "gender_source": "inferred"},
-      {"category": "bottoms", "gender_source": "inferred"},
+      {"category": "dresses", "gender_source": "inferred"},
       {"category": "shoes", "gender_source": "inferred"}
     ]
   }
