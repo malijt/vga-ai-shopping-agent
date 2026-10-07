@@ -1,0 +1,17 @@
+# Giordano UAE: Shopify storefront, read through /search/suggest.json (10 products per call).
+# Evidence: docs/store-qualification/giordano-uae.md. Fragility notes: docs/store-notes/giordano-uae.md.
+id: giordano-uae
+name: Giordano UAE
+country: AE
+currency: AED          # the suggest response carries no currency; AED is store-level (product page JSON-LD)
+search_url_template: "https://giordano.ae/search/suggest.json?q={query}&resources[type]=product&resources[limit]=10"
+allowed_hosts:
+  - giordano.ae        # product links and the search endpoint
+  - cdn.shopify.com    # product images (seen on all 40 qualification records)
+extraction:
+  strategies:
+    - name: shopify    # default options: name_field "title", image_width 400
+tier_hint: budget      # AED 39.50 to 199.50 seen, all on sale during qualification
+# genders is left unset on purpose: the report saw men's and unisex items and its page titles also
+# describe women's and kids' lines, so this is not a single-gender store.
+enabled: true          # the live smoke test passed on 2026-10-08 (tests/stores/giordano-uae, 4 requests)
