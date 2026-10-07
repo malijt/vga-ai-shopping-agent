@@ -1,0 +1,29 @@
+User-agent: *
+Disallow: /_svc/
+Disallow: /_vs/
+Disallow: /*discount_percent=
+Disallow: /*arrival_date=
+Disallow: ?q=
+Disallow: /*nms_colour=
+Disallow: /*nms_occasion=
+Disallow: /*size_group=
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: BadBot
+Disallow: /
+
+User-agent: GoogleOther
+Disallow: /
+
+User-agent: python-requests
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: YandexBot
+Disallow: /
+
+Sitemap: https://www.namshi.com/sitemap-index.xml

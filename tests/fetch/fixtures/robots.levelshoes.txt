@@ -1,0 +1,21 @@
+# Reconstructed from the rules quoted in docs/store-qualification/level-shoes.md (the real file
+# was not saved). Only the lines the report quotes verbatim are here.
+User-agent: *
+User-agent: Googlebot
+User-agent: Bingbot
+Disallow: */catalogsearch/
+Disallow: */catalog/product_compare/
+Disallow: /*?*sortBy=
+Disallow: /*?price=
+Disallow: /*?color=
+Disallow: /*?size=
+Disallow: /*?brand=
+Disallow: /*?category=
+Disallow: /_next/data/*?*
+Disallow: /api/
+Disallow: /checkout/
+
+User-agent: Diffbot
+Disallow: /
+
+Sitemap: https://www.levelshoes.com/sitemap.xml

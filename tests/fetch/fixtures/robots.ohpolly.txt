@@ -1,0 +1,16 @@
+# Reconstructed from the rules quoted in docs/store-qualification/oh-polly.md (the real file was
+# not saved). Club L London's file has the same rules.
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /cart/
+Disallow: /checkout
+Disallow: /orders
+Disallow: /account
+Disallow: /cart.js
+Disallow: /recommendations/products
+Disallow: /collections/*sort_by*
+Disallow: /collections/*+*
+Disallow: /*?*preview_theme_id=*
+
+Sitemap: https://ohpolly.ae/sitemap.xml
