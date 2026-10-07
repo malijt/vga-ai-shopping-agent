@@ -619,6 +619,36 @@ class TestProduct:
 
         assert (product.colour, product.in_stock, product.category) == (None, None, None)
 
+    def test_gender_defaults_to_unknown(self) -> None:
+        product = Product(
+            title="Plain Tee",
+            price=59,
+            currency="AED",
+            image_url="https://cdn.demo-store.example/a.jpg",
+            product_url="https://www.demo-store.example/p/a",
+            store="Demo Store",
+        )
+
+        assert product.gender is None
+        assert make_product().gender is None
+
+    @pytest.mark.parametrize("gender", list(Gender))
+    def test_gender_round_trips(self, gender: Gender) -> None:
+        product = make_product(gender=gender)
+
+        assert round_trip(product) == product
+        assert round_trip(product).gender is gender
+
+    def test_gender_is_read_from_its_json_value(self) -> None:
+        data = make_product().model_dump(mode="json")
+        data["gender"] = "women"
+
+        assert Product.model_validate(data).gender is Gender.WOMEN
+
+    def test_a_gender_that_is_not_men_women_or_unisex_is_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            make_product(gender="kids")
+
     def test_very_long_title_is_accepted(self) -> None:
         assert len(make_product(title="Blazer " * 100).title) > 600
 
