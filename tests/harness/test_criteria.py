@@ -1,7 +1,5 @@
 """11.2.1: each criterion, with passing and failing responses, and the boundary cases."""
 
-from dataclasses import replace
-
 import pytest
 from eval.harness.criteria import (
     Cause,
@@ -18,12 +16,10 @@ from eval.harness.criteria import (
     failure_rows,
     price_range_problems,
 )
-from eval.harness.labels import LabelSet, label_rows
-from eval.harness.links import LinkCheck
 from eval.harness.runner import DurationSource, PipelineFailure, QueryRun
 
 from tests.factories import make_store_report
-from tests.harness.helpers import make_group, make_query, make_response
+from tests.harness.helpers import labels_for, make_group, make_query, make_response, ok_links
 from vga.models import Category, Flag, SearchResponse, StepTiming, Tier
 
 CONFIG = CriteriaConfig()
@@ -45,23 +41,6 @@ def run_of(
         duration,
         source,
     )
-
-
-def ok_links(response: SearchResponse, only_top: int | None = None) -> list[LinkCheck]:
-    products = [scored.product for scored in response.products]
-    chosen = products if only_top is None else products[:only_top]
-    return [
-        LinkCheck(url=p.product_url, store=p.store, product_title=p.title, ok=True) for p in chosen
-    ]
-
-
-def labels_for(run: QueryRun, good_in_group: dict[str, int]) -> LabelSet:
-    """Label the first ``good_in_group[group]`` ranks of each group good, the rest not good."""
-    rows = [
-        replace(row, label=1 if row.rank <= good_in_group[row.group] else 0)
-        for row in label_rows([run])
-    ]
-    return LabelSet(tuple(rows))
 
 
 class TestResults:

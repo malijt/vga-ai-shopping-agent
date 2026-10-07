@@ -6,9 +6,13 @@ record-then-replay tests can run "a pipeline built from three boundaries" end to
 """
 
 from collections.abc import Callable, Mapping, Sequence
+from dataclasses import replace
 from typing import Any
 
+from eval.harness.labels import LabelSet, label_rows
+from eval.harness.links import LinkCheck
 from eval.harness.queries import AcceptanceQuery
+from eval.harness.runner import QueryRun
 
 from tests.factories import (
     make_item_intent,
@@ -155,6 +159,24 @@ def make_response(
         "duration_ms": duration_ms,
     }
     return SearchResponse.model_validate({**fields, **overrides})
+
+
+def ok_links(response: SearchResponse, only_top: int | None = None) -> list[LinkCheck]:
+    """Passing link checks for every result (or only the first ``only_top`` displayed)."""
+    products = [scored.product for scored in response.products]
+    chosen = products if only_top is None else products[:only_top]
+    return [
+        LinkCheck(url=p.product_url, store=p.store, product_title=p.title, ok=True) for p in chosen
+    ]
+
+
+def labels_for(run: QueryRun, good_in_group: dict[str, int]) -> LabelSet:
+    """Label the first ``good_in_group[group]`` ranks of each group good, the rest not good."""
+    rows = [
+        replace(row, label=1 if row.rank <= good_in_group[row.group] else 0)
+        for row in label_rows([run])
+    ]
+    return LabelSet(tuple(rows))
 
 
 class ToyPipeline:
