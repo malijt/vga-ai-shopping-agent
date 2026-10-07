@@ -64,7 +64,7 @@ Worked examples (request q01: a burgundy evening gown, photo only):
 
 ## How to label the top 10
 
-1. Use the labelling sheet the harness exports (`query_id, rank, title, store, url, label`). Fill
+1. Use the labelling sheet the harness exports (`query_id, photo, group, rank, title, price, store, price_range, url, label`; `photo` is the file to open for that query, `group` is the garment for an outfit). Fill
    only `label`.
 2. "Top 10" means ranks 1 to 10 of the result list, ordered by the app's overall match order across
    all price ranges together (not by price). Label exactly those ten rows.
