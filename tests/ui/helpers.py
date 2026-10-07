@@ -9,7 +9,7 @@ from typing import Any
 from streamlit.testing.v1 import AppTest
 
 SEARCH_BUTTON = "search_button"
-TEXT_AREA = "query_text"
+TEXT_BOX = "query_text"
 PHOTO = "photo_upload"
 
 EXAMPLE_TEXT = "black oversized blazer for men under 400 AED"
@@ -65,6 +65,6 @@ def visible_strings(at: AppTest) -> list[str]:
 
 def search(at: AppTest, text: str = EXAMPLE_TEXT) -> AppTest:
     """Type a description and press "Search stores"."""
-    at.text_area(key=TEXT_AREA).set_value(text).run()
+    at.text_input(key=TEXT_BOX).set_value(text).run()
     at.button(key=SEARCH_BUTTON).click().run()
     return at

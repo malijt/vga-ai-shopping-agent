@@ -14,7 +14,7 @@ from streamlit.testing.v1 import AppTest
 from streamlit.testing.v1.element_tree import Markdown
 
 from tests.fakes import FakePipeline
-from tests.ui.helpers import SEARCH_BUTTON, TEXT_AREA, nodes, search, visible_strings
+from tests.ui.helpers import SEARCH_BUTTON, TEXT_BOX, nodes, search, visible_strings
 
 
 class TestStartup:
@@ -110,7 +110,7 @@ class TestEmptyState:
 
         at.button(key="example_2").click().run()
 
-        assert at.text_area(key=TEXT_AREA).value == EXAMPLE_QUERIES[2]
+        assert at.text_input(key=TEXT_BOX).value == EXAMPLE_QUERIES[2]
         assert at.button(key=SEARCH_BUTTON).disabled is False
 
     def test_first_screen_disappears_once_there_are_results(

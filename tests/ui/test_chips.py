@@ -12,7 +12,7 @@ from tests.factories import (
 )
 from tests.fakes import FakePipeline
 from tests.ui.conftest import InstallPipeline
-from tests.ui.helpers import SEARCH_BUTTON, TEXT_AREA, search
+from tests.ui.helpers import SEARCH_BUTTON, TEXT_BOX, search
 from vga.errors import LlmError
 from vga.models import (
     Budget,
@@ -181,7 +181,7 @@ class TestApply:
     def test_the_search_again_uses_what_is_in_the_boxes_now(
         self, results_at: AppTest, pipeline: FakePipeline
     ) -> None:
-        results_at.text_area(key=TEXT_AREA).set_value("something else").run()
+        results_at.text_input(key=TEXT_BOX).set_value("something else").run()
 
         results_at.button(key=APPLY).click().run()
 
@@ -209,7 +209,7 @@ class TestApply:
         assert results_at.button(key=APPLY).disabled is False
 
     def test_search_again_is_blocked_when_the_boxes_are_empty(self, results_at: AppTest) -> None:
-        results_at.text_area(key=TEXT_AREA).set_value("").run()
+        results_at.text_input(key=TEXT_BOX).set_value("").run()
 
         assert results_at.button(key=APPLY).disabled is True
         assert any("keep your photo or description" in m.value for m in results_at.markdown)
