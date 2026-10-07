@@ -55,12 +55,18 @@ MAX_URL_LENGTH = 2048
 
 
 class Category(StrEnum):
-    """The four garment categories in scope (BRD). Accessories are out of scope."""
+    """The five garment categories in scope (BRD). Accessories are out of scope.
+
+    ``DRESSES`` (added 2026-10-08, assumption A23) covers dresses, gowns, kaftans, abayas,
+    jalabiyas, kurtas and similar one-piece or ethnic garments. Jumpsuits, swimwear and nightwear
+    are not part of it.
+    """
 
     TOPS = "tops"
     OUTERWEAR = "outerwear"
     BOTTOMS = "bottoms"
     SHOES = "shoes"
+    DRESSES = "dresses"
 
 
 class Tier(StrEnum):

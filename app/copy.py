@@ -25,11 +25,13 @@ EXAMPLE_QUERIES: tuple[str, ...] = (
     "جاكيت جلد أسود للرجال بأقل من 400 درهم",  # "black leather jacket for men under 400 AED"
 )
 
+# "Dresses" alone would read oddly for an abaya or a kurta, so the fifth label names both.
 CATEGORY_LABELS: dict[Category, str] = {
     Category.TOPS: "Tops",
     Category.OUTERWEAR: "Outerwear",
     Category.BOTTOMS: "Bottoms",
     Category.SHOES: "Shoes",
+    Category.DRESSES: "Dresses and ethnic wear",
 }
 
 GENDER_LABELS: dict[Gender, str] = {
