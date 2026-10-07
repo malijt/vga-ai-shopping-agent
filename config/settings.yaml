@@ -4,8 +4,9 @@
 # recorded acceptance run, not per query.
 
 # --- Search -------------------------------------------------------------------------------
-country: AE                     # ISO country code of the market (UAE first). Only enabled stores in it are used.
-stores: []                      # Store ids to use. Empty = every enabled store in `country`.
+country: AE                     # ISO country code of the home market (UAE first). Enabled stores in it are used.
+extra_store_countries: [KW]     # Also use the enabled stores of these countries (Kuwait: Bazza Alzouman, Hamsa, Manal Smaoui).
+stores: []                      # Store ids to use. Empty = every enabled store in `country` and `extra_store_countries`.
 results: 30                     # Results for a normal request (PRD R13).
 max_per_store: 6                # No store may supply more than this many results (PRD R9).
 outfit_results_per_garment: 12  # Results per garment for an outfit photo (assumption A2).
@@ -19,6 +20,26 @@ rps_images_per_host: 5          # Thumbnail downloads per second per image host 
 store_cache_ttl_s: 600          # Identical store searches within this time are served from memory.
 store_cooldown_s: 900           # A store that blocked or failed is not contacted again for this long.
 max_response_bytes: 2000000     # Size cap for one HTTP response; a store can override it (max_response_bytes in its file).
+
+# --- Currencies ---------------------------------------------------------------------------
+# Prices, budgets and price ranges are compared in the base currency. A store that prices in
+# another currency shows its own price plus an approximate figure in the base currency, and the
+# approximate figure is what ranges and budgets use (decided by the user on 2026-10-08).
+# A currency with no rate below is never converted: its products get no budget comparison and are
+# left out of the price ranges (the app does not guess a rate). There is no live rate call.
+base_currency: AED
+fx_rates:                       # 1 unit of the currency = this many units of base_currency.
+  # KWD: a FIXED, APPROXIMATE rate. It is not live and drifts as the dinar (pegged to an undisclosed
+  # basket) moves, so REFRESH IT BEFORE ANY REAL USE and update the lines below with the new source
+  # and date. Do not change the number without changing them.
+  # Source: Central Bank of Kuwait, "US Dollar Exchange Rate", 308.150 fils per unit on 2026-10-07
+  #   https://www.cbk.gov.kw/en/monetary-policy/market-operations/exchange-rates
+  # combined with the dirham's fixed peg of 3.6725 AED per USD (Central Bank of the UAE):
+  #   3.6725 / 0.30815 = 11.918, rounded to 11.92.
+  # Cross-check: Central Bank of the UAE's own table "Exchange Rates against UAE Dirham for VAT
+  #   related obligations", 01-Jun-2026: Kuwaiti Dinar 11.974242 (within 0.5%).
+  #   https://centralbank.ae/media/dlcdkjd2/fx_jun26_en.pdf
+  KWD: 11.92
 
 # --- Price ranges and ranking -------------------------------------------------------------
 tier_mix:                       # Percent of results per price range; must sum to 100 (PRD R14).

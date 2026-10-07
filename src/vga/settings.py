@@ -16,6 +16,7 @@ An empty value in the environment (``OPENAI_MODEL=`` in ``.env``, for example) m
 YAML value is used. It is never an error and never an empty string.
 """
 
+import math
 import os
 import re
 from collections.abc import MutableMapping
@@ -27,7 +28,14 @@ import yaml
 from pydantic import Field, ValidationError, field_validator, model_validator
 
 from vga.errors import ConfigError
-from vga.models import CountryCode, MixPreset, SettingsOverride, TierMix, VgaModel
+from vga.models import (
+    DEFAULT_CURRENCY,
+    CountryCode,
+    MixPreset,
+    SettingsOverride,
+    TierMix,
+    VgaModel,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 """The repository root (this file lives in ``<root>/src/vga``)."""
@@ -67,6 +75,7 @@ alias is never added: ``gpt-6-luna-latest`` or a bare ``luna`` must keep failing
 
 _SNAPSHOT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]*-(\d{4})-(\d{2})-(\d{2})$")
 _REVISION_RE = re.compile(r"^[0-9a-f]{40}$")
+_CURRENCY_RE = re.compile(r"^[A-Z]{3}$")
 _BROWSER_MARKERS = ("mozilla/", "applewebkit", "chrome/", "safari/", "firefox/", "gecko/")
 
 
@@ -91,10 +100,24 @@ class Settings(VgaModel):
 
     # --- search ---------------------------------------------------------------------------
     country: CountryCode = "AE"
-    """ISO 3166-1 alpha-2 code of the market to search. Only enabled stores in this country are
-    used. The PRD's "UAE" is ``AE``."""
+    """ISO 3166-1 alpha-2 code of the home market. Enabled stores in this country are used, plus
+    those in ``extra_store_countries``. The PRD's "UAE" is ``AE``."""
+    extra_store_countries: list[CountryCode] = Field(default_factory=list)
+    """Further countries whose enabled stores are searched next to the home market's (the shipped
+    file lists ``KW`` for the Kuwaiti stores). The market stays ``country``; this only widens
+    which stores are used. Empty means the home country alone."""
     stores: list[str] = Field(default_factory=list)
-    """Store ids to use. Empty means every enabled store in ``country``."""
+    """Store ids to use. Empty means every enabled store in ``country`` and
+    ``extra_store_countries``."""
+    base_currency: str = DEFAULT_CURRENCY
+    """The currency prices, budgets and price ranges are compared in (three upper-case letters).
+    A store that prices in another currency is converted into it at ``fx_rates``."""
+    fx_rates: dict[str, float] = Field(default_factory=dict)
+    """Fixed, approximate rates into ``base_currency``: ``{"KWD": 11.92}`` means 1 KWD is 11.92
+    of the base currency. A currency with no entry is never converted (its prices are not
+    compared with a budget and it is left out of the price ranges): the app does not guess a
+    rate. There is no live exchange-rate call; refresh the values by hand (see the notes in
+    ``config/settings.yaml``)."""
     results: int = Field(default=30, ge=1, le=100)
     max_per_store: int = Field(default=6, ge=1, le=50)
     outfit_results_per_garment: int = Field(default=12, ge=1, le=50)
@@ -146,6 +169,43 @@ class Settings(VgaModel):
             msg = (
                 f"siglip_cos_lo ({self.siglip_cos_lo}) must be below siglip_cos_hi "
                 f"({self.siglip_cos_hi}): together they map an image cosine to a 0-1 score"
+            )
+            raise ValueError(msg)
+        return self
+
+    @field_validator("base_currency")
+    @classmethod
+    def _base_currency_is_a_code(cls, value: str) -> str:
+        if not _CURRENCY_RE.match(value):
+            msg = f"base_currency must be a three-letter upper-case currency code, got {value!r}"
+            raise ValueError(msg)
+        return value
+
+    @field_validator("fx_rates", mode="before")
+    @classmethod
+    def _rates_are_positive_numbers_by_code(cls, value: Any) -> Any:
+        if not isinstance(value, dict):
+            msg = f"fx_rates must be a mapping of currency code to rate, got {type(value).__name__}"
+            raise ValueError(msg)
+        for code, rate in value.items():
+            if not isinstance(code, str) or not _CURRENCY_RE.match(code):
+                msg = f"fx_rates keys must be three-letter upper-case currency codes, got {code!r}"
+                raise ValueError(msg)
+            # A bool is an int in Python and a quoted number is a string: neither is a rate.
+            if isinstance(rate, bool) or not isinstance(rate, int | float):
+                msg = f"fx_rates[{code}] must be a number, got {rate!r}"
+                raise ValueError(msg)
+            if not math.isfinite(rate) or rate <= 0:
+                msg = f"fx_rates[{code}] must be a positive number, got {rate!r}"
+                raise ValueError(msg)
+        return value
+
+    @model_validator(mode="after")
+    def _base_currency_has_no_rate(self) -> Self:
+        if self.base_currency in self.fx_rates:
+            msg = (
+                f"fx_rates must not list the base currency {self.base_currency}: "
+                "the rates convert other currencies into it"
             )
             raise ValueError(msg)
         return self
@@ -214,6 +274,12 @@ class Settings(VgaModel):
             )
             raise ValueError(msg)
         return value
+
+    def searches_country(self, country: str) -> bool:
+        """True when stores in ``country`` are searched: the home country and every country in
+        ``extra_store_countries``. The one place that rule lives (the registry and the search
+        engine both ask it)."""
+        return country == self.country or country in self.extra_store_countries
 
     def with_overrides(self, override: SettingsOverride | None) -> Self:
         """A copy with the UI sidebar's changes applied. Only the price-range mix is a setting;

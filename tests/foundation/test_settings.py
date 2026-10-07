@@ -93,13 +93,23 @@ class TestShippedSettingsFile:
         assert settings.siglip_revision == MEASURED_SIGLIP_REVISION
         assert settings.image_ranker == "siglip"
 
-    def test_yaml_file_agrees_with_the_code_defaults_except_the_pinned_models(self) -> None:
+    def test_yaml_file_agrees_with_the_code_defaults_except_the_pinned_and_market_settings(
+        self,
+    ) -> None:
         from_file = load_settings(DEFAULT_SETTINGS_PATH, env={}).model_dump()
         defaults = Settings().model_dump()
 
         differing = {name for name in defaults if from_file[name] != defaults[name]}
 
-        assert differing == {"image_ranker", "siglip_revision", "openai_model"}
+        # fx_rates and extra_store_countries are empty in the code (no rate means no conversion, and
+        # no other country is searched) and filled in by the shipped file for the Kuwaiti stores.
+        assert differing == {
+            "image_ranker",
+            "siglip_revision",
+            "openai_model",
+            "fx_rates",
+            "extra_store_countries",
+        }
 
     def test_the_code_defaults_leave_the_models_unpinned(self) -> None:
         assert Settings().image_ranker == "off"
@@ -472,6 +482,111 @@ class TestMaxResponseBytes:
     ) -> None:
         with pytest.raises(ConfigError, match="max_response_bytes"):
             load_settings(settings_file(max_response_bytes=value), env={})
+
+
+class TestCurrencySettings:
+    """The base currency, the fixed rates into it, and the countries whose stores are searched."""
+
+    def test_the_code_defaults_have_no_rates_and_search_only_the_home_country(self) -> None:
+        settings = Settings()
+
+        assert settings.base_currency == "AED"
+        assert settings.fx_rates == {}
+        assert settings.extra_store_countries == []
+        assert settings.searches_country("AE")
+        assert not settings.searches_country("KW")
+
+    def test_the_shipped_file_prices_in_aed_and_carries_one_rate_for_the_dinar(self) -> None:
+        settings = load_settings(DEFAULT_SETTINGS_PATH, env={})
+
+        assert settings.base_currency == "AED"
+        # Changing this number means re-reading the sources named beside it in the YAML.
+        assert settings.fx_rates == {"KWD": 11.92}
+
+    def test_the_shipped_file_stays_uae_first_and_also_searches_kuwait(self) -> None:
+        settings = load_settings(DEFAULT_SETTINGS_PATH, env={})
+
+        assert settings.country == "AE"
+        assert settings.extra_store_countries == ["KW"]
+        assert settings.searches_country("AE")
+        assert settings.searches_country("KW")
+        assert not settings.searches_country("SA")
+
+    def test_the_yaml_names_the_source_and_date_of_the_rate_and_calls_it_approximate(self) -> None:
+        text = DEFAULT_SETTINGS_PATH.read_text(encoding="utf-8")
+
+        assert "cbk.gov.kw" in text
+        assert "2026-10-07" in text
+        assert "approximate" in text.lower()
+        assert "refresh" in text.lower()
+
+    def test_a_table_of_rates_into_the_base_currency_is_accepted(self, settings_file) -> None:
+        loaded = load_settings(
+            settings_file(base_currency="AED", fx_rates={"KWD": 11.92, "BHD": 9.74}), env={}
+        )
+
+        assert loaded.fx_rates == {"KWD": 11.92, "BHD": 9.74}
+
+    def test_a_whole_number_rate_is_accepted(self, settings_file) -> None:
+        assert load_settings(settings_file(fx_rates={"USD": 4}), env={}).fx_rates == {"USD": 4.0}
+
+    def test_the_base_currency_can_be_another_code_with_its_own_table(self, settings_file) -> None:
+        loaded = load_settings(settings_file(base_currency="USD", fx_rates={"AED": 0.2723}), env={})
+
+        assert (loaded.base_currency, loaded.fx_rates) == ("USD", {"AED": 0.2723})
+
+    @pytest.mark.parametrize("code", ["kwd", "Kwd", "KW", "KWDD", "K1D", "", " KWD", "KWD "])
+    def test_a_rate_key_must_be_exactly_three_upper_case_letters(
+        self, settings_file, code: str
+    ) -> None:
+        with pytest.raises(ConfigError, match="fx_rates"):
+            load_settings(settings_file(fx_rates={code: 11.92}), env={})
+
+    @pytest.mark.parametrize("rate", [0, -1, -11.92, float("inf"), float("nan")])
+    def test_a_rate_must_be_a_positive_finite_number(self, settings_file, rate: float) -> None:
+        with pytest.raises(ConfigError, match="fx_rates"):
+            load_settings(settings_file(fx_rates={"KWD": rate}), env={})
+
+    @pytest.mark.parametrize("rate", ["11.92", "", None, True, [11.92], {"rate": 11.92}])
+    def test_a_rate_that_is_not_a_number_is_rejected(self, settings_file, rate: object) -> None:
+        with pytest.raises(ConfigError, match="fx_rates"):
+            load_settings(settings_file(fx_rates={"KWD": rate}), env={})
+
+    @pytest.mark.parametrize("table", [[("KWD", 11.92)], "KWD", 11.92])
+    def test_the_rate_table_must_be_a_mapping(self, settings_file, table: object) -> None:
+        with pytest.raises(ConfigError, match="fx_rates"):
+            load_settings(settings_file(fx_rates=table), env={})
+
+    def test_the_base_currency_must_not_be_in_the_table(self, settings_file) -> None:
+        with pytest.raises(ConfigError, match="AED") as error:
+            load_settings(settings_file(base_currency="AED", fx_rates={"AED": 1.0}), env={})
+
+        assert "fx_rates" in detail_of(error) or "base_currency" in detail_of(error)
+
+    @pytest.mark.parametrize("code", ["aed", "AE", "DIRHAM", "", "A3D"])
+    def test_the_base_currency_must_be_three_upper_case_letters(
+        self, settings_file, code: str
+    ) -> None:
+        with pytest.raises(ConfigError, match="base_currency"):
+            load_settings(settings_file(base_currency=code), env={})
+
+    def test_other_countries_are_listed_by_two_letter_code(self, settings_file) -> None:
+        loaded = load_settings(settings_file(extra_store_countries=["KW", "SA"]), env={})
+
+        assert loaded.extra_store_countries == ["KW", "SA"]
+        assert loaded.searches_country("SA")
+
+    @pytest.mark.parametrize("value", [["KWT"], ["K"], [""], "KW", [1], [None]])
+    def test_a_bad_country_list_is_rejected(self, settings_file, value: object) -> None:
+        with pytest.raises(ConfigError, match="extra_store_countries"):
+            load_settings(settings_file(extra_store_countries=value), env={})
+
+    def test_the_home_country_is_searched_even_if_it_is_not_listed(self) -> None:
+        settings = make_settings(country="SA", extra_store_countries=["KW"])
+
+        assert settings.searches_country("SA")
+        assert settings.searches_country("KW")
+        assert not settings.searches_country("AE")
 
 
 class TestWithOverrides:
