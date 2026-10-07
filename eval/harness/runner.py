@@ -23,7 +23,7 @@ from vga.settings import Settings
 ImageLoader = Callable[[AcceptanceQuery], bytes | None]
 """Gives the photo's bytes for a query, or ``None`` for a text-only query."""
 
-DurationSource = Literal["measured", "recorded"]
+DurationSource = Literal["measured", "recorded", "unavailable"]
 
 
 class QueryScope(Protocol):

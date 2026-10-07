@@ -257,6 +257,86 @@ class TestLabellingThroughTheCommandLine:
         assert "No saved run" in cli.errors
 
 
+class TestWorkIsNotLost:
+    """The expensive part of a run, and a person's labels and notes, survive mistakes."""
+
+    def test_an_interrupt_during_the_link_phase_leaves_the_finished_run_on_disk(
+        self, cli: Cli
+    ) -> None:
+        calls = 0
+
+        async def fetch(url: str) -> LinkResult:
+            nonlocal calls
+            calls += 1
+            if calls == 4:
+                raise KeyboardInterrupt
+            return await ok_link_fetch(url)
+
+        put_photos(cli.root)
+        run_dir = cli.root / "eval" / "results" / "run-1"
+
+        with pytest.raises(KeyboardInterrupt):
+            cli.run("--record", str(run_dir / "recording"), wiring=wiring_over(LiveParts(), fetch))
+
+        assert len(list((run_dir / "responses").glob("*.json"))) == 10
+        assert (run_dir / LABELS_FILE).is_file()
+        text = (run_dir / REPORT_FILE).read_text(encoding="utf-8")
+        assert "| not checked |" in text  # links had not run yet; the report says so
+        assert len(load_run(run_dir).runs) == 10
+
+    def test_rerunning_mock_never_replaces_a_labelling_sheet_that_has_labels(
+        self, cli: Cli
+    ) -> None:
+        cli.run("--mock")
+        run_dir = cli.root / "eval" / "results" / "mock"
+        fill_sheet(run_dir / LABELS_FILE, good_queries=10)
+        filled = (run_dir / LABELS_FILE).read_bytes()
+
+        assert cli.run("--mock") == 0
+
+        assert (run_dir / LABELS_FILE).read_bytes() == filled
+        assert (run_dir / "labels.new.csv").is_file()
+        assert "labels.new.csv" in cli.printed
+
+    def test_rescoring_keeps_a_report_a_person_has_added_notes_to(self, cli: Cli) -> None:
+        cli.run("--mock")
+        run_dir = cli.root / "eval" / "results" / "mock"
+        report = run_dir / REPORT_FILE
+        report.write_text(
+            report.read_text(encoding="utf-8") + "\nMy own note: the rubric changed.\n",
+            encoding="utf-8",
+        )
+        fill_sheet(run_dir / LABELS_FILE, good_queries=10)
+
+        cli.run("--rescore", str(run_dir), "--labels", str(run_dir / LABELS_FILE))
+
+        backup = run_dir / "results.bak-1.md"
+        assert "My own note: the rubric changed." in backup.read_text(encoding="utf-8")
+        assert "My own note" not in report.read_text(encoding="utf-8")
+        assert "results.bak-1.md" in cli.printed
+
+    def test_rescoring_an_unchanged_report_makes_no_backup(self, cli: Cli) -> None:
+        cli.run("--mock")
+        run_dir = cli.root / "eval" / "results" / "mock"
+
+        cli.run("--rescore", str(run_dir))
+
+        assert not list(run_dir.glob("results.bak-*.md"))
+
+
+class TestAMockOrReplayRunSaysSo:
+    def test_the_printed_verdict_of_a_mock_run_carries_a_warning(self, cli: Cli) -> None:
+        cli.run("--mock")
+
+        assert "Mock run: the verdict below says nothing about the real app." in cli.printed
+
+    def test_the_report_opens_with_a_banner(self, cli: Cli) -> None:
+        cli.run("--mock")
+
+        text = (cli.root / "eval" / "results" / "mock" / REPORT_FILE).read_text(encoding="utf-8")
+        assert "\n> Mock run: a canned response, not a real result.\n" in text
+
+
 class TestSafety:
     def test_a_folder_that_already_has_files_is_not_overwritten(
         self, cli: Cli, tmp_path: Path
@@ -515,6 +595,42 @@ class TestRecordThenReplayThroughTheCommandLine:
         assert "Replay: the real pipeline ran again on a recording" in text
         assert "| Links ok |" in text
         assert "| not checked |" in text
+
+    def test_a_replay_with_one_unrecorded_query_still_runs_the_others(self, cli: Cli) -> None:
+        self.record(cli, LiveParts())
+        manifest = cli.root / "rec" / "manifest.json"
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        del data["queries"]["q03_product_jeans"]
+        manifest.write_text(json.dumps(data), encoding="utf-8")
+
+        code = cli.run("--replay", str(cli.root / "rec"), wiring=wiring_over(LiveParts()))
+
+        assert code == 0
+        assert "q03_product_jeans: FAILED" in cli.printed
+        assert "9 of 10 queries answered" in cli.printed
+        text = (cli.root / "eval" / "results" / "replay" / REPORT_FILE).read_text(encoding="utf-8")
+        assert "could not serve q03_product_jeans from the recording" in text
+        assert "| q03_product_jeans | Results | store |" in text
+
+    def test_a_replay_without_a_recorded_duration_cannot_pass_the_time_rule(self, cli: Cli) -> None:
+        self.record(cli, LiveParts())
+        manifest = cli.root / "rec" / "manifest.json"
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        del data["queries"]["q01_product_jacket"]["live_duration_ms"]
+        manifest.write_text(json.dumps(data), encoding="utf-8")
+
+        cli.run("--replay", str(cli.root / "rec"), wiring=wiring_over(LiveParts()))
+
+        text = (cli.root / "eval" / "results" / "replay" / REPORT_FILE).read_text(encoding="utf-8")
+        assert "| q01_product_jacket | 8 | 2 | not recorded |" in text
+
+    def test_a_replay_report_opens_with_a_banner(self, cli: Cli) -> None:
+        self.record(cli, LiveParts())
+
+        cli.run("--replay", str(cli.root / "rec"), wiring=wiring_over(LiveParts()))
+
+        text = (cli.root / "eval" / "results" / "replay" / REPORT_FILE).read_text(encoding="utf-8")
+        assert "\n> Replay of a recording: no live data was fetched in this run.\n" in text
 
     def test_replaying_a_recording_that_does_not_exist_says_to_record_first(self, cli: Cli) -> None:
         code = cli.run("--replay", str(cli.root / "nothing"), wiring=wiring_over(LiveParts()))

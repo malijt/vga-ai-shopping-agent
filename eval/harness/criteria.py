@@ -231,6 +231,8 @@ def check_stores(response: SearchResponse, config: CriteriaConfig) -> CriterionR
 def check_seconds(
     run: QueryRun, response: SearchResponse | None, config: CriteriaConfig
 ) -> CriterionResult:
+    if run.duration_source == "unavailable":
+        return CriterionResult(Criterion.SECONDS, Status.PENDING, "not recorded")
     seconds = run.duration_ms / 1000
     recorded = run.duration_source == "recorded"
     cell = f"{seconds:.1f}" + (" (recorded)" if recorded else "")

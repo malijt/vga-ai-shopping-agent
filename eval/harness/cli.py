@@ -23,6 +23,7 @@ Every run is saved to a folder under ``eval/results/`` (``run-N`` for a live run
 
 import argparse
 import asyncio
+import csv
 import re
 import sys
 from collections.abc import Callable, Collection, Mapping, Sequence
@@ -282,9 +283,13 @@ async def _run_and_check(
     settings: Settings,
     links: LinksMode,
     progress: Callable[[QueryRun], None],
+    checkpoint: Callable[[list[QueryRun]], None],
 ) -> tuple[list[QueryRun], dict[str, list[LinkCheck]]]:
-    """Run the queries, then check links. One event loop for both, because a fetch function or
-    pipeline may keep an HTTP client that belongs to the loop it was first used in."""
+    """Run the queries, save them, then check links. One event loop for all of it, because a
+    fetch function or pipeline may keep an HTTP client that belongs to the loop it first ran in.
+
+    ``checkpoint`` is called with the finished runs before the first link is fetched, so the
+    expensive part of a live run is on disk even if the link phase is interrupted."""
     runs = await run_queries(
         queries,
         setup.pipeline,
@@ -295,22 +300,35 @@ async def _run_and_check(
         progress=progress,
     )
     if setup.replay is not None:
-        runs = [
-            replace(run, duration_ms=recorded, duration_source="recorded")
-            if (recorded := setup.replay.live_duration_ms(run.query.id)) is not None
-            else run
-            for run in runs
-        ]
+        runs = [_with_recorded_duration(run, setup.replay) for run in runs]
+    checkpoint(runs)
     if links is LinksMode.NONE:
         return runs, {}
     fetch, allowed = _link_tools(setup, runs)
     return runs, await _check_links(runs, links, fetch, allowed)
 
 
-def _run_notes(setup: _Setup) -> list[str]:
+def _with_recorded_duration(run: QueryRun, replay: ReplaySession) -> QueryRun:
+    """A replay's own time is meaningless; the 30 s rule uses the recorded live figure."""
+    if run.failure is not None:
+        return run
+    recorded = replay.live_duration_ms(run.query.id)
+    if recorded is None:
+        return replace(run, duration_source="unavailable")
+    return replace(run, duration_ms=recorded, duration_source="recorded")
+
+
+def _run_notes(setup: _Setup, runs: Sequence[QueryRun]) -> list[str]:
     notes: list[str] = []
     if setup.replay is not None:
         notes.extend(setup.replay.final_notes())
+    unservable = [r.query.id for r in runs if r.failure and r.failure.code.startswith("recording")]
+    if unservable:
+        notes.append(
+            "The replay could not serve " + ", ".join(unservable) + " from the recording (not "
+            "recorded, incomplete, or the pipeline asked for something else). Those queries "
+            "count as failed; the others ran. This is a limit of the recording, not a store fault."
+        )
     if setup.recording is not None and setup.recording.incomplete:
         notes.append(
             "The recording of "
@@ -320,11 +338,46 @@ def _run_notes(setup: _Setup) -> list[str]:
     return notes
 
 
-def _write_report(scored: ScoredRun, out: Path) -> Path:
+def _back_up(path: Path) -> Path:
+    """Move ``path`` aside to the first free ``<name>.bak-N`` and return where it went."""
+    number = 1
+    while (backup := path.with_name(f"{path.stem}.bak-{number}{path.suffix}")).exists():
+        number += 1
+    path.replace(backup)
+    return backup
+
+
+def _write_report(
+    scored: ScoredRun, out: Path, *, keep_previous: bool = False
+) -> tuple[Path, Path | None]:
+    """Write ``results.md``. With ``keep_previous``, an existing different report (a person may
+    have added notes to it) is moved aside first rather than overwritten. Returns the report and
+    the backup, if one was made."""
     out.mkdir(parents=True, exist_ok=True)
     path = out / REPORT_FILE
-    path.write_text(render_report(scored), encoding="utf-8")
-    return path
+    text = render_report(scored)
+    backup = None
+    if keep_previous and path.exists() and path.read_text(encoding="utf-8") != text:
+        backup = _back_up(path)
+    path.write_text(text, encoding="utf-8")
+    return path, backup
+
+
+def _sheet_has_labels(path: Path) -> bool:
+    """True when a labelling sheet already holds at least one label: a person's work."""
+    try:
+        with path.open(encoding="utf-8-sig", newline="") as handle:
+            return any((row.get("label") or "").strip() for row in csv.DictReader(handle))
+    except (OSError, UnicodeDecodeError):
+        return False
+
+
+def _export_sheet(runs: Sequence[QueryRun], out: Path) -> tuple[Path, int]:
+    """Write the blank labelling sheet, but never over one that already holds labels."""
+    sheet = out / LABELS_FILE
+    if sheet.exists() and _sheet_has_labels(sheet):
+        sheet = out / "labels.new.csv"
+    return sheet, export_label_sheet(runs, sheet)
 
 
 def _load_labels(path: str | None, runs: Sequence[QueryRun]) -> LabelSet | None:
@@ -333,6 +386,8 @@ def _load_labels(path: str | None, runs: Sequence[QueryRun]) -> LabelSet | None:
 
 def _print_verdict(scored: ScoredRun, out: TextIO) -> None:
     verdict = scored.verdict
+    if scored.loaded.meta.mode == "mock":
+        print("Mock run: the verdict below says nothing about the real app.", file=out)
     print(f"Verdict: {verdict.label}. {verdict.headline}.", file=out)
     if verdict.pending:
         print(
@@ -347,8 +402,10 @@ def _rescore(args: argparse.Namespace, out_stream: TextIO) -> int:
     loaded = load_run(args.rescore)
     scored = score_run(loaded, labels=_load_labels(args.labels, loaded.runs))
     target = Path(args.out) if args.out else Path(args.rescore)
-    report = _write_report(scored, target)
+    report, backup = _write_report(scored, target, keep_previous=True)
     print(f"Rescored {args.rescore} -> {report}", file=out_stream)
+    if backup is not None:
+        print(f"The previous report was kept as {backup}.", file=out_stream)
     _print_verdict(scored, out_stream)
     return 0
 
@@ -400,34 +457,42 @@ def _execute(
             failure = run.failure.message if run.failure else "no response"
             print(f"{run.query.id}: FAILED ({failure})", file=out_stream)
 
-    runs, link_checks = asyncio.run(_run_and_check(setup, queries, settings, links, progress))
-    notes = _run_notes(setup)
+    def persist(
+        runs: list[QueryRun], link_checks: dict[str, list[LinkCheck]], *, use_labels: bool
+    ) -> tuple[ScoredRun, Path, int]:
+        meta = RunMeta(
+            number=number,
+            mode=mode,
+            date=today,
+            links=links,
+            price_range_mix=list(settings.tier_mix.as_tuple()),
+            source=setup.source,
+            notes=_run_notes(setup, runs),
+        )
+        loaded = LoadedRun(meta, runs, link_checks)
+        # The folder was checked before the run (`_ensure_output_is_free`). By now it may hold
+        # the recording, written there on purpose, so this save must not call that a collision.
+        save_run(out, loaded, overwrite=True)
+        sheet, rows = (out / LABELS_FILE, 0) if args.labels else _export_sheet(runs, out)
+        labels = _load_labels(args.labels, runs) if use_labels else None
+        scored = score_run(loaded, labels=labels)
+        _write_report(scored, out)
+        return scored, sheet, rows
 
-    meta = RunMeta(
-        number=number,
-        mode=mode,
-        date=today,
-        links=links,
-        price_range_mix=list(settings.tier_mix.as_tuple()),
-        source=setup.source,
-        notes=notes,
+    def checkpoint(runs: list[QueryRun]) -> None:
+        persist(runs, {}, use_labels=False)
+
+    runs, link_checks = asyncio.run(
+        _run_and_check(setup, queries, settings, links, progress, checkpoint)
     )
-    loaded = LoadedRun(meta, runs, link_checks)
-    # The folder was checked before the run (`_ensure_output_is_free`). By now it may hold the
-    # recording, written there on purpose, so this save must not treat that as a collision.
-    save_run(out, loaded, overwrite=True)
-    sheet = out / LABELS_FILE
-    rows = 0 if args.labels else export_label_sheet(runs, sheet)
-
-    scored = score_run(loaded, labels=_load_labels(args.labels, runs))
-    report = _write_report(scored, out)
+    scored, sheet, rows = persist(runs, link_checks, use_labels=True)
 
     answered = sum(1 for run in runs if run.response is not None)
     print(
         f"{answered} of {len(runs)} queries answered; responses saved in {out / 'responses'}",
         file=out_stream,
     )
-    print(f"Report: {report}", file=out_stream)
+    print(f"Report: {out / REPORT_FILE}", file=out_stream)
     if not args.labels:
         print(f"Labelling sheet: {sheet} ({rows} rows to label)", file=out_stream)
     _print_verdict(scored, out_stream)

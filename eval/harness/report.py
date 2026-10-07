@@ -312,6 +312,10 @@ def render_report(scored: ScoredRun) -> str:
     config = scored.config
     number = loaded.meta.number if loaded.meta.number is not None else loaded.meta.mode
     lines: list[str] = [f"# Acceptance results: run {number}", ""]
+    if loaded.meta.mode == "mock":
+        lines += ["> Mock run: a canned response, not a real result.", ""]
+    elif loaded.meta.mode == "replay":
+        lines += ["> Replay of a recording: no live data was fetched in this run.", ""]
     lines += _table(("Field", "Value"), _fields(loaded))
     lines += [
         "",
