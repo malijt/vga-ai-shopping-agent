@@ -428,7 +428,7 @@ async def test_a_skipped_store_does_not_disturb_the_others(
 # --------------------------------------------------------------------------------------------
 
 
-async def test_every_variant_is_searched_and_the_products_merged(
+async def test_a_store_with_little_to_show_is_sent_the_second_variant_and_the_products_merge(
     engine: StoreSearchEngine, router: respx.MockRouter
 ) -> None:
     router.get(OHPOLLY_ROBOTS_URL).mock(return_value=text_response(ALLOW_ALL_ROBOTS))
@@ -442,8 +442,104 @@ async def test_every_variant_is_searched_and_the_products_merged(
 
     [result] = await engine.search(item("a one", "b two", "c three"), [shopify_store()])
 
-    assert queries(search_route) == ["a one", "b two", "c three"]
-    assert [p.title for p in result.products] == ["Blazer 1", "Blazer 2", "Blazer 3", "Blazer 4"]
+    assert queries(search_route) == ["a one", "b two"]  # the third is never sent
+    assert [p.title for p in result.products] == ["Blazer 1", "Blazer 2", "Blazer 3"]
+
+
+def products_of(count: int) -> str:
+    return suggest_body(*(shopify_product(number) for number in range(1, count + 1)))
+
+
+async def test_a_store_with_enough_products_for_the_first_variant_is_sent_only_that_one(
+    engine: StoreSearchEngine, router: respx.MockRouter, settings: Settings
+) -> None:
+    enough = products_of(settings.second_variant_below)
+    router.get(OHPOLLY_ROBOTS_URL).mock(return_value=text_response(ALLOW_ALL_ROBOTS))
+    search_route = router.get(url__startswith=SUGGEST).mock(return_value=json_response(enough))
+
+    [result] = await engine.search(item("a one", "b two"), [shopify_store()])
+
+    assert queries(search_route) == ["a one"]
+    assert len(result.products) == settings.second_variant_below
+
+
+async def test_one_product_short_of_the_threshold_gets_the_second_variant(
+    engine: StoreSearchEngine, router: respx.MockRouter, settings: Settings
+) -> None:
+    short = products_of(settings.second_variant_below - 1)
+    router.get(OHPOLLY_ROBOTS_URL).mock(return_value=text_response(ALLOW_ALL_ROBOTS))
+    search_route = router.get(url__startswith=SUGGEST).mock(return_value=json_response(short))
+
+    await engine.search(item("a one", "b two"), [shopify_store()])
+
+    assert queries(search_route) == ["a one", "b two"]
+
+
+async def test_a_first_variant_that_found_nothing_gets_the_second(
+    engine: StoreSearchEngine, router: respx.MockRouter
+) -> None:
+    router.get(OHPOLLY_ROBOTS_URL).mock(return_value=text_response(ALLOW_ALL_ROBOTS))
+    search_route = router.get(url__startswith=SUGGEST).mock(
+        side_effect=[json_response(suggest_body()), json_response(suggest_body(shopify_product(1)))]
+    )
+
+    [result] = await engine.search(item("a one", "b two"), [shopify_store()])
+
+    assert queries(search_route) == ["a one", "b two"]
+    assert [p.title for p in result.products] == ["Blazer 1"]
+
+
+async def test_no_store_is_ever_sent_a_third_variant(
+    router: respx.MockRouter, clock: FakeClock
+) -> None:
+    engine = StoreSearchEngine(make_settings(second_variant_below=50), clock=clock)
+    router.get(OHPOLLY_ROBOTS_URL).mock(return_value=text_response(ALLOW_ALL_ROBOTS))
+    search_route = router.get(url__startswith=SUGGEST).mock(
+        return_value=json_response(products_of(3))  # always thin, and a threshold nobody reaches
+    )
+
+    await engine.search(item("a one", "b two", "c three"), [shopify_store()])
+
+    assert queries(search_route) == ["a one", "b two"]
+
+
+async def test_a_threshold_of_zero_never_sends_a_second_variant(
+    router: respx.MockRouter, clock: FakeClock
+) -> None:
+    engine = StoreSearchEngine(make_settings(second_variant_below=0), clock=clock)
+    router.get(OHPOLLY_ROBOTS_URL).mock(return_value=text_response(ALLOW_ALL_ROBOTS))
+    search_route = router.get(url__startswith=SUGGEST).mock(
+        return_value=json_response(suggest_body())  # nothing found at all
+    )
+
+    await engine.search(item("a one", "b two"), [shopify_store()])
+
+    assert queries(search_route) == ["a one"]
+
+
+async def test_a_thin_first_variant_does_not_override_the_stores_own_cap(
+    engine: StoreSearchEngine, router: respx.MockRouter
+) -> None:
+    router.get(OHPOLLY_ROBOTS_URL).mock(return_value=text_response(ALLOW_ALL_ROBOTS))
+    search_route = router.get(url__startswith=SUGGEST).mock(
+        return_value=json_response(products_of(1))
+    )
+
+    await engine.search(item("a one", "b two"), [shopify_store(max_variants=1)])
+
+    assert queries(search_route) == ["a one"]
+
+
+async def test_a_blocked_first_variant_is_not_followed_by_a_second(
+    engine: StoreSearchEngine, router: respx.MockRouter
+) -> None:
+    router.get(OHPOLLY_ROBOTS_URL).mock(return_value=text_response(ALLOW_ALL_ROBOTS))
+    search_route = router.get(url__startswith=SUGGEST).mock(return_value=httpx.Response(403))
+
+    [result] = await engine.search(item("a one", "b two"), [shopify_store()])
+
+    assert result.status is StoreStatus.BLOCKED
+    assert queries(search_route) == ["a one"]
 
 
 async def test_variants_overlapping_each_other_are_deduplicated(
@@ -490,13 +586,13 @@ async def test_variants_that_differ_only_in_case_or_spacing_are_searched_once(
 async def test_the_variant_requests_to_one_store_are_spaced_by_its_rate(
     engine: StoreSearchEngine, router: respx.MockRouter, clock: FakeClock
 ) -> None:
-    mock_oh_polly(router)
+    mock_oh_polly(router, products_of(2))  # thin, so that the second variant is sent
     started = clock.monotonic()
 
     await engine.search(item("a one", "b two", "c three"), [shopify_store()])
 
-    # robots.txt, then three searches, on one host at 1 request per second
-    assert clock.monotonic() - started == pytest.approx(3.0, abs=0.01)
+    # robots.txt, then two searches, on one host at 1 request per second
+    assert clock.monotonic() - started == pytest.approx(2.0, abs=0.01)
 
 
 async def test_a_failing_variant_stops_the_rest(

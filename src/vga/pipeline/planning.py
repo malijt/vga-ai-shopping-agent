@@ -8,6 +8,7 @@ from collections.abc import Sequence
 
 from vga.models import (
     Budget,
+    InputType,
     ItemIntent,
     MixPreset,
     RunOverrides,
@@ -17,18 +18,22 @@ from vga.models import (
 from vga.settings import Settings
 from vga.understand import effective_gender
 
-MAX_OUTFIT_KEYWORDS = 2
-"""An outfit searches several garments, one search each, so each gets at most this many keyword
-variants (plan 13.1.3). That keeps the number of store requests inside the politeness budget."""
+MAX_OUTFIT_KEYWORDS = 1
+"""An outfit photo searches several garments, one search each, so each gets only its first, most
+specific keyword variant and never a second, however little the store had to show for it. That keeps
+the number of store requests inside the politeness budget: with the stores' shared platform
+limited to a few requests a second, one search per garment per store is what an outfit can afford
+(plan 13.1.3)."""
 
 _CHEAPER = re.compile(r"\b(?:cheaper|less expensive|more affordable)\b", re.IGNORECASE)
 
 
 def items_to_search(understood: UnderstandResult) -> list[ItemIntent]:
-    """The items to search for, in order. With more than one garment each keeps at most
-    ``MAX_OUTFIT_KEYWORDS`` keyword variants."""
+    """The items to search for, in order. For an outfit photo each garment keeps only its first
+    ``MAX_OUTFIT_KEYWORDS`` keyword variant; any other request keeps what the model gave (the
+    store engine decides how many of them a store is really sent)."""
     items = list(understood.items)
-    if len(items) <= 1:
+    if understood.input_type is not InputType.OUTFIT_PHOTO:
         return items
     return [
         item.model_copy(update={"search_keywords": item.search_keywords[:MAX_OUTFIT_KEYWORDS]})

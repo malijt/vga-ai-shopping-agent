@@ -514,6 +514,30 @@ class TestRequestsPerPlatform:
             load_settings(settings_file(rps_per_platform=value), env={})
 
 
+class TestSecondVariantBelow:
+    """How few products a store may return for a garment's first keyword variant before it is
+    also sent the second."""
+
+    def test_default_is_five_products(self) -> None:
+        assert Settings().second_variant_below == 5
+
+    def test_the_shipped_file_carries_the_same_number(self) -> None:
+        assert load_settings(DEFAULT_SETTINGS_PATH, env={}).second_variant_below == 5
+
+    @pytest.mark.parametrize("value", [0, 1, 5, 50])
+    def test_whole_numbers_from_zero_to_fifty_are_accepted(self, settings_file, value: int) -> None:
+        loaded = load_settings(settings_file(second_variant_below=value), env={})
+
+        assert loaded.second_variant_below == value
+
+    @pytest.mark.parametrize("value", [-1, 51, 2.5, "few"])
+    def test_negative_too_large_and_non_integer_values_are_rejected(
+        self, settings_file, value: object
+    ) -> None:
+        with pytest.raises(ConfigError, match="second_variant_below"):
+            load_settings(settings_file(second_variant_below=value), env={})
+
+
 class TestCurrencySettings:
     """The base currency, the fixed rates into it, and the countries whose stores are searched."""
 

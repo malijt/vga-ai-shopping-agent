@@ -339,7 +339,9 @@ async def test_the_engine_reads_the_saved_answers_after_checking_robots_txt_once
             headers={"content-type": "application/json; charset=utf-8"},
         )
 
-    settings = make_settings()
+    # Both saved answers are read: a store is sent its second keyword variant only when the first
+    # gave fewer than second_variant_below products, and each saved answer has ten.
+    settings = make_settings(second_variant_below=50)
     engine = StoreSearchEngine(settings, clock=FakeClock(), transport=httpx.MockTransport(answer))
     try:
         [result] = await engine.search(

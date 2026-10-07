@@ -5,11 +5,14 @@
 1. skips it, with no request, if it is not ``enabled`` or is not in a country that is searched
    (the home country or one of ``Settings.extra_store_countries``);
 2. skips it, with no request, while it is in cooldown after a block;
-3. for each of the item's keyword variants (at most ``max_variants``), in order: answers from the
-   cache if it can, else checks robots.txt, fetches the search page and reads it through the
-   store's extraction chain; a redirect is followed only after the robots.txt of the page it leads
-   to (another host of the store, say) allows it; it stops at the first variant that is blocked,
-   refused, slow or broken, because asking again the same way would only repeat the failure;
+3. sends the item's first keyword variant: answers from the cache if it can, else checks
+   robots.txt, fetches the search page and reads it through the store's extraction chain; a
+   redirect is followed only after the robots.txt of the page it leads to (another host of the
+   store, say) allows it. A second variant follows only if the first gave fewer than
+   ``Settings.second_variant_below`` usable products (the store has little to show), never a
+   third, and never more than the store's ``max_variants``. It stops at the first variant that is
+   blocked, refused, slow or broken, because asking again the same way would only repeat the
+   failure;
 4. merges the variants into one ``StoreResult``.
 
 Every outcome is a ``StoreResult``; nothing a store does, and no bug in one store's code path, can
@@ -52,6 +55,11 @@ _FAILURE_PRIORITY = (
     StoreStatus.ERROR,
 )
 _KEEP_GOING = frozenset({StoreStatus.OK, StoreStatus.EMPTY})
+
+MAX_VARIANTS = 2
+"""The most keyword variants any store is sent for one garment. The first is the most specific; a
+second is a fallback for a store that had little to show for the first. Never a third: every extra
+request counts against the platform's limit (``vga.fetch.platform``)."""
 
 
 class StoreSearchEngine:
@@ -158,6 +166,8 @@ class StoreSearchEngine:
             done.append(result)
             if result.status not in _KEEP_GOING:
                 return  # asking again the same way would only repeat the failure
+            if len(result.products) >= self.settings.second_variant_below:
+                return  # the store had enough to show; another request would only cost
 
     async def _search_variant(self, store: StoreConfig, variant: str) -> StoreResult:
         """Search one store for one query variant. Always returns a result."""
@@ -266,11 +276,12 @@ class StoreSearchEngine:
 
     @staticmethod
     def _variants(item: ItemIntent, store: StoreConfig) -> list[str]:
-        """The item's distinct keyword variants, in order, at most ``store.max_variants``."""
+        """The item's distinct keyword variants, in order: at most ``MAX_VARIANTS``, and at most
+        ``store.max_variants``. Which of them are really sent is ``_search_variants``' decision."""
         distinct: dict[str, str] = {}
         for keyword in item.search_keywords:
             distinct.setdefault(variant_key(keyword), keyword)
-        variants = list(distinct.values())
+        variants = list(distinct.values())[:MAX_VARIANTS]
         return variants[: store.max_variants] if store.max_variants else variants
 
     def _elapsed_ms(self, started: float) -> float:
