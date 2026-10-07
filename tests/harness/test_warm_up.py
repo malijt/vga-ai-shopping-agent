@@ -8,57 +8,17 @@ the first time it is used, to show where the harness puts that time.
 """
 
 import json
-from collections.abc import Sequence
 from pathlib import Path
 
 from eval.harness.recording import RecordingSession
 from eval.harness.runstore import REPORT_FILE, RUN_FILE, load_run
 from eval.harness.wiring import Boundaries, Wiring, WiringFactory
 from tests.fakes import FakeClock, FakeImageRanker, FakeStoreSearcher, FakeUnderstander
-from tests.harness.cli_support import Cli, put_photos
+from tests.harness.cli_support import LOAD_SECONDS, Cli, SlowToLoadRanker, put_photos
 from tests.harness.helpers import ToyPipeline
 from tests.harness.live_parts import LiveParts, make_stores
-from vga.models import Product, QueryImage
 from vga.pipeline import SearchPipeline, pipeline_factory
 from vga.settings import Settings
-
-LOAD_SECONDS = 10.0
-
-
-class SlowToLoadRanker(FakeImageRanker):
-    """Stands in for the FashionSigLIP ranker: ``warm_up`` loads the model (10 s on the fake
-    clock), and a ranker that was not warmed up loads it inside its first ``score`` call."""
-
-    def __init__(self, clock: FakeClock, *, ready: bool = True, fails: bool = False) -> None:
-        super().__init__(default=0.8)
-        self._clock = clock
-        self._ready = ready
-        self._fails = fails
-        self.loaded = False
-        self.loads = 0
-        self.warm_ups = 0
-
-    def _load(self) -> None:
-        if not self.loaded:
-            self.loaded = True
-            self.loads += 1
-            self._clock.advance(LOAD_SECONDS)
-
-    async def warm_up(self) -> bool:
-        self.warm_ups += 1
-        if self._fails:
-            msg = "the weights are corrupt"
-            raise RuntimeError(msg)
-        if self._ready:
-            self._load()
-        return self._ready
-
-    async def score(
-        self, query: QueryImage | None, products: Sequence[Product]
-    ) -> dict[str, float | None]:
-        if query is not None and self._ready:
-            self._load()
-        return await super().score(query, products)
 
 
 class WarmableToyPipeline(ToyPipeline):

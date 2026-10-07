@@ -79,6 +79,7 @@ from eval.harness.scoring import ScoredRun, score_run
 from eval.harness.wiring import Wiring, WiringFactory, load_wiring_factory
 from vga.errors import VgaError
 from vga.interfaces import Clock, Pipeline, SystemClock
+from vga.models import StoreConfig
 from vga.settings import PROJECT_ROOT, Settings, load_settings
 
 RESULTS_DIR = Path("eval") / "results"
@@ -165,6 +166,8 @@ class _Setup:
     event loop the run used."""
     warm_up: WarmUp | None = None
     """Set by the run, before the first query."""
+    stores: Sequence[StoreConfig] = ()
+    """The stores the real application searches, to say so when a run starts."""
 
 
 def _next_run_number(results_dir: Path, prefix: str = "run") -> int:
@@ -252,6 +255,7 @@ def _setup_replay(
         scope=session,
         source=str(args.replay),
         replay=session,
+        stores=wiring.stores,
     )
 
 
@@ -269,8 +273,11 @@ def _setup_record(
     if links is not LinksMode.NONE and wiring.link_fetch is None:
         msg = "The wiring has no link_fetch, so links cannot be checked. Use --links none."
         raise WiringError(msg)
+    # Build the live parts before the recording folder exists: a missing key or model is found
+    # here, in plain words, and leaves nothing behind.
+    boundaries = wiring.build_boundaries()
     session = RecordingSession(args.record)
-    live = session.wrap(wiring.build_boundaries())
+    live = session.wrap(boundaries)
     return _Setup(
         mode="record",
         pipeline=wiring.pipeline_factory(live.understander, live.searcher, live.image_ranker),
@@ -280,6 +287,7 @@ def _setup_record(
         allowed_hosts=allowed_hosts_from_stores(wiring.stores),
         recording=session,
         close=wiring.aclose,
+        stores=wiring.stores,
     )
 
 
@@ -540,6 +548,9 @@ def _execute(
         setup = _setup_record(args, settings, wiring_factory, links, root)
     if clock is not None:
         setup.clock = clock
+    if setup.stores:
+        names = ", ".join(store.id for store in setup.stores)
+        print(f"Stores in this run ({len(setup.stores)}): {names}", file=out_stream)
 
     def progress(run: QueryRun) -> None:
         if run.response is not None:

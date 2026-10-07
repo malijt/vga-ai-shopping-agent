@@ -6,6 +6,7 @@ is a temporary folder, so no test writes into ``eval/results/`` of the real chec
 
 import csv
 import io
+from collections.abc import Sequence
 from datetime import date
 from pathlib import Path
 
@@ -13,13 +14,58 @@ from eval.harness.cli import main
 from eval.harness.queries import QUERIES_PATH, load_queries
 from eval.harness.wiring import Wiring, WiringFactory
 from tests.factories import make_settings
-from tests.fakes import FakeClock
+from tests.fakes import FakeClock, FakeImageRanker
 from tests.harness.helpers import ToyPipeline
 from tests.harness.live_parts import LiveParts, make_stores, ok_link_fetch
 from vga.interfaces import Clock
+from vga.models import Product, QueryImage
 from vga.settings import Settings
 
 TODAY = date(2026, 10, 7)
+LOAD_SECONDS = 10.0
+
+
+class SlowToLoadRanker(FakeImageRanker):
+    """Stands in for the FashionSigLIP ranker: ``warm_up`` loads the model (10 s on the fake
+    clock), and a ranker that was not warmed up loads it inside its first ``score`` call."""
+
+    def __init__(
+        self,
+        clock: FakeClock,
+        *,
+        ready: bool = True,
+        fails: bool = False,
+        embedding: Sequence[float] = (0.1, 0.2, 0.3),
+    ) -> None:
+        super().__init__(default=0.8, embedding=embedding)
+        self._clock = clock
+        self._ready = ready
+        self._fails = fails
+        self.loaded = False
+        self.loads = 0
+        self.warm_ups = 0
+
+    def _load(self) -> None:
+        if not self.loaded:
+            self.loaded = True
+            self.loads += 1
+            self._clock.advance(LOAD_SECONDS)
+
+    async def warm_up(self) -> bool:
+        self.warm_ups += 1
+        if self._fails:
+            msg = "the weights are corrupt"
+            raise RuntimeError(msg)
+        if self._ready:
+            self._load()
+        return self._ready
+
+    async def score(
+        self, query: QueryImage | None, products: Sequence[Product]
+    ) -> dict[str, float | None]:
+        if query is not None and self._ready:
+            self._load()
+        return await super().score(query, products)
 
 
 class Cli:
