@@ -11,6 +11,7 @@ from tests.factories import (
     make_understand_result,
 )
 from vga.models import (
+    Category,
     Gender,
     GenderSource,
     MixPreset,
@@ -223,3 +224,82 @@ def test_no_gender_and_unisex_exclude_no_store() -> None:
 
     assert stores_for_item(stores(), make_item_intent())[1] == []
     assert stores_for_item(stores(), unisex)[1] == []
+
+
+# --------------------------------------------------------------------------------------------
+# Stores follow the item's category
+# --------------------------------------------------------------------------------------------
+
+
+def category_stores() -> list:
+    return [
+        make_store_config(id="everything", name="Everything"),
+        make_store_config(
+            id="dresses-only",
+            name="Dresses Only",
+            search_url_template="https://www.demo-store.example/d?q={query}",
+            categories=frozenset({Category.DRESSES}),
+        ),
+        make_store_config(
+            id="tops-and-bottoms",
+            name="Tops And Bottoms",
+            search_url_template="https://www.demo-store.example/tb?q={query}",
+            categories=frozenset({Category.TOPS, Category.BOTTOMS}),
+        ),
+    ]
+
+
+def test_a_shoes_item_is_not_searched_at_a_dresses_only_store() -> None:
+    item = make_item_intent(category=Category.SHOES)
+
+    searched, skipped = stores_for_item(category_stores(), item)
+
+    assert ids(searched) == ["everything"]
+    assert ids(skipped) == ["dresses-only", "tops-and-bottoms"]
+
+
+def test_a_dresses_item_is_searched_at_the_dresses_only_store() -> None:
+    item = make_item_intent(category=Category.DRESSES)
+
+    searched, skipped = stores_for_item(category_stores(), item)
+
+    assert ids(searched) == ["everything", "dresses-only"]
+    assert ids(skipped) == ["tops-and-bottoms"]
+
+
+def test_a_store_that_lists_several_categories_is_searched_for_each_of_them() -> None:
+    for category in (Category.TOPS, Category.BOTTOMS):
+        searched, _ = stores_for_item(category_stores(), make_item_intent(category=category))
+
+        assert "tops-and-bottoms" in ids(searched)
+
+
+def test_a_store_must_pass_both_the_category_and_the_gender_check() -> None:
+    womens_dresses = make_store_config(
+        id="womens-dresses",
+        name="Womens Dresses",
+        search_url_template="https://www.demo-store.example/wd?q={query}",
+        genders=frozenset({Gender.WOMEN}),
+        categories=frozenset({Category.DRESSES}),
+    )
+
+    def searched_for(category: Category, gender: Gender) -> bool:
+        item = make_item_intent(
+            category=category, gender=gender, gender_source=GenderSource.EXPLICIT
+        )
+        return "womens-dresses" in ids(stores_for_item([womens_dresses], item)[0])
+
+    assert searched_for(Category.DRESSES, Gender.WOMEN)
+    assert not searched_for(Category.DRESSES, Gender.MEN)  # right garment, wrong audience
+    assert not searched_for(Category.SHOES, Gender.WOMEN)  # right audience, wrong garment
+
+
+def test_a_guessed_gender_does_not_change_the_category_rule() -> None:
+    item = make_item_intent(
+        category=Category.SHOES, gender=Gender.WOMEN, gender_source=GenderSource.INFERRED
+    )
+
+    searched, skipped = stores_for_item(category_stores(), item)
+
+    assert ids(searched) == ["everything"]
+    assert ids(skipped) == ["dresses-only", "tops-and-bottoms"]

@@ -127,19 +127,19 @@ async def test_every_garment_shares_one_rate_limiter_per_store(
     assert not any("longer than" in warning for warning in response.warnings)
 
 
-async def test_an_outfit_photo_is_compared_once_per_garment_in_item_order(
+async def test_an_outfit_photo_is_not_handed_to_the_image_ranker(
     make_pipeline: PipelineMaker, two_stores: list, settings: Settings, photo: bytes
 ) -> None:
+    # Comparing the photo with each garment's thumbnails is left out for an outfit photo: see
+    # test_outfit_images.py for why, and for the thumbnail and warning side of it.
     ranker = FakeImageRanker()
     pipeline = make_pipeline(understander=outfit_understander(), image_ranker=ranker)
 
     response = await pipeline.run(make_search_request(image=photo, text=None), settings)
 
-    assert len(ranker.calls) == 4
-    # each call carries only that garment's products: blazers first, shoes last
-    assert all("blazer" in key for key in ranker.calls[0])
-    assert all("shoes" in key for key in ranker.calls[3])
-    assert response.query_embedding == [0.1, 0.2, 0.3]
+    assert ranker.calls == []
+    assert all(scored.scores.image is None for scored in response.products)
+    assert response.query_embedding is None
 
 
 async def test_a_text_request_that_names_two_garments_is_searched_the_same_way(

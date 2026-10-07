@@ -2,8 +2,8 @@
 
 Each item (garment) is searched on its own, so the same store has one outcome per item. The
 response lists a store once: *used* when it gave products for at least one item, otherwise *skipped*
-with the plain reason of its most serious outcome. A store left out for its gender is skipped with
-that reason, not as a failure.
+with the plain reason of its most serious outcome. A store left out because it does not sell the
+garment's category, or does not sell for its gender, is skipped with that reason, not as a failure.
 """
 
 from collections.abc import Sequence
@@ -39,7 +39,7 @@ class StoreOutcome:
 
     report: StoreReport
     searched: bool
-    """False when the store was left out for its gender and no request was made."""
+    """False when the store was left out (for its category or gender) and no request was made."""
 
 
 @dataclass(frozen=True)
@@ -58,7 +58,7 @@ def outcomes_for_item(run: ItemRun) -> list[StoreOutcome]:
     """One outcome for every active store, for this item."""
     if run.cached is not None:
         # Nothing was asked this time: say so, and charge no time. The cached reports already
-        # include the stores left out for their gender.
+        # include the stores left out for their category or gender.
         reused: list[StoreOutcome] = []
         for report in run.cached.reports:
             searched = report.store_id in run.cached.searched_ids
@@ -68,18 +68,25 @@ def outcomes_for_item(run: ItemRun) -> list[StoreOutcome]:
         return reused
 
     outcomes: list[StoreOutcome] = []
-    gender = effective_gender(run.item)
-    for store in run.gender_skipped:
-        reason = (
-            messages.store_not_for_gender(store, gender)
-            if gender is not None
-            else messages.store_reason(StoreStatus.EMPTY)
+    for store in run.skipped:
+        report = StoreReport(
+            store_id=store.id, status=StoreStatus.EMPTY, reason=_not_searched_reason(store, run)
         )
-        report = StoreReport(store_id=store.id, status=StoreStatus.EMPTY, reason=reason)
         outcomes.append(StoreOutcome(report, searched=False))
     for store in run.stores:
         outcomes.append(StoreOutcome(_report_for(store, run.store_results.get(store.id)), True))
     return outcomes
+
+
+def _not_searched_reason(store: StoreConfig, run: ItemRun) -> str:
+    """Why ``store`` was left out for this item. The garment comes first when both reasons hold:
+    it is the more specific one, and it does not depend on what the shopper stated."""
+    if not store.sells_category(run.item.category):
+        return messages.store_not_for_category(store, run.item.category)
+    gender = effective_gender(run.item)
+    if gender is not None:
+        return messages.store_not_for_gender(store, gender)
+    return messages.store_reason(StoreStatus.EMPTY)
 
 
 def _report_for(store: StoreConfig, result: StoreResult | None) -> StoreReport:
@@ -149,7 +156,7 @@ def _merge(store_id: str, outcomes: Sequence[StoreOutcome]) -> StoreReport:
             reason=None,
         )
 
-    # Not used: show the most serious outcome, preferring a real search over a gender skip.
+    # Not used: show the most serious outcome, preferring a real search over a skip.
     worst = min(outcomes, key=lambda o: (_SEVERITY.index(o.report.status), not o.searched)).report
     return StoreReport(
         store_id=store_id,

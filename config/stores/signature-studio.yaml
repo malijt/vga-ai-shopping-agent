@@ -21,5 +21,7 @@ extraction:
         # no gender tag at all and stay unknown (the ranker reads their titles).
         gender_fields: [type, tags]
 # genders is left unset on purpose: the store sells women's wear and men's kurta sets (10 of 40 records seen).
+categories:
+  - dresses      # designer kaftans, dresses, co-ord and formal sets and men's kurta-trouser sets: 40 of 40 records seen, type "Clothing" on all; no shoes, jeans, tops or jackets on their own (docs/store-qualification/signature-studio.md)
 tier_hint: mid_range   # AED 174-2,753 seen, median 589; printed and casual pieces 170-625, formal and wedding sets above 1,200
 enabled: true          # the live smoke test passed on 2026-10-08 (tests/stores/signature-studio); enabled when the user raised the store limit to ten (plan A25)

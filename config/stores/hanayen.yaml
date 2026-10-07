@@ -15,5 +15,7 @@ extraction:
     - name: shopify
 genders:
   - women               # abayas, under-abaya dresses and sheilas only: 40 of 40 records seen are women's garments
+categories:
+  - dresses             # abayas and under-abaya dresses (sheilas are accessories): no shoes, trousers, tops or jackets in the 40 records seen (docs/store-qualification/hanayen.md)
 tier_hint: premium      # outer abayas AED 600-5,550 (median 1,290); the inner dresses and sheilas seen are cheaper
 enabled: true           # the live smoke test passed on 2026-10-08 (tests/stores/hanayen); enabled when the user raised the store limit to ten (plan A25)

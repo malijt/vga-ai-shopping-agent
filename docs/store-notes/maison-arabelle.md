@@ -110,6 +110,14 @@ smoke test. Every response was HTTP 200, no redirect, no challenge, CAPTCHA or l
   qualification pass are all kaftans, abayas or one-piece dresses from one women's atelier; no title
   or tag names a gender. The data carries no gender field, so this rests on the range and the brand.
   A men's request is therefore not sent to this store.
+- **Categories:** `categories: [dresses]`. Evidence: `type` is "Kaftans and Abayas" on every record, and
+  the 40 qualification records and 20 recorded today are kaftans, abayas and one-piece dresses; no
+  kurtas, shoes, trousers, tops or jackets were seen. A search for any other category is therefore not
+  sent to this store. This matters more here than elsewhere: many titles are only a name ("ELAN
+  EMBROIDERED VELVET BLACK", an abaya that once turned up in the shoes group of an outfit), and a title
+  with no garment word passes the category filter for every request. Listed among the skipped stores as
+  "Not searched: Maison Arabelle does not sell shoes." and so on. If the store adds other garments,
+  remove the line.
 
 ## robots.txt (data, not acted on)
 

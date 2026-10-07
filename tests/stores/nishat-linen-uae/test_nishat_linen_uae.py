@@ -31,7 +31,7 @@ from protego import Protego
 from tests.factories import make_item_intent, make_settings
 from tests.fakes import FakeClock
 
-from vga.models import Gender, Product, StoreConfig, StoreStatus, Tier
+from vga.models import Category, Gender, Product, StoreConfig, StoreStatus, Tier
 from vga.stores.engine import StoreSearchEngine
 from vga.stores.extractors import ExtractionChain, default_registry
 from vga.stores.extractors.chain import ChainOutcome
@@ -117,6 +117,17 @@ def test_the_store_is_searched_for_either_gender_because_it_sells_both(
     assert store.sells_for_gender(Gender.MEN)
     assert store.sells_for_gender(Gender.WOMEN)
     assert store.sells_for_gender(None)
+
+
+def test_only_a_dresses_search_is_sent_to_this_dress_store(store: StoreConfig) -> None:
+    # Every product seen here is a dress, kaftan, gown, suit or kurta
+    # (docs/store-notes/nishat-linen-uae.md), so a search for shoes, jeans, tops or jackets would
+    # only waste a request to it. The one exception seen, a men's shalwar listed as a "Basic
+    # Kurta", reads as a kurta by its title.
+    assert store.categories == frozenset({Category.DRESSES})
+    assert store.sells_category(Category.DRESSES)
+    for other in (Category.TOPS, Category.OUTERWEAR, Category.BOTTOMS, Category.SHOES):
+        assert not store.sells_category(other)
 
 
 def test_robots_txt_allows_the_search_path_and_still_closes_the_cart() -> None:
