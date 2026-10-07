@@ -9,6 +9,7 @@ from tests.factories import make_settings
 from vga.errors import ConfigError
 from vga.settings import DEFAULT_STORES_DIR
 from vga.stores.extractors import ExtractorRegistry, ShopifyExtractor
+from vga.stores.extractors.shopify import OPTIONS as SHOPIFY_OPTIONS
 from vga.stores.registry import StoreRegistry, load_store_configs
 
 OH_POLLY = {
@@ -58,8 +59,10 @@ allowed_hosts:
 extraction:
   strategies:
     - name: shopify
-      options:
-        name_field: vendor   # style code in `title`, readable name in `vendor`
+      options:               # every option the shopify strategy has; both are optional
+        name_field: vendor   # "title" (default) or "vendor" (name kept in `vendor`)
+        image_width: 400     # default 400; a positive whole number, or null to keep the URL
+rps: 1                   # optional overrides: rps, timeout_s, max_response_bytes, max_variants
 tier_hint: mid_range
 enabled: false           # true only after the live smoke test passes
 """
@@ -71,9 +74,38 @@ def test_a_hand_written_shopify_store_file_loads_as_documented(tmp_path: Path) -
     [store] = load_store_configs(tmp_path)
 
     assert store.id == "the-bear-house"
-    assert store.extraction.strategies[0].options == {"name_field": "vendor"}
+    assert store.extraction.strategies[0].options == {"name_field": "vendor", "image_width": 400}
     assert store.enabled is False
     assert "resources[type]=product" in store.search_url_template
+
+
+def test_the_documented_example_names_every_option_the_shopify_strategy_accepts() -> None:
+    example = yaml.safe_load(HAND_WRITTEN_SHOPIFY_FILE)
+    documented = set(example["extraction"]["strategies"][0]["options"])
+
+    assert documented == set(SHOPIFY_OPTIONS)
+
+
+def test_image_width_null_in_a_store_file_is_accepted(tmp_path: Path) -> None:
+    text = HAND_WRITTEN_SHOPIFY_FILE.replace("image_width: 400 ", "image_width: null")
+    write(tmp_path, "the-bear-house.yaml", text)
+
+    [store] = load_store_configs(tmp_path)
+
+    assert store.extraction.strategies[0].options["image_width"] is None
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "400.5", "'wide'", "true"])
+def test_a_bad_image_width_in_a_store_file_names_the_file_and_the_option(
+    tmp_path: Path, value: str
+) -> None:
+    text = HAND_WRITTEN_SHOPIFY_FILE.replace("image_width: 400 ", f"image_width: {value}")
+    write(tmp_path, "the-bear-house.yaml", text)
+
+    detail = load_error(tmp_path).detail or ""
+
+    assert "the-bear-house.yaml: extraction.strategies.0 (shopify)" in detail
+    assert "options.image_width must be a positive whole number or null" in detail
 
 
 def test_a_missing_directory_gives_no_stores(tmp_path: Path) -> None:

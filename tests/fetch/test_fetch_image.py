@@ -10,13 +10,14 @@ import respx
 
 from tests.factories import make_image_bytes, make_product
 from tests.fakes import FakeClock
-from tests.fetch.conftest import shopify_store
+from tests.fetch.conftest import fixture_text, shopify_store, text_response
 from vga.models import Product
 from vga.settings import Settings
-from vga.stores.engine import IMAGE_TIMEOUT_S, StoreSearchEngine
+from vga.stores import IMAGE_TIMEOUT_S, StoreSearchEngine
 from vga.stores.registry import StoreRegistry
 
 CDN = "https://cdn.shopify.com/s/files/1/0757/9670/9661/files"
+CDN_ROBOTS_URL = "https://cdn.shopify.com/robots.txt"
 PNG = make_image_bytes("PNG")
 
 
@@ -31,6 +32,14 @@ def oh_polly_product(index: int = 1, **overrides: object) -> Product:
 
 def image_response(body: bytes = PNG, content_type: str = "image/png") -> httpx.Response:
     return httpx.Response(200, content=body, headers={"content-type": content_type})
+
+
+@pytest.fixture(autouse=True)
+def cdn_robots(router: respx.MockRouter) -> respx.Route:
+    """cdn.shopify.com's robots.txt, as reported on 2026-10-07: it leaves product images open."""
+    return router.get(CDN_ROBOTS_URL).mock(
+        return_value=text_response(fixture_text("robots.cdn-shopify.txt"))
+    )
 
 
 @pytest.fixture
@@ -61,16 +70,6 @@ async def test_a_thumbnail_comes_back_as_bytes(
     assert "cookie" not in sent.headers
 
 
-async def test_robots_txt_is_not_consulted_for_a_thumbnail(
-    engine: StoreSearchEngine, router: respx.MockRouter
-) -> None:
-    router.get(url__startswith=CDN).mock(return_value=image_response())
-
-    await engine.fetch_image(oh_polly_product())
-
-    assert [call.request.url.host for call in router.calls] == ["cdn.shopify.com"]
-
-
 async def test_the_image_host_rate_is_used_and_not_the_store_rate(
     engine: StoreSearchEngine, router: respx.MockRouter, clock: FakeClock
 ) -> None:
@@ -79,8 +78,9 @@ async def test_the_image_host_rate_is_used_and_not_the_store_rate(
 
     await asyncio.gather(*(engine.fetch_image(oh_polly_product(n)) for n in range(1, 11)))
 
-    # 10 thumbnails at 5 requests per second: the last one goes out 9 / 5 = 1.8 s in
-    assert clock.monotonic() - started == pytest.approx(1.8)
+    # robots.txt and 10 thumbnails on one host at 5 requests per second: the 11th request goes
+    # out 10 / 5 = 2.0 s in
+    assert clock.monotonic() - started == pytest.approx(2.0)
 
 
 async def test_a_thumbnail_on_the_stores_own_host_keeps_the_store_rate(
@@ -88,6 +88,7 @@ async def test_a_thumbnail_on_the_stores_own_host_keeps_the_store_rate(
 ) -> None:
     store = shopify_store(allowed_hosts=["ohpolly.ae", "cdn.shopify.com"])
     engine = StoreSearchEngine(settings, StoreRegistry([store]), clock=clock)
+    router.get("https://ohpolly.ae/robots.txt").mock(return_value=text_response(""))
     router.get(url__startswith="https://ohpolly.ae/cdn/").mock(return_value=image_response())
     started = clock.monotonic()
 
@@ -98,29 +99,28 @@ async def test_a_thumbnail_on_the_stores_own_host_keeps_the_store_rate(
         )
     )
 
-    assert clock.monotonic() - started == pytest.approx(2.0)  # 1 request per second
+    # robots.txt and 3 thumbnails on the store's own host, one request per second
+    assert clock.monotonic() - started == pytest.approx(3.0)
 
 
 async def test_a_slow_thumbnail_is_given_up_after_four_seconds(
     engine: StoreSearchEngine, router: respx.MockRouter, clock: FakeClock
 ) -> None:
-    attempts = 0
+    request_times: list[float] = []
 
     async def hang(request: httpx.Request) -> httpx.Response:
-        nonlocal attempts
-        attempts += 1
+        request_times.append(clock.monotonic())
         await clock.sleep(1000)
         return image_response()
 
     router.get(url__startswith=CDN).mock(side_effect=hang)
-    started = clock.monotonic()
 
     data = await engine.fetch_image(oh_polly_product())
 
     assert data is None
     assert IMAGE_TIMEOUT_S == 4.0
-    assert clock.monotonic() - started == pytest.approx(IMAGE_TIMEOUT_S)
-    assert attempts == 1  # no retry
+    assert len(request_times) == 1  # no retry
+    assert clock.monotonic() - request_times[0] == pytest.approx(IMAGE_TIMEOUT_S)
 
 
 async def test_the_store_default_timeout_does_not_apply_to_thumbnails(
@@ -129,15 +129,17 @@ async def test_the_store_default_timeout_does_not_apply_to_thumbnails(
     slow_store = shopify_store(timeout_s=15)
     engine = StoreSearchEngine(settings, StoreRegistry([slow_store]), clock=clock)
 
+    request_times: list[float] = []
+
     async def hang(request: httpx.Request) -> httpx.Response:
+        request_times.append(clock.monotonic())
         await clock.sleep(1000)
         return image_response()
 
     router.get(url__startswith=CDN).mock(side_effect=hang)
-    started = clock.monotonic()
 
     assert await engine.fetch_image(oh_polly_product()) is None
-    assert clock.monotonic() - started == pytest.approx(4.0)
+    assert clock.monotonic() - request_times[0] == pytest.approx(4.0)
 
 
 async def test_an_oversized_thumbnail_is_refused(
@@ -332,3 +334,207 @@ async def test_failures_are_logged_not_silent(
     messages = [r.getMessage() for r in caplog.records]
     assert "image not fetched: bad status" in messages
     assert "image not fetched: unknown store" in messages
+
+
+# --------------------------------------------------------------------------------------------
+# robots.txt applies to thumbnails too (BRD Rule 2)
+# --------------------------------------------------------------------------------------------
+
+
+async def test_the_image_hosts_robots_txt_is_fetched_before_the_image(
+    engine: StoreSearchEngine, router: respx.MockRouter
+) -> None:
+    router.get(url__startswith=CDN).mock(return_value=image_response())
+
+    await engine.fetch_image(oh_polly_product())
+
+    assert [call.request.url.path.rsplit("/", 1)[-1] for call in router.calls] == [
+        "robots.txt",
+        "blazer-1.jpg",
+    ]
+
+
+async def test_an_image_host_whose_robots_txt_disallows_the_image_path_gives_none_and_no_request(
+    engine: StoreSearchEngine, router: respx.MockRouter, cdn_robots: respx.Route
+) -> None:
+    cdn_robots.mock(return_value=text_response("User-agent: *\nDisallow: /s/files/\n"))
+    image_route = router.get(url__startswith=CDN).mock(return_value=image_response())
+
+    assert await engine.fetch_image(oh_polly_product()) is None
+
+    assert image_route.call_count == 0
+    assert cdn_robots.call_count == 1
+
+
+async def test_a_wildcard_rule_with_a_query_string_is_honoured_for_images(
+    engine: StoreSearchEngine, router: respx.MockRouter, cdn_robots: respx.Route
+) -> None:
+    cdn_robots.mock(return_value=text_response("User-agent: *\nDisallow: /*?*width=\n"))
+    image_route = router.get(url__startswith=CDN).mock(return_value=image_response())
+
+    denied = await engine.fetch_image(oh_polly_product(image_url=f"{CDN}/a.jpg?v=1&width=400"))
+    allowed = await engine.fetch_image(oh_polly_product(image_url=f"{CDN}/a.jpg?v=1"))
+
+    assert (denied, allowed) == (None, PNG)
+    assert image_route.call_count == 1
+
+
+async def test_the_reported_cdn_shopify_rules_allow_product_images_under_s_files(
+    engine: StoreSearchEngine, router: respx.MockRouter, cdn_robots: respx.Route
+) -> None:
+    image_route = router.get(url__startswith=CDN).mock(return_value=image_response())
+
+    data = await engine.fetch_image(oh_polly_product(image_url=f"{CDN}/blazer-1.jpg?v=1&width=400"))
+
+    assert data == PNG
+    assert image_route.call_count == 1
+
+
+async def test_the_reported_cdn_shopify_rules_still_disallow_the_two_script_paths(
+    engine: StoreSearchEngine,
+) -> None:
+    store = shopify_store()
+    robots = engine.robots
+
+    assert await robots.can_fetch(f"{CDN}/blazer-1.jpg", store) is True
+    assert await robots.can_fetch("https://cdn.shopify.com/wpm/app.js", store) is False
+    assert (
+        await robots.can_fetch("https://cdn.shopify.com/x/blog-article-remove-faq-utms-9.js", store)
+        is False
+    )
+
+
+async def test_the_robots_fetch_for_an_image_host_happens_once_and_is_cached(
+    engine: StoreSearchEngine, router: respx.MockRouter, cdn_robots: respx.Route, clock: FakeClock
+) -> None:
+    router.get(url__startswith=CDN).mock(return_value=image_response())
+
+    first_wave = await asyncio.gather(*(engine.fetch_image(oh_polly_product(n)) for n in range(5)))
+    second_wave = [await engine.fetch_image(oh_polly_product(n)) for n in range(5, 8)]
+    clock.advance(3600)  # an hour later: still trusted (parsed files are kept for a day)
+    later = await engine.fetch_image(oh_polly_product(9))
+
+    assert all(data == PNG for data in [*first_wave, *second_wave, later])
+    assert cdn_robots.call_count == 1
+
+
+async def test_an_unreachable_robots_txt_on_the_image_host_gives_none_and_no_image_request(
+    engine: StoreSearchEngine, router: respx.MockRouter, cdn_robots: respx.Route
+) -> None:
+    cdn_robots.mock(return_value=httpx.Response(503))
+    image_route = router.get(url__startswith=CDN).mock(return_value=image_response())
+
+    results = [await engine.fetch_image(oh_polly_product(n)) for n in range(1, 4)]
+
+    assert results == [None, None, None]
+    assert image_route.call_count == 0
+    assert cdn_robots.call_count == 1  # remembered: no new robots request for each image
+
+
+async def test_a_missing_robots_txt_on_the_image_host_allows_the_image(
+    engine: StoreSearchEngine, router: respx.MockRouter, cdn_robots: respx.Route
+) -> None:
+    cdn_robots.mock(return_value=httpx.Response(404))
+    router.get(url__startswith=CDN).mock(return_value=image_response())
+
+    assert await engine.fetch_image(oh_polly_product()) == PNG
+
+
+async def test_an_html_page_in_place_of_the_image_hosts_robots_txt_counts_as_unreachable(
+    engine: StoreSearchEngine, router: respx.MockRouter, cdn_robots: respx.Route
+) -> None:
+    cdn_robots.mock(return_value=text_response("<html>home</html>", content_type="text/html"))
+    image_route = router.get(url__startswith=CDN).mock(return_value=image_response())
+
+    assert await engine.fetch_image(oh_polly_product()) is None
+    assert image_route.call_count == 0
+
+
+async def test_a_slow_robots_txt_on_the_image_host_is_given_up_after_four_seconds(
+    engine: StoreSearchEngine, router: respx.MockRouter, cdn_robots: respx.Route, clock: FakeClock
+) -> None:
+    request_times: list[float] = []
+
+    async def hang(request: httpx.Request) -> httpx.Response:
+        request_times.append(clock.monotonic())
+        await clock.sleep(1000)
+        return text_response("")
+
+    cdn_robots.mock(side_effect=hang)
+    image_route = router.get(url__startswith=CDN).mock(return_value=image_response())
+
+    assert await engine.fetch_image(oh_polly_product()) is None
+
+    assert clock.monotonic() - request_times[0] == pytest.approx(IMAGE_TIMEOUT_S)
+    assert image_route.call_count == 0
+
+
+async def test_a_blocked_robots_request_on_the_image_host_cools_down_that_host_not_the_store(
+    engine: StoreSearchEngine, router: respx.MockRouter, cdn_robots: respx.Route
+) -> None:
+    cdn_robots.mock(return_value=httpx.Response(403))
+    image_route = router.get(url__startswith=CDN).mock(return_value=image_response())
+
+    results = [await engine.fetch_image(oh_polly_product(n)) for n in range(1, 4)]
+
+    assert results == [None, None, None]
+    assert (cdn_robots.call_count, image_route.call_count) == (1, 0)
+    assert engine.client.cooldowns.remaining("host:cdn.shopify.com") > 0
+    assert engine.client.cooldowns.remaining("oh-polly") == 0
+
+
+async def test_the_image_hosts_robots_txt_uses_the_image_host_rate(
+    engine: StoreSearchEngine, router: respx.MockRouter, clock: FakeClock
+) -> None:
+    router.get(url__startswith=CDN).mock(return_value=image_response())
+    started = clock.monotonic()
+
+    await engine.fetch_image(oh_polly_product())
+
+    # robots.txt at once, the image 1 / 5 s later (a store page would wait a whole second)
+    assert clock.monotonic() - started == pytest.approx(0.2)
+
+
+async def test_a_thumbnail_on_the_stores_own_host_shares_the_robots_verdict_with_the_search(
+    settings: Settings, clock: FakeClock, router: respx.MockRouter
+) -> None:
+    store = shopify_store(allowed_hosts=["ohpolly.ae", "cdn.shopify.com"])
+    engine = StoreSearchEngine(settings, StoreRegistry([store]), clock=clock)
+    robots = router.get("https://ohpolly.ae/robots.txt").mock(return_value=text_response(""))
+    router.get(url__startswith="https://ohpolly.ae/cdn/").mock(return_value=image_response())
+    await engine.robots.ensure_allowed("https://ohpolly.ae/search?q=blazer", store)
+
+    data = await engine.fetch_image(oh_polly_product(image_url="https://ohpolly.ae/cdn/1.jpg"))
+
+    assert data == PNG
+    assert robots.call_count == 1
+
+
+async def test_a_block_on_the_stores_own_host_while_fetching_its_robots_blocks_the_store(
+    settings: Settings, clock: FakeClock, router: respx.MockRouter
+) -> None:
+    store = shopify_store(allowed_hosts=["ohpolly.ae", "cdn.shopify.com"])
+    engine = StoreSearchEngine(settings, StoreRegistry([store]), clock=clock)
+    router.get("https://ohpolly.ae/robots.txt").mock(return_value=httpx.Response(403))
+
+    data = await engine.fetch_image(oh_polly_product(image_url="https://ohpolly.ae/cdn/1.jpg"))
+
+    assert data is None
+    assert engine.client.cooldowns.remaining("oh-polly") > 0
+
+
+async def test_a_robots_refusal_for_an_image_is_logged_with_its_reason(
+    engine: StoreSearchEngine,
+    router: respx.MockRouter,
+    cdn_robots: respx.Route,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level(logging.INFO)
+    cdn_robots.mock(return_value=text_response("User-agent: *\nDisallow: /s/files/\n"))
+
+    await engine.fetch_image(oh_polly_product())
+
+    refusals = [r for r in caplog.records if r.getMessage() == "image not fetched"]
+    assert [r.reason for r in refusals] == ["robots_denied"]  # type: ignore[attr-defined]
+    assert "disallows" in refusals[0].detail  # type: ignore[attr-defined]
+    assert any(r.getMessage() == "robots.txt disallows the URL; skipped" for r in caplog.records)

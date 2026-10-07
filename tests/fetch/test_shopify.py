@@ -19,6 +19,7 @@ from vga.stores.extractors import (
     ShopifyExtractor,
     default_registry,
 )
+from vga.stores.extractors.shopify import DEFAULT_IMAGE_WIDTH
 from vga.stores.normalise import normalise_records
 
 SHOPIFY = StrategyConfig(name="shopify")
@@ -140,7 +141,7 @@ def test_a_record_carries_the_five_fields_the_normaliser_needs() -> None:
     assert record == {
         "title": "Blazer 1",
         "price": "101.00",
-        "image_url": "https://cdn.shopify.com/s/files/1/0001/0002/files/blazer-1.jpg?v=1",
+        "image_url": "https://cdn.shopify.com/s/files/1/0001/0002/files/blazer-1.jpg?v=1&width=400",
         "product_url": "/products/blazer-1",
         "in_stock": True,
     }
@@ -153,7 +154,7 @@ def test_the_image_falls_back_to_the_featured_image() -> None:
 
     [record] = records_of(suggest_body(product))
 
-    assert record["image_url"] == "https://cdn.shopify.com/f.jpg"
+    assert record["image_url"] == "https://cdn.shopify.com/f.jpg?width=400"
 
 
 def test_the_link_falls_back_to_the_handle() -> None:
@@ -264,6 +265,119 @@ def test_a_missing_name_in_the_chosen_field_drops_the_record_with_a_reason() -> 
 
 
 # --------------------------------------------------------------------------------------------
+# image_width: ask the CDN for a smaller picture (default 400)
+# --------------------------------------------------------------------------------------------
+
+CDN_IMAGE = "https://cdn.shopify.com/s/files/1/0757/9670/9661/files/14960-Black_Azelie_4.jpg"
+
+
+def image_urls(image: object, **options: object) -> str:
+    [record] = records_of(suggest_body(shopify_product(1, image=image)), **options)
+    url = record["image_url"]
+    assert isinstance(url, str)
+    return url
+
+
+def test_the_default_width_is_400() -> None:
+    assert DEFAULT_IMAGE_WIDTH == 400
+    assert image_urls(f"{CDN_IMAGE}?v=1762411731") == f"{CDN_IMAGE}?v=1762411731&width=400"
+
+
+def test_a_url_without_a_query_gets_one() -> None:
+    assert image_urls(CDN_IMAGE) == f"{CDN_IMAGE}?width=400"
+
+
+def test_existing_parameters_are_kept_exactly_as_written() -> None:
+    url = image_urls(f"{CDN_IMAGE}?v=1762411731&crop=center&format=pjpg%20x")
+
+    assert url == f"{CDN_IMAGE}?v=1762411731&crop=center&format=pjpg%20x&width=400"
+
+
+def test_an_existing_width_is_replaced_in_place() -> None:
+    url = image_urls(f"{CDN_IMAGE}?v=1&width=2000&crop=center")
+
+    assert url == f"{CDN_IMAGE}?v=1&width=400&crop=center"
+
+
+def test_repeated_width_parameters_collapse_to_one() -> None:
+    url = image_urls(f"{CDN_IMAGE}?width=100&v=1&width=2000")
+
+    assert url == f"{CDN_IMAGE}?width=400&v=1"
+
+
+def test_a_parameter_that_only_ends_in_width_is_not_mistaken_for_width() -> None:
+    url = image_urls(f"{CDN_IMAGE}?v=1&maxwidth=900&width_x=1")
+
+    assert url == f"{CDN_IMAGE}?v=1&maxwidth=900&width_x=1&width=400"
+
+
+def test_a_fragment_is_kept() -> None:
+    assert image_urls(f"{CDN_IMAGE}?v=1#top") == f"{CDN_IMAGE}?v=1&width=400#top"
+
+
+def test_a_configured_width_is_used() -> None:
+    assert image_urls(f"{CDN_IMAGE}?v=1", image_width=800) == f"{CDN_IMAGE}?v=1&width=800"
+
+
+def test_null_leaves_the_url_untouched() -> None:
+    original = f"{CDN_IMAGE}?v=1762411731&width=2000"
+
+    assert image_urls(original, image_width=None) == original
+    assert image_urls(CDN_IMAGE, image_width=None) == CDN_IMAGE
+
+
+@pytest.mark.parametrize(
+    ("image", "expected"), [(None, None), ("", None), (42, 42), (["x"], ["x"])]
+)
+def test_a_missing_or_odd_image_value_is_left_for_the_validator_to_drop(
+    image: object, expected: object
+) -> None:
+    [record] = records_of(suggest_body(shopify_product(1, image=image)))
+
+    assert record["image_url"] == expected
+
+
+def test_the_width_applies_to_the_featured_image_fallback_too() -> None:
+    product = shopify_product(1, image=None, featured_image={"url": f"{CDN_IMAGE}?v=3"})
+
+    [record] = records_of(suggest_body(product), image_width=250)
+
+    assert record["image_url"] == f"{CDN_IMAGE}?v=3&width=250"
+
+
+def test_products_from_the_saved_samples_carry_the_width_by_default() -> None:
+    raw = fixture_text("ohpolly-suggest-black-blazer.json")
+    outcome = ExtractionChain(default_registry()).run(raw, shopify_store(), OHPOLLY_BLAZER_URL)
+
+    assert outcome.products
+    for product in outcome.products:
+        assert product.image_url.startswith("https://cdn.shopify.com/s/files/")
+        assert product.image_url.endswith("&width=400")
+        assert product.image_url.count("width=") == 1
+        assert "?v=" in product.image_url  # the sample's own version parameter survives
+
+
+def test_the_widened_url_is_still_on_the_allow_list_and_the_product_url_is_unaffected() -> None:
+    raw = fixture_text("ohpolly-suggest-black-blazer.json")
+    outcome = ExtractionChain(default_registry()).run(raw, shopify_store(), OHPOLLY_BLAZER_URL)
+
+    assert outcome.dropped == {}
+    assert all("width" not in product.product_url for product in outcome.products)
+
+
+def test_with_null_the_saved_samples_keep_their_original_image_urls() -> None:
+    raw = fixture_text("ohpolly-suggest-black-blazer.json")
+    store = shopify_store(
+        extraction={"strategies": [{"name": "shopify", "options": {"image_width": None}}]}
+    )
+
+    outcome = ExtractionChain(default_registry()).run(raw, store, OHPOLLY_BLAZER_URL)
+
+    originals = [p["image"] for p in saved_products("ohpolly-suggest-black-blazer.json")]
+    assert [p.image_url for p in outcome.products] == originals
+
+
+# --------------------------------------------------------------------------------------------
 # Store-file validation of the strategy
 # --------------------------------------------------------------------------------------------
 
@@ -274,6 +388,10 @@ def test_a_missing_name_in_the_chosen_field_drops_the_record_with_a_reason() -> 
         StrategyConfig(name="shopify"),
         StrategyConfig(name="shopify", options={"name_field": "title"}),
         StrategyConfig(name="shopify", options={"name_field": "vendor"}),
+        StrategyConfig(name="shopify", options={"image_width": 400}),
+        StrategyConfig(name="shopify", options={"image_width": 1}),
+        StrategyConfig(name="shopify", options={"image_width": None}),
+        StrategyConfig(name="shopify", options={"name_field": "vendor", "image_width": 600}),
     ],
 )
 def test_valid_shopify_settings_pass(strategy: StrategyConfig) -> None:
@@ -287,6 +405,14 @@ def test_valid_shopify_settings_pass(strategy: StrategyConfig) -> None:
         (StrategyConfig(name="shopify", options={"name_fied": "vendor"}), "name_fied"),
         (StrategyConfig(name="shopify", options={"limit": 10}), "limit"),
         (StrategyConfig(name="shopify", fields={"title": "name"}), "fixed field mapping"),
+        (StrategyConfig(name="shopify", options={"image_width": 0}), "image_width"),
+        (StrategyConfig(name="shopify", options={"image_width": -400}), "image_width"),
+        (StrategyConfig(name="shopify", options={"image_width": 400.5}), "image_width"),
+        (StrategyConfig(name="shopify", options={"image_width": "400"}), "image_width"),
+        (StrategyConfig(name="shopify", options={"image_width": True}), "image_width"),
+        (StrategyConfig(name="shopify", options={"image_width": False}), "image_width"),
+        (StrategyConfig(name="shopify", options={"image_width": [400]}), "image_width"),
+        (StrategyConfig(name="shopify", options={"image_widht": 400}), "image_widht"),
     ],
 )
 def test_invalid_shopify_settings_are_rejected_with_the_field_named(

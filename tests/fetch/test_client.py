@@ -10,7 +10,7 @@ import respx
 from tests.factories import make_settings, make_store_config
 from tests.fakes import FakeClock
 from tests.fetch.conftest import CDN, HOST, SEARCH_URL, text_response
-from vga.fetch.client import PoliteClient
+from vga.fetch.client import IMAGE_TIMEOUT_S, PoliteClient
 from vga.fetch.errors import (
     BlockedError,
     CooldownError,
@@ -639,3 +639,24 @@ def test_an_image_cdn_gets_the_image_rate_but_the_stores_own_domain_keeps_the_st
     assert polite.image_policy(store, "cdn.shopify.com", timeout_s=4).rps == 5
     assert polite.image_policy(store, HOST, timeout_s=4).rps == 1
     assert polite.image_policy(store, CDN, timeout_s=4).rps == 1  # same registered domain
+
+
+def test_robots_txt_of_the_stores_own_domain_uses_the_page_policy(clock: FakeClock) -> None:
+    polite = PoliteClient(make_settings(), clock=clock)
+    store = make_store_config(rps=2, timeout_s=15)
+
+    assert polite.robots_policy(store, HOST) == polite.page_policy(store)
+    assert polite.robots_policy(store, CDN) == polite.page_policy(store)  # same registered domain
+
+
+def test_robots_txt_of_an_image_cdn_uses_the_image_rate_timeout_and_its_own_cooldown_key(
+    clock: FakeClock,
+) -> None:
+    polite = PoliteClient(make_settings(rps_per_store=1, rps_images_per_host=5), clock=clock)
+    store = make_store_config(timeout_s=15)
+
+    policy = polite.robots_policy(store, "cdn.shopify.com")
+
+    assert (policy.rps, policy.timeout_s) == (5, IMAGE_TIMEOUT_S)
+    assert policy.cooldown_key == "host:cdn.shopify.com"
+    assert policy.accept != "image/*"  # it asks for a text file, not an image

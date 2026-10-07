@@ -25,7 +25,7 @@ from collections.abc import Sequence
 import httpx
 
 from vga.fetch.allowlist import check_url
-from vga.fetch.client import PoliteClient
+from vga.fetch.client import IMAGE_TIMEOUT_S, PoliteClient
 from vga.fetch.deadline import run_with_deadline
 from vga.fetch.errors import FetchError
 from vga.fetch.robots import RobotsChecker
@@ -41,8 +41,6 @@ from vga.stores.urls import build_search_url
 
 log = get_logger(__name__)
 
-IMAGE_TIMEOUT_S = 4.0
-"""A thumbnail that takes longer is not worth waiting for (plan 8.3.1)."""
 
 _FAILURE_PRIORITY = (
     StoreStatus.BLOCKED,
@@ -336,9 +334,11 @@ class StoreSearchEngine:
 
         Meant to be handed to the image ranker as a ``Callable[[Product], Awaitable[bytes |
         None]]``. It finds the product's store, checks the image URL is https and on that store's
-        ``allowed_hosts``, takes a slot from the image-host rate limiter, allows 4 seconds, keeps
-        the response size cap, never retries and keeps the bytes in memory only. The response must
-        be an image (a challenge page or an error body is not).
+        ``allowed_hosts``, checks the image host's robots.txt (fetched once per host and cached,
+        like the store's own), takes a slot from the image-host rate limiter, allows 4 seconds,
+        keeps the response size cap, never retries and keeps the bytes in memory only. The response
+        must be an image (a challenge page or an error body is not). A robots refusal (or an
+        unreadable robots.txt) gives ``None`` and is logged with its reason.
         """
         try:
             store = self.registry.by_display_name(product.store)
@@ -346,6 +346,7 @@ class StoreSearchEngine:
                 log.warning("image not fetched: unknown store", extra={"store_name": product.store})
                 return None
             host = check_url(product.image_url, store.allowed_hosts)
+            await self.robots.ensure_allowed(product.image_url, store)
             policy = self.client.image_policy(store, host, timeout_s=IMAGE_TIMEOUT_S)
             response = await self.client.fetch(product.image_url, store, policy)
         except asyncio.CancelledError:
