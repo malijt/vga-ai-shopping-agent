@@ -15,6 +15,7 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 - This changelog is maintained from now on (user request).
 
 **Added**
+- Dress and modest-wear store discovery (plan Module 2.5): 31 candidates listed, 12 tested, four more Shopify stores qualify, all through `/search/suggest.json` with robots.txt allowing it: Hanayen (abayas, AED 600-4,500), Maison Arabelle (abayas and kaftans, AED 790-2,400), Nishat Linen UAE (budget long dresses and South Asian suits, AED 40-239) and Signature Studio (designer South Asian sets and kaftans, AED 174-2,753). Reports, samples and a coverage table are in `docs/store-qualification/`. No adapter is built or enabled yet.
 - Product gender from the store's own data: the Shopify extractor reads `type` and `tags` to say who an item is for, and the ranker drops the other gender when the shopper states one. On the 160 saved products it labelled every Sacoor, Nautica and Maison D'Vie item and none wrongly; Giordano, Oh Polly and Club L London mostly stay unlabelled and rely on the title or the store-level setting.
 - Sixteen test photos supplied by the user (abayas, dresses, ethnic sets, bottoms, a blouse), kept in the git-ignored private assets folder with descriptive names and a manifest. No duplicates.
 - Store adapters for all six demo stores, each enabled only after a live smoke test through the project's own engine: Sacoor Brothers UAE, Giordano UAE, Club L London UAE, Oh Polly UAE, Maison D'Vie, Nautica UAE. Every live response was HTTP 200, with no block or challenge.
@@ -28,6 +29,10 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 - `httpx2`, which the Understand tests import directly, is now a declared test dependency. `app` and `eval` imports sort as first-party.
 
 **Found**
+- Only two readable AED stores sell real abayas (Hanayen and Maison Arabelle), and none sells an everyday abaya below AED 600. An abaya search will struggle to reach three stores.
+- Six stores cannot serve both the men's queries and the dress queries: three stores carry menswear, so at most three are left for dresses, and three stores at six results each is 18, below the 20-result bar.
+- Shopify's older default robots.txt disallows `/search` and the newer one leaves it open. Five of the eight abaya or kaftan sellers checked close search, so robots.txt has to be the first request to any new store.
+- Rejected in discovery: Lamis Abaya, Basic Abaya, KMansoori, Bousni and CAS Basics (robots.txt), Boksha (its search endpoint redirects to an HTML page), East Essence (priced in USD). The discovery agent sent Boksha 4 requests where its limit for an early rejection was 2, because its script followed two redirects; it fixed the script before the next store.
 - The default test suite reads the developer's real `.env`: with the user's `.env` in place, 112 UI tests fail or error in the main checkout, and the real API key is copied into the test process. With `.env` moved aside the same suite passes. Agents never saw it because their worktrees have no `.env`. A fix (tests isolated from the real `.env`) is in progress.
 - Sacoor's women's suit blazers are tagged "Formalwear Men", so `type` has to outrank `tags` when reading gender.
 - Nautica UAE sells women's clothing as well as men's. The qualification pass had seen only women's accessories.
