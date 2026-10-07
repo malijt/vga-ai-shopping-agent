@@ -16,8 +16,9 @@ def group_heading(position: int, group: GarmentGroup) -> str:
     return f"Item {position}: {CATEGORY_LABELS[group.category]}"
 
 
-def render_groups(response: SearchResponse) -> None:
-    """Draw every garment group in the response, each with its four price ranges in order."""
+def render_groups(response: SearchResponse, *, base_currency: str) -> None:
+    """Draw every garment group in the response, each with its four price ranges in order.
+    ``base_currency`` is ``Settings.base_currency``, the currency the price ranges are in."""
     multiple = len(response.groups) > 1
     if not multiple:
         st.header("Results", anchor=False)
@@ -25,4 +26,6 @@ def render_groups(response: SearchResponse) -> None:
         if multiple:
             st.header(group_heading(position, group), anchor=False)
         for tier in group.tiers:
-            render_price_range(tier, key=f"{group.item_index}_{tier.name.value}")
+            render_price_range(
+                tier, key=f"{group.item_index}_{tier.name.value}", base_currency=base_currency
+            )

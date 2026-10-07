@@ -156,7 +156,7 @@ class TestResultCards:
         def script(scored) -> None:
             from app.components.result_card import render_result_card
 
-            render_result_card(scored, key="card")
+            render_result_card(scored, key="card", base_currency="AED")
 
         # `model_copy` skips validation: the contract refuses an empty address, but the page must
         # still cope if one ever got through.
@@ -173,7 +173,7 @@ class TestResultCards:
         def script(scored) -> None:
             from app.components.result_card import render_result_card
 
-            render_result_card(scored, key="card")
+            render_result_card(scored, key="card", base_currency="AED")
 
         product = make_product(1).model_copy(update={"product_url": "javascript:alert(1)"})
         scored = make_scored_product(product)

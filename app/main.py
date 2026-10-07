@@ -88,7 +88,7 @@ def render_page() -> None:
         render_run_details(response)
     else:
         render_notes(response.warnings)
-        render_groups(response)
+        render_groups(response, base_currency=settings.base_currency)
         render_run_details(response)
 
 

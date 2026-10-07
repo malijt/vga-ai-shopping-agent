@@ -28,8 +28,9 @@ def facts_line(tier: TierResult) -> str:
     return " ".join(parts)
 
 
-def render_price_range(tier: TierResult, *, key: str) -> None:
-    """Draw one price range. ``key`` is unique per garment group and range."""
+def render_price_range(tier: TierResult, *, key: str, base_currency: str) -> None:
+    """Draw one price range. ``key`` is unique per garment group and range. ``base_currency`` is
+    handed on to each card (``Settings.base_currency``)."""
     st.subheader(tier.display_label, anchor=False)
     st.text(facts_line(tier))
     if not tier.results:
@@ -40,5 +41,7 @@ def render_price_range(tier: TierResult, *, key: str) -> None:
         for column_number, (column, scored) in enumerate(zip(columns, row, strict=False)):
             with column:
                 render_result_card(
-                    scored, key=f"{key}_{row_number * CARDS_PER_ROW + column_number}"
+                    scored,
+                    key=f"{key}_{row_number * CARDS_PER_ROW + column_number}",
+                    base_currency=base_currency,
                 )

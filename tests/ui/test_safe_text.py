@@ -4,7 +4,7 @@ import re
 
 import pytest
 
-from app.safe_text import ELLIPSIS, clamp, format_price, label_fragment, plain_text
+from app.safe_text import ELLIPSIS, clamp, label_fragment, plain_text
 
 HOSTILE = [
     "<script>alert(1)</script>",
@@ -92,14 +92,3 @@ class TestLabelFragment:
 
     def test_a_long_name_is_cut(self) -> None:
         assert len(label_fragment("Store " * 50)) <= 40
-
-
-class TestFormatPrice:
-    @pytest.mark.parametrize(
-        ("value", "shown"),
-        [(129.0, "129"), (1250.0, "1,250"), (2400.0, "2,400"), (89.5, "89.50"), (0.99, "0.99")],
-    )
-    def test_whole_amounts_have_no_decimals_and_thousands_are_grouped(
-        self, value: float, shown: str
-    ) -> None:
-        assert format_price(value) == shown

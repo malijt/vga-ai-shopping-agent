@@ -13,8 +13,9 @@ The "No image available" placeholder below covers a missing or unusable image ad
 import streamlit as st
 
 from app.copy import FLAG_TEXT, NOT_LISTED, PLACEHOLDER_NO_IMAGE
-from app.safe_text import format_price, label_fragment, plain_text
+from app.safe_text import label_fragment, plain_text
 from vga.models import ScoredProduct
+from vga.money import format_price
 
 TITLE_MAX_CHARS = 120
 STORE_MAX_CHARS = 60
@@ -26,8 +27,15 @@ def _is_https(url: str) -> bool:
     return url.startswith("https://")
 
 
-def render_result_card(scored: ScoredProduct, *, key: str) -> None:
-    """Draw one product. ``key`` makes the link button's identity stable and unique."""
+def render_result_card(scored: ScoredProduct, *, key: str, base_currency: str) -> None:
+    """Draw one product. ``key`` makes the link button's identity stable and unique.
+
+    ``base_currency`` is ``Settings.base_currency``. The price line is the store's own price and,
+    for a product in another currency, the approximate figure in the base currency that the
+    pipeline worked out (``ScoredProduct.base_price``): ``245.000 KWD (about 2,920 AED)``. The page
+    converts nothing and compares nothing, and an "over your budget" flag is the pipeline's own
+    word, measured on that figure.
+    """
     product = scored.product
     title = plain_text(product.title, TITLE_MAX_CHARS)
     store = plain_text(product.store, STORE_MAX_CHARS)
@@ -40,7 +48,15 @@ def render_result_card(scored: ScoredProduct, *, key: str) -> None:
             st.text(PLACEHOLDER_NO_IMAGE)
 
         st.text(title)
-        st.markdown(f"**{format_price(product.price)} {product.currency}**")
+        # Markdown only for the bold: the text is digits, separators, "about" and currency codes
+        # that the contract checked (three capital letters), never a string from the store.
+        price = format_price(
+            product.price,
+            product.currency,
+            base_price=scored.base_price,
+            base_currency=base_currency,
+        )
+        st.markdown(f"**{price}**")
         details = [
             f"Store: {store}",
             f"Colour: {plain_text(product.colour, COLOUR_MAX_CHARS) or NOT_LISTED}",
