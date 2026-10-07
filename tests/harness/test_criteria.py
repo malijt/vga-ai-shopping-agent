@@ -1,6 +1,7 @@
 """11.2.1: each criterion, with passing and failing responses, and the boundary cases."""
 
 import pytest
+
 from eval.harness.criteria import (
     Cause,
     CriteriaConfig,
@@ -17,7 +18,6 @@ from eval.harness.criteria import (
     price_range_problems,
 )
 from eval.harness.runner import DurationSource, PipelineFailure, QueryRun
-
 from tests.factories import make_store_report
 from tests.harness.helpers import labels_for, make_group, make_query, make_response, ok_links
 from vga.models import Category, Flag, SearchResponse, StepTiming, Tier

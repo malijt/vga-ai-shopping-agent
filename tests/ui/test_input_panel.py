@@ -1,6 +1,8 @@
 """The input panel (plan 10.1.2): what can be searched, what is refused, and what survives."""
 
 import pytest
+from streamlit.testing.v1 import AppTest
+
 from app.components.input_panel import (
     ALLOWED_PHOTO_TYPES,
     MAX_PHOTO_MB,
@@ -10,8 +12,6 @@ from app.components.input_panel import (
     check_photo,
     sniff_image_kind,
 )
-from streamlit.testing.v1 import AppTest
-
 from tests.factories import make_image_bytes
 from tests.ui.conftest import InstallPipeline
 from tests.ui.helpers import PHOTO, SEARCH_BUTTON, TEXT_BOX, search

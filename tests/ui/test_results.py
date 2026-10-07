@@ -3,11 +3,11 @@
 import re
 
 import pytest
+from streamlit.testing.v1 import AppTest
+
 from app.components.price_range import facts_line
 from app.components.result_card import TITLE_MAX_CHARS
 from app.copy import FLAG_TEXT, PLACEHOLDER_NO_IMAGE
-from streamlit.testing.v1 import AppTest
-
 from tests.factories import (
     load_sample_response,
     make_garment_group,

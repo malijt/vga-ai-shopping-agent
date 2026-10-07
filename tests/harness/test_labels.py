@@ -5,6 +5,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 import pytest
+
 from eval.harness.errors import LabelSheetError
 from eval.harness.groups import TOP_N
 from eval.harness.labels import (
@@ -15,7 +16,6 @@ from eval.harness.labels import (
     label_rows,
 )
 from eval.harness.runner import PipelineFailure, QueryRun
-
 from tests.factories import make_product, make_scored_product, make_scores
 from tests.harness.helpers import make_group, make_query, make_response
 from vga.models import Category, GarmentGroup, Tier, TierResult

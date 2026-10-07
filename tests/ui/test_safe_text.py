@@ -3,6 +3,7 @@
 import re
 
 import pytest
+
 from app.safe_text import ELLIPSIS, clamp, format_price, label_fragment, plain_text
 
 HOSTILE = [

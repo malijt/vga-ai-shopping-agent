@@ -7,6 +7,7 @@ import tomllib
 from pathlib import Path
 
 import pytest
+
 from app.components.input_panel import MAX_PHOTO_MB
 
 ROOT = Path(__file__).resolve().parents[2]

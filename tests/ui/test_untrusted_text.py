@@ -4,9 +4,9 @@ and no function that reads markdown or HTML ever receives it.
 """
 
 import pytest
-from app.components.result_card import REASON_MAX_CHARS, STORE_MAX_CHARS, TITLE_MAX_CHARS
 from streamlit.testing.v1 import AppTest
 
+from app.components.result_card import REASON_MAX_CHARS, STORE_MAX_CHARS, TITLE_MAX_CHARS
 from tests.factories import (
     make_garment_group,
     make_product,

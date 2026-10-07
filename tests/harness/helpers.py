@@ -13,7 +13,6 @@ from eval.harness.labels import LabelSet, label_rows
 from eval.harness.links import LinkCheck
 from eval.harness.queries import AcceptanceQuery
 from eval.harness.runner import QueryRun
-
 from tests.factories import (
     make_item_intent,
     make_product,

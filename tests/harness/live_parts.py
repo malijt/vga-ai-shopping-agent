@@ -8,9 +8,9 @@ replay made no network call and no model call by checking the counters afterward
 from collections.abc import Sequence
 
 import httpx
+
 from eval.harness.links import LinkResult
 from eval.harness.wiring import Boundaries, Wiring
-
 from tests.factories import (
     make_image_bytes,
     make_item_intent,

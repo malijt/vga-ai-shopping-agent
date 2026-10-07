@@ -3,6 +3,7 @@
 from dataclasses import replace
 
 import pytest
+
 from eval.harness.criteria import (
     Criterion,
     CriterionResult,
@@ -14,7 +15,6 @@ from eval.harness.labels import LabelSet, label_rows
 from eval.harness.links import LinkCheck
 from eval.harness.runner import QueryRun
 from eval.harness.verdict import overall_verdict
-
 from tests.harness.helpers import make_group, make_query, make_response
 
 

@@ -4,6 +4,7 @@ import asyncio
 from collections.abc import Awaitable, Callable
 
 import pytest
+
 from eval.harness.links import (
     LinkChecker,
     LinkResult,
@@ -14,7 +15,6 @@ from eval.harness.links import (
     products_to_check,
     title_words,
 )
-
 from tests.factories import make_product, make_store_config
 from tests.harness.helpers import make_group, make_response
 from vga.models import Category, Product, SearchResponse

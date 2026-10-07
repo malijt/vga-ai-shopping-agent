@@ -13,6 +13,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
+
 from eval.harness.errors import RecordingError, RecordingMismatchError
 from eval.harness.queries import AcceptanceQuery
 from eval.harness.recording import (
@@ -24,7 +25,6 @@ from eval.harness.recording import (
 )
 from eval.harness.runner import QueryRun, run_queries
 from eval.harness.wiring import Boundaries
-
 from tests.factories import (
     make_item_intent,
     make_settings,

@@ -1,5 +1,6 @@
 """Settings model and loader (plan feature 1.3.1)."""
 
+import re
 from pathlib import Path
 
 import pytest
@@ -23,6 +24,9 @@ VALID_REVISION = "0123456789abcdef0123456789abcdef01234567"
 # The FashionSigLIP revision measured in spikes/siglip/REPORT.md. Changing it means re-running
 # the spike's quality check, so this test must change with it.
 MEASURED_SIGLIP_REVISION = "c56244cc94f92419e8369fa71efdaf403b124ce8"
+# The OpenAI snapshot pinned in config/settings.yaml (OpenAI's model page for gpt-5-mini). Changing
+# it means re-running the Understand eval and adding a prompts/CHANGELOG.md entry.
+PINNED_OPENAI_MODEL = "gpt-5-mini-2025-08-07"
 
 
 @pytest.fixture
@@ -58,8 +62,16 @@ class TestShippedSettingsFile:
         assert settings.store_cooldown_s == 900
         assert settings.rps_images_per_host == 5
 
-    def test_openai_model_is_still_unset(self) -> None:
-        assert load_settings(DEFAULT_SETTINGS_PATH, env={}).openai_model is None
+    def test_openai_model_is_pinned_to_a_dated_snapshot(self) -> None:
+        settings = load_settings(DEFAULT_SETTINGS_PATH, env={})
+
+        assert settings.openai_model == PINNED_OPENAI_MODEL
+        assert re.search(r"-\d{4}-\d{2}-\d{2}$", PINNED_OPENAI_MODEL)
+
+    def test_the_environment_can_still_override_the_pinned_model(self) -> None:
+        settings = load_settings(DEFAULT_SETTINGS_PATH, env={"OPENAI_MODEL": VALID_SNAPSHOT})
+
+        assert settings.openai_model == VALID_SNAPSHOT
 
     def test_siglip_is_pinned_to_the_measured_revision_and_switched_on(self) -> None:
         settings = load_settings(DEFAULT_SETTINGS_PATH, env={})
@@ -67,17 +79,18 @@ class TestShippedSettingsFile:
         assert settings.siglip_revision == MEASURED_SIGLIP_REVISION
         assert settings.image_ranker == "siglip"
 
-    def test_yaml_file_agrees_with_the_code_defaults_except_the_siglip_decision(self) -> None:
+    def test_yaml_file_agrees_with_the_code_defaults_except_the_pinned_models(self) -> None:
         from_file = load_settings(DEFAULT_SETTINGS_PATH, env={}).model_dump()
         defaults = Settings().model_dump()
 
         differing = {name for name in defaults if from_file[name] != defaults[name]}
 
-        assert differing == {"image_ranker", "siglip_revision"}
+        assert differing == {"image_ranker", "siglip_revision", "openai_model"}
 
-    def test_the_code_default_ranker_stays_off(self) -> None:
+    def test_the_code_defaults_leave_the_models_unpinned(self) -> None:
         assert Settings().image_ranker == "off"
         assert Settings().siglip_revision is None
+        assert Settings().openai_model is None
 
 
 class TestTierMix:

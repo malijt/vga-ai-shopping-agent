@@ -5,13 +5,13 @@ from datetime import date
 from typing import Any
 
 import pytest
+
 from eval.harness.labels import LabelRow, LabelSet
 from eval.harness.links import LinkCheck, LinksMode
 from eval.harness.report import escape, render_report
 from eval.harness.runner import PipelineFailure, QueryRun
 from eval.harness.runstore import LoadedRun, RunMeta
 from eval.harness.scoring import ScoredRun, score_run
-
 from tests.factories import make_product, make_store_report, make_understand_result
 from tests.harness.helpers import (
     labels_for,

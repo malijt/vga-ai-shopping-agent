@@ -2,6 +2,9 @@
 
 import re
 
+from streamlit.testing.v1 import AppTest
+from streamlit.testing.v1.element_tree import Markdown
+
 from app import runner
 from app.copy import (
     APP_TITLE,
@@ -10,9 +13,6 @@ from app.copy import (
     NOTE_DEMO,
     NOTE_PHOTO,
 )
-from streamlit.testing.v1 import AppTest
-from streamlit.testing.v1.element_tree import Markdown
-
 from tests.fakes import FakePipeline
 from tests.ui.helpers import SEARCH_BUTTON, TEXT_BOX, nodes, search, visible_strings
 

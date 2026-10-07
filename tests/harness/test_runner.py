@@ -6,6 +6,7 @@ from datetime import date
 from pathlib import Path
 
 import pytest
+
 from eval.harness.errors import RecordingError, RunFileError
 from eval.harness.links import LinkCheck, LinksMode
 from eval.harness.queries import AcceptanceQuery
@@ -18,7 +19,6 @@ from eval.harness.runstore import (
     load_run,
     save_run,
 )
-
 from tests.factories import make_image_bytes, make_settings
 from tests.fakes import FakeClock, FakePipeline
 from tests.harness.helpers import make_query, make_response
