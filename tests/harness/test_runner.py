@@ -255,6 +255,26 @@ class TestAFailingQuery:
         assert "RuntimeError: boom" in runs[1].failure.message
         assert len(runs) == 3
 
+    async def test_an_exception_that_quotes_the_photo_is_not_kept_with_the_photo(self) -> None:
+        # A validation error prints the value it choked on. run.json may be committed, so the
+        # photo's bytes must not ride along in the failure text (BRD Rule 4).
+        photo = b"\x89PNG\r\n\x1a\n" + bytes(range(256))
+        error = ValueError(f"bad value (input_value={photo!r}, input_type=bytes) in the request")
+
+        runs = await run_all(FailingOn("black oversized blazer", error))
+
+        message = runs[1].failure.message  # type: ignore[union-attr]
+        assert "ValueError: bad value" in message
+        assert "PNG" not in message
+        assert "x89" not in message
+        assert "<bytes omitted>" in message
+        assert "in the request" in message
+
+    async def test_a_very_long_unexpected_message_is_cut(self) -> None:
+        runs = await run_all(FailingOn("black oversized blazer", RuntimeError("x" * 5000)))
+
+        assert len(runs[1].failure.message) < 600  # type: ignore[union-attr]
+
     async def test_a_failed_query_still_tells_the_scope_it_ended(self) -> None:
         scope = RecordingScope()
 
