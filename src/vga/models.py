@@ -243,15 +243,21 @@ class SearchRequest(VgaModel):
     """What the shopper submitted: a photo, text, or both (PRD R1).
 
     Text is validated here so every caller gets the same rule: it is stripped, blank text counts
-    as no text, it may be at most ``MAX_TEXT_CHARS`` long, and a request needs text or a photo.
-    Image checks (magic bytes, size, dimensions) are NOT done here; they happen at the pipeline
-    entry (plan 13.1.1). The photo is excluded from ``repr`` and from every dump so it cannot
-    leak into logs or fixtures.
+    as no text, it may be at most ``MAX_TEXT_CHARS`` long, and a request needs text or a photo,
+    unless it is a re-run (``rerun_of`` is set). Image checks (magic bytes, size, dimensions) are
+    NOT done here; they happen at the pipeline entry (plan 13.1.1). The photo is excluded from
+    ``repr`` and from every dump so it cannot leak into logs or fixtures.
     """
 
     text: str | None = None
     image: bytes | None = Field(default=None, repr=False, exclude=True)
     request_id: RequestId = Field(default_factory=new_request_id)
+    rerun_of: RequestId | None = None
+    """The ``request_id`` of the search being re-run, or ``None`` for a new search. After a
+    photo-only search the app discards the photo (BRD Rule 4), so when the shopper edits a chip
+    there is no text and no image left to send. A re-run request may therefore have neither: it
+    carries the earlier understanding and the stored image embedding in ``RunOverrides`` instead.
+    The pipeline, not this model, checks that a re-run comes with ``overrides.understood``."""
 
     @field_validator("text")
     @classmethod
@@ -264,7 +270,7 @@ class SearchRequest(VgaModel):
 
     @model_validator(mode="after")
     def _needs_input(self) -> Self:
-        if self.text is None and self.image is None:
+        if self.text is None and self.image is None and self.rerun_of is None:
             msg = "a request needs text, a photo, or both"
             raise ValueError(msg)
         return self

@@ -10,6 +10,7 @@ results: 30                     # Results for a normal request (PRD R13).
 max_per_store: 6                # No store may supply more than this many results (PRD R9).
 outfit_results_per_garment: 12  # Results per garment for an outfit photo (assumption A2).
 request_deadline_s: 30          # Ceiling for one whole request; at the deadline we return what we have.
+max_image_bytes: 8000000        # Largest photo the app accepts, in bytes (the UI and the pipeline both check it).
 
 # --- Fetching (be polite: BRD Rule 2) -----------------------------------------------------
 timeout_s: 6                    # Per store request (PRD R5).

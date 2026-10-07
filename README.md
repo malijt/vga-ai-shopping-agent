@@ -60,7 +60,7 @@ Copy `.env.example` to `.env` (it is gitignored). Values from the real environme
 
 ## Settings
 
-`config/settings.yaml` holds the tunable values: `country`, `stores`, `results` (30), `max_per_store` (6), `timeout_s` (6), `rps_per_store` (1), `max_response_bytes` (2,000,000, the HTTP response size cap), `tier_mix` (25/25/25/25), `ranking_weights`, `min_match_score`, and the model settings. It is validated on load, and a bad value stops start-up with a message naming the field. For example, `tier_mix` must sum to 100.
+`config/settings.yaml` holds the tunable values: `country`, `stores`, `results` (30), `max_per_store` (6), `max_image_bytes` (8,000,000, the largest photo accepted), `timeout_s` (6), `rps_per_store` (1), `max_response_bytes` (2,000,000, the HTTP response size cap), `tier_mix` (25/25/25/25), `ranking_weights`, `min_match_score`, and the model settings. It is validated on load, and a bad value stops start-up with a message naming the field. For example, `tier_mix` must sum to 100.
 
 The image model settings come from the FashionSigLIP spike (`spikes/siglip/REPORT.md`): `image_ranker` is `siglip` and `siglip_revision` is the measured Hugging Face commit. `siglip_cos_lo` (0.45) and `siglip_cos_hi` (0.90) turn an image cosine into a 0-1 score, `clip((cos - lo) / (hi - lo), 0, 1)`, so `lo` must be below `hi`. The code default for `image_ranker` stays `off`, and `siglip_revision` is unset there; only the shipped YAML turns the model on.
 
