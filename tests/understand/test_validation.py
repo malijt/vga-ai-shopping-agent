@@ -351,15 +351,11 @@ def test_a_bad_currency_is_a_problem() -> None:
 
 
 def test_edits_are_cleaned_deduplicated_and_capped() -> None:
-    edits = [
-        "dark brown",
-        "Dark Brown",
-        "cheaper http://evil.example",
-        "",
-        *[f"e{i}" for i in range(20)],
-    ]
+    names = [f"colour{i}" for i in range(20)]
+    edits = ["dark brown", "Dark Brown", "cheaper http://evil.example", "", *names]
+    text = "same but dark brown and cheaper " + " ".join(names)
 
-    result = _validate(make_reading(edits=edits), text="same but dark brown", has_image=True)
+    result = _validate(make_reading(edits=edits), text=text, has_image=True)
 
     assert result.edits[:2] == ["dark brown", "cheaper"]
     assert len(result.edits) == 10
@@ -581,3 +577,97 @@ def test_a_budget_the_typed_text_does_not_support_is_not_even_checked_for_validi
     result = _validate(reading, text="black bomber jacket for men", has_image=True)
 
     assert result.budget is None
+
+
+# --------------------------------------------------------------------------------------------
+# An edit is kept only when the typed text asks for that change (a sign cannot ask for one)
+# --------------------------------------------------------------------------------------------
+
+
+def _kept_edits(text: str, *edits: str) -> list[str]:
+    return _validate(make_reading(edits=list(edits)), text=text, has_image=True).edits
+
+
+@pytest.mark.parametrize(
+    ("text", "edits", "kept"),
+    [
+        # the golden photo + text cases
+        (
+            "similar but dark green and cheaper",
+            ["dark green", "cheaper"],
+            ["dark green", "cheaper"],
+        ),
+        (
+            "same cut but in black, under 250 AED",
+            ["black", "under 250 AED"],
+            ["black", "under 250 AED"],
+        ),
+        ("same cut but in black, under 250 AED", ["black"], ["black"]),
+        # price direction
+        ("same but less expensive", ["cheaper"], ["cheaper"]),
+        ("same but not too pricey", ["cheaper"], ["cheaper"]),
+        (
+            "same but more affordable",
+            ["cheaper", "more affordable"],
+            ["cheaper", "more affordable"],
+        ),
+        ("same but pricier", ["more expensive"], ["more expensive"]),
+        # colours, materials, genders and other changes are kept when the shopper wrote the words
+        ("same but in Dark Brown", ["dark brown"], ["dark brown"]),
+        ("same but in leather", ["leather"], ["leather"]),
+        ("same but in leather", ["suede"], []),
+        ("same but for women", ["women"], ["women"]),
+        ("same but longer sleeves", ["long sleeves"], []),  # a rephrasing cannot be verified
+        ("same but longer sleeves", ["longer sleeves"], ["longer sleeves"]),
+        ("same but with slim fit", ["slim fit"], ["slim fit"]),
+    ],
+)
+def test_an_edit_is_kept_when_the_typed_text_asks_for_it(
+    text: str, edits: list[str], kept: list[str]
+) -> None:
+    assert _kept_edits(text, *edits) == kept
+
+
+@pytest.mark.parametrize(
+    ("text", "edits", "kept"),
+    [
+        # "cheaper" read off a sign switches the request to the value-first price mix
+        ("black bomber jacket for men", ["cheaper"], []),
+        ("black bomber jacket for men", ["cheaper", "dark brown", "women"], []),
+        ("same but in grey", ["grey", "cheaper"], ["grey"]),
+        ("same but in black, under 250 AED", ["black", "cheaper"], ["black"]),  # a limit is no wish
+        ("same but in black, under 250 AED", ["black", "under 1 AED"], ["black"]),
+        ("same but premium", ["cheaper"], []),  # the wrong direction
+        ("same but cheaper", ["more expensive", "pricier"], []),
+        ("same but in black", ["women"], []),
+        ("same but for men", ["women"], []),
+        ("same but in black", ["it"], []),  # a change with nothing in it
+        ("same but in black", ["the", "with"], []),
+    ],
+)
+def test_an_edit_the_typed_text_does_not_ask_for_is_dropped(
+    text: str, edits: list[str], kept: list[str]
+) -> None:
+    assert _kept_edits(text, *edits) == kept
+
+
+@pytest.mark.parametrize(
+    ("text", "edits", "kept"),
+    [
+        ("نفس القطعة بس أرخص", ["cheaper"], ["cheaper"]),
+        ("نفس القطعة بسعر أقل", ["cheaper"], ["cheaper"]),
+        ("نفس القطعة بلون أخضر غامق", ["dark green"], ["dark green"]),
+        ("نفس القطعة باللون الأسود وأرخص", ["black", "cheaper"], ["black", "cheaper"]),
+        ("نفس القطعة بس باللون الأسود", ["black", "cheaper"], ["black"]),
+        ("نفس القطعة بلون أخضر", ["red"], []),
+        ("نفس القطعة بس من الجلد", ["leather"], ["leather"]),
+        ("نفس القطعة للنساء", ["for women"], ["for women"]),
+        ("نفس القطعة للنساء", ["for men"], []),
+        ("نفس القطعة بس أرخص", ["oversized"], []),  # no Arabic spelling listed: not verifiable
+        ("same but أسود and cheaper", ["black", "cheaper"], ["black", "cheaper"]),
+    ],
+)
+def test_arabic_text_can_ask_for_the_same_changes(
+    text: str, edits: list[str], kept: list[str]
+) -> None:
+    assert _kept_edits(text, *edits) == kept

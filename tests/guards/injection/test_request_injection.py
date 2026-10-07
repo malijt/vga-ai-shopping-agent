@@ -415,15 +415,6 @@ async def test_a_price_read_from_a_sign_is_not_the_budget_when_the_typed_text_ha
     assert outcome.response.understood.budget is None
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "FINDING: _validate_edits keeps whatever edits the model reports when the shopper typed "
-        "text, without checking they are in that text. An order read from a sign ('cheaper') "
-        "switches the request to the value-first mix and adds a 'you asked for cheaper' note. "
-        "See src/vga/understand/validation.py _validate_edits."
-    ),
-)
 async def test_an_edit_that_only_a_sign_asked_for_is_not_applied(make_rig: RigFactory) -> None:
     # The attacker (a sign in the photo) wants the search changed ("cheaper") as if the shopper
     # had asked. The typed text is "black bomber jacket for men": it asks for no change.

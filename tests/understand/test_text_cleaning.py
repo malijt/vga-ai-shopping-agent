@@ -4,6 +4,8 @@ import pytest
 
 from vga.models import Category, Gender
 from vga.understand.lexicon import (
+    asks_for_a_higher_price,
+    asks_for_a_lower_price,
     garment_category,
     meaningful_tokens,
     mentioned_genders,
@@ -360,3 +362,56 @@ def test_a_number_written_in_words_is_found(text: str) -> None:
 )
 def test_words_that_are_not_a_price_are_not_taken_for_one(text: str) -> None:
     assert not names_a_number_in_words(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "cheaper",
+        "similar but cheap",
+        "a bit more affordable",
+        "less expensive",
+        "not too pricey",
+        "lower price please",
+        "something on a budget",
+        "budget friendly",
+        "رخيص",
+        "أرخص",
+        "نفس القطعة بس ارخص",
+        "أوفر",
+        "بسعر أقل",
+        "سعر اقل",
+        "اقل سعرا",
+        "اقل تكلفه",
+        "رَخِيص",  # with diacritics
+    ],
+)
+def test_a_wish_for_a_lower_price_is_read_in_english_and_arabic(text: str) -> None:
+    assert asks_for_a_lower_price(text)
+    assert not asks_for_a_higher_price(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "more expensive",
+        "pricier",
+        "something luxury",
+        "premium quality",
+        "high end",
+        "غالي",
+        "فاخر",
+    ],
+)
+def test_a_wish_for_a_higher_price_is_read_in_english_and_arabic(text: str) -> None:
+    assert asks_for_a_higher_price(text)
+    assert not asks_for_a_lower_price(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["dark green", "black bomber jacket for men", "price", "prices", "سعر", "under 300 AED", ""],
+)
+def test_words_with_no_direction_ask_for_neither(text: str) -> None:
+    assert not asks_for_a_lower_price(text)
+    assert not asks_for_a_higher_price(text)
