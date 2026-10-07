@@ -213,6 +213,19 @@ Wave 3 uses one agent per qualified store (expect 4-5). Waves 5-6 are the serial
 - Contracts in `models.py`, `interfaces.py` and `errors.py` are frozen after Phase 1 merges. A change to them is its own PR that updates every user.
 - Commit messages and PR descriptions say why, not only what.
 
+**How the Wave 2 parts fit together** (decided by the orchestrator when Wave 2 was launched, so seven agents could build in parallel; Phase 13 wires them):
+
+| Decision | Detail |
+|---|---|
+| Thumbnails | Phase 6 exposes `fetch_image(product) -> bytes \| None` (allow-list, image-host rate limit, 4 s timeout, size cap, no retry). Phase 8 receives it by injection and never makes HTTP requests itself |
+| Ranking in two steps | Phase 7 provides `prefilter_and_score(...)` (filters, text and price scores) and `apply_image_scores(...)` (adds image scores, applies the minimum score, writes the reason). The pipeline picks the image candidates between the two |
+| Off-category results | A product is dropped when its inferred category differs from the request or its title names a garment outside the four categories (dress, bag, ...). A product whose category cannot be inferred is kept without a category bonus. Reason: store search pads results (one "black blazer" search returned 9 dresses and 1 blazer) |
+| Store gender | `StoreConfig.genders` says which genders a store sells. For an explicitly stated gender the pipeline skips stores that do not sell it, so a men's query never reaches a women-only store |
+| Record / replay | Recorded at the contract boundary (`Understander`, `StoreSearcher`, `ImageRanker` results), not as raw HTTP. Replay re-runs the real pipeline, ranking and price ranges with no network. Extractors are covered by Phase 12's fixture tests instead |
+| Link checker | Takes its fetch function by injection; Phase 16 passes one built on Phase 6's polite client |
+| Mixed currencies | The price-range shaper works in the most common currency and returns the rest as a warning; it never converts |
+| OpenAI model id | Phase 5 reports the dated snapshot id and its source; the orchestrator sets `openai_model` in `config/settings.yaml` after review |
+
 **File ownership.** No two agents in a wave touch the same path.
 
 | Assignment | Owned paths |
