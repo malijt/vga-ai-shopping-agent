@@ -34,7 +34,7 @@ from vga.models import (
     Language,
 )
 from vga.understand.keywords import dedupe_keywords, with_stated_gender
-from vga.understand.lexicon import mentioned_genders
+from vga.understand.lexicon import mentioned_genders, names_a_number_in_words
 from vga.understand.prompt import echoes_instructions
 from vga.understand.schema import UnderstandReading, Verdict
 from vga.understand.text import KEYWORD_MAX_CHARS, clean_keyword, clean_phrase, numbers_in
@@ -204,8 +204,19 @@ def _keywords(value: Any, where: str, problems: list[str]) -> list[str]:
 def _validate_budget(
     raw: Any, text: str | None, problems: list[str], warnings: list[str]
 ) -> Budget | None:
+    """The budget, only when the shopper's own typed words state one.
+
+    A price printed in the photo is data, not a limit, so a budget needs a number in the typed text:
+    a digit (Western or Arabic-Indic) or a number word such as "four hundred" or "مئتين". With no
+    typed text, or none of those in it, whatever the model reported is dropped unseen: nothing the
+    shopper wrote is being ignored, so there is nothing to explain and nothing to ask the model to
+    redo. When the text does hold digits, one of them must be the model's amount.
+    """
     if raw is None or text is None:
         return None  # a photo cannot state a budget; a price printed in it is data, not a limit
+    written = numbers_in(text)
+    if not written and not names_a_number_in_words(text):
+        return None  # the shopper typed no number, so a price from elsewhere is not their limit
     currency = raw.currency.strip().upper() if isinstance(raw.currency, str) else None
     max_price = raw.max_price
     if (
@@ -223,7 +234,6 @@ def _validate_budget(
     except ValidationError:
         problems.append("budget: max_price must be above 0 and currency a 3-letter code or null")
         return None
-    written = numbers_in(text)
     if written and not any(abs(number - budget.max_price) < 0.005 for number in written):
         # The model reported a price the shopper never wrote (for example one read from a sign in
         # the photo). A wrong limit hides good results; no limit hides nothing.

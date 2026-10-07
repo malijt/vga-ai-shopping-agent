@@ -7,6 +7,7 @@ from vga.understand.lexicon import (
     garment_category,
     meaningful_tokens,
     mentioned_genders,
+    names_a_number_in_words,
     strip_price_words,
 )
 from vga.understand.text import (
@@ -310,3 +311,52 @@ def test_numbers_in_a_text_are_read_the_way_a_shopper_writes_them(
     text: str, expected: list[float]
 ) -> None:
     assert numbers_in(text) == pytest.approx(expected)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "black blazer under four hundred dirhams",
+        "black blazer under Four Hundred AED",
+        "black blazer under four-hundred",
+        "black blazer under a hundred and fifty dirhams",
+        "black blazer, two fifty max",
+        "black blazer for one thousand dirhams",
+        "قميص أبيض بأقل من مئتين درهم",
+        "قميص أبيض أقل من مئتين درهم",
+        "قميص أبيض بأقل من مائتين درهم",
+        "قميص أبيض بأقل من ميتين درهم",
+        "قميص أبيض ميزانيتي ثلاثمئة درهم",
+        "قميص أبيض ميزانيتي أربع مئة درهم",
+        "قميص أبيض بخمسمية درهم",
+        "قميص أبيض بحد أقصى ألف درهم",
+        "قميص أبيض بحد أقصى ألفين درهم",
+        "قميص أبيض أقل من خمسين درهم",
+        "قميص أبيض أقل من عشرين درهم",
+    ],
+)
+def test_a_number_written_in_words_is_found(text: str) -> None:
+    assert names_a_number_in_words(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "black bomber jacket for men",
+        "three quarter sleeve blazer",  # "three" alone is a count, not a price
+        "one shoulder dress",
+        "two piece set",
+        "five pocket jeans",
+        "ten",
+        "hundredth edition",  # a word that only contains one
+        "grandfather collar shirt",
+        "",
+        "رخيص وبسعر مناسب",  # a wish for a good price, no number
+        "قميص أبيض للرجال",
+        "ثلاثة قمصان",  # "three shirts"
+        "ستة",  # "six"
+        "الستات",  # the women (colloquial), not sixty
+    ],
+)
+def test_words_that_are_not_a_price_are_not_taken_for_one(text: str) -> None:
+    assert not names_a_number_in_words(text)

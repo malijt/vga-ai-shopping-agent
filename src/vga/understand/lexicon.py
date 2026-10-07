@@ -1,7 +1,7 @@
 # ruff: noqa: RUF001  (Arabic letters look like Latin ones to the linter; they are meant)
 """English and Arabic word lists that the Understand step applies in plain code, after the model.
 
-Three jobs, each one a rule the model alone cannot be trusted with:
+Four jobs, each one a rule the model alone cannot be trusted with:
 
 - **Price words** (BRD Rule 7): "cheap", "budget", "رخيص" ... are filters, never search terms, so
   they are removed from every keyword whatever the model returned (plan 5.3.2).
@@ -9,6 +9,8 @@ Three jobs, each one a rule the model alone cannot be trusted with:
   Rule 8, plan 5.3.4), and a gender it calls *explicit* must really appear in the shopper's text.
 - **Garment words**: the fallback (plan 5.3.1) has no model to say what category a request is
   about, so it reads a small garment word list instead.
+- **Number words**: a budget must be a number the shopper typed, and "under four hundred dirhams"
+  has no digit, so the validator needs to tell a written-out amount from a request with no number.
 
 The lists are deliberately short and will have gaps. A gender word they miss fails safe: the claim
 is downgraded to "inferred" (shown, not applied). A price word they miss is a real leak of Rule 7
@@ -115,6 +117,45 @@ def strip_price_words(text: str) -> str:
     """
     text = re.sub(r"\s+", " ", text)  # a long run of spaces would make the phrase patterns slow
     return _PRICE_WORDS.sub(" ", _PRICE_PHRASES.sub(" ", text))
+
+
+# --------------------------------------------------------------------------------------------
+# Numbers written in words (a budget must be something the shopper wrote)
+# --------------------------------------------------------------------------------------------
+
+_ARABIC_HUNDRED_MULTIPLIER = r"(?:ثلاث|تلات|تلت|اربع|ربع|خمس|ست|سبع|ثمان|ثمن|تمن|تسع)"
+_ARABIC_HUNDRED = r"م(?:ائ|ئ|اي|ي)ه"  # folded: مئة, مائة, مية, ماية
+_ARABIC_TENS = r"(?:عشر|ثلاث|تلات|اربع|خمس|ست|سبع|ثمان|تمان|تسع)(?:ين|ون)"
+
+_NUMBER_WORDS = re.compile(
+    "|".join(
+        [
+            r"(?<!\w)(?:twenty|thirty|forty|fourty|fifty|sixty|seventy|eighty|ninety|hundred|thousand)"
+            r"(?!\w)",
+            # Arabic is looked up folded (hamza, taa marbuta and alef maqsura unified).
+            rf"(?<!\w){_AR_PREFIX}(?:"
+            rf"(?:{_ARABIC_HUNDRED_MULTIPLIER}\s?)?{_ARABIC_HUNDRED}"  # 100, 300 ... 900
+            rf"|م(?:ائ|ئ|ي)ت(?:ين|ان)"  # 200
+            rf"|{_ARABIC_TENS}"  # 20 ... 90
+            r"|الف(?:ين|ان)?|الاف"  # 1000, 2000, thousands
+            r")(?!\w)",
+        ]
+    ),
+    re.IGNORECASE,
+)
+
+
+def names_a_number_in_words(text: str) -> bool:
+    """Whether ``text`` writes an amount of money in words: "four hundred", "fifty", "a thousand",
+    "مئتين", "ألف".
+
+    Only the words that make a price count: the tens (twenty to ninety), hundred and thousand. The
+    small numbers do not, because in a garment request they are counts and cuts, not prices ("three
+    quarter sleeve", "one shoulder", "two piece", "five pocket jeans"). Digits are read by
+    ``text.numbers_in``; this covers the shopper who typed "under four hundred dirhams" instead.
+    The words are only looked for, not added up, so the amount itself is not checked.
+    """
+    return _NUMBER_WORDS.search(fold_arabic(text)) is not None
 
 
 # --------------------------------------------------------------------------------------------
