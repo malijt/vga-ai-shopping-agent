@@ -198,7 +198,7 @@ docs/adr/             decision records    docs/store-notes/, docs/store-qualific
 
 ### Architecture & Infrastructure — principles
 - One process, modular monolith. No services, queues or databases without a current, concrete reason.
-- Assume the other side fails: timeout, cooldown for a failing store, graceful degradation, no silent failure.
+- Assume the other side fails: timeout, cooldown for a store that blocks us (a store that only errors or times out is skipped for that search and asked again next time, ADR 0003), graceful degradation, no silent failure.
 - Add stores and extractors by configuration or a new class.
 
 ### DevOps — CI only
