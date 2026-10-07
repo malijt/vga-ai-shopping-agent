@@ -73,4 +73,3 @@ NO_RESULTS_TIPS: tuple[str, ...] = (
 )
 
 PLACEHOLDER_NO_IMAGE = "No image available"
-NOT_LISTED = "not listed"

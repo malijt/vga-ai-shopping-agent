@@ -12,7 +12,7 @@ The "No image available" placeholder below covers a missing or unusable image ad
 
 import streamlit as st
 
-from app.copy import FLAG_TEXT, NOT_LISTED, PLACEHOLDER_NO_IMAGE
+from app.copy import FLAG_TEXT, PLACEHOLDER_NO_IMAGE
 from app.safe_text import label_fragment, plain_text
 from vga.models import ScoredProduct
 from vga.money import format_price
@@ -57,10 +57,13 @@ def render_result_card(scored: ScoredProduct, *, key: str, base_currency: str) -
             base_currency=base_currency,
         )
         st.markdown(f"**{price}**")
-        details = [
-            f"Store: {store}",
-            f"Colour: {plain_text(product.colour, COLOUR_MAX_CHARS) or NOT_LISTED}",
-        ]
+        details = [f"Store: {store}"]
+        # The stores give no separate colour field, so most cards have none, and the title and the
+        # reason sentence already name it. A "Colour: not listed" line under a title that lists the
+        # colour reads as a mistake, so the line is there only when the record carries a colour.
+        colour = plain_text(product.colour, COLOUR_MAX_CHARS)
+        if colour:
+            details.append(f"Colour: {colour}")
         details.extend(FLAG_TEXT[flag] for flag in scored.flags)
         st.text("\n".join(details))
         if scored.reason:
