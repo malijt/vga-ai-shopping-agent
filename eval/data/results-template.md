@@ -36,12 +36,17 @@ How to fill the columns:
 
 - **Results**: number of results shown. Outfit photos: the number per garment, such as `12 / 12 / 11`.
 - **Stores**: number of different stores among the results.
-- **Seconds**: total time from search to results.
+- **Seconds**: time from search to results for the first search, the wait before the shopper sees
+  anything; where the "Who is this for?" question was answered, the search after the answer and
+  the sum follow in brackets, and only the first counts against the 30 s.
 - **Links ok**: working links over total, such as `30/30`.
 - **good@10**: good matches among the top 10, such as `8/10`. Outfit photos: one figure per garment,
   such as `8 / 7 / 6`; the query counts as the lowest of them.
 - **Price ranges ok**: `yes`, or `no` with the range and the gap. A range flagged "few options"
   counts as ok.
+
+Every column describes the results shown after the "Who is this for?" question was answered, for
+the queries that record an answer (`shopper_gender` in `queries.yaml`); the Notes say which.
 
 A query passes only if every column meets the pass rule. **Overall verdict:** `__ of 10` queries
 pass (list their ids: ...). The demo passes if at least 7 of 10 pass (the rule in `rubric.md`).

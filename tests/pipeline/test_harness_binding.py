@@ -35,14 +35,27 @@ from eval.harness.recording import RecordingSession, ReplaySession
 from eval.harness.runner import QueryRun, run_queries
 from eval.harness.runstore import LABELS_FILE, REPORT_FILE, load_run
 from eval.harness.wiring import Boundaries, Wiring, load_wiring_factory
-from tests.factories import make_item_intent, make_settings, make_understand_result
+from tests.factories import (
+    make_image_bytes,
+    make_item_intent,
+    make_settings,
+    make_understand_result,
+)
 from tests.fakes import FakeClock, FakeImageRanker, FakeUnderstander
 from tests.harness.cli_support import Cli, SlowToLoadRanker, read_rows, write_rows
 from tests.harness.helpers import make_query
 from tests.harness.photos import marker_of, put_marked_photos, traces_of_photos
 from tests.pipeline.builders import BLAZER, OUTFIT, SHIRT
 from tests.pipeline.world import TITLES, StoreWorld, store_for
-from vga.models import Category, InputType, SearchRequest, SearchResponse, UnderstandResult
+from vga.models import (
+    Category,
+    Gender,
+    GenderSource,
+    InputType,
+    SearchRequest,
+    SearchResponse,
+    UnderstandResult,
+)
 from vga.pipeline import pipeline_factory
 from vga.settings import Settings
 from vga.stores import StoreRegistry, StoreSearchEngine
@@ -513,3 +526,343 @@ class TestTheWiringFailsEarlyAndPlainly:
 
     def test_the_command_line_name_resolves_to_the_production_wiring(self) -> None:
         assert load_wiring_factory("eval.harness.real:real_wiring") is real.real_wiring
+
+
+# ============================================================================================
+# The shopper's answer to "Who is this for?": recorded and replayed
+# ============================================================================================
+#
+# A query that records the shopper's answer is searched twice: the first search, then the search
+# the page runs after the answer (the first understanding reused, the gender applied, no photo, no
+# model call). Both belong to one query, so one recording holds both, in order, and a replay serves
+# both offline.
+
+GUESSED_MEN_BLAZER = make_item_intent(
+    search_keywords=["black oversized blazer", "oversized blazer"],
+    gender=Gender.MEN,
+    gender_source=GenderSource.INFERRED,
+)
+SHOPPER_PHOTO = make_image_bytes("JPEG", (64, 64), (10, 120, 200))
+
+
+def guessed_men(req: SearchRequest) -> UnderstandResult:
+    """The model looks at a women's blazer and guesses men: shown to the shopper, never applied."""
+    return make_understand_result(input_type=InputType.PRODUCT_PHOTO, items=[GUESSED_MEN_BLAZER])
+
+
+def photo_query(answer: str | None) -> AcceptanceQuery:
+    return make_query("q01_photo", "product_photo", shopper_gender=answer)
+
+
+@dataclass
+class AnsweredWorld:
+    """Two stores for everyone and one for men only, a model that guesses men, and a recorder."""
+
+    world: StoreWorld
+    clock: FakeClock
+    directory: Path
+    stores: list
+    understander: FakeUnderstander
+    ranker: FakeImageRanker
+
+    async def record(self, answer: str | None) -> tuple[QueryRun, RecordingSession]:
+        engine = StoreSearchEngine(make_settings(), StoreRegistry(self.stores), clock=self.clock)
+        session = RecordingSession(self.directory)
+        live = session.wrap(Boundaries(self.understander, engine, self.ranker))
+        [run] = await self.run(live, session, answer)
+        await engine.aclose()
+        return run, session
+
+    async def replay(self, answer: str | None) -> tuple[QueryRun, ReplaySession]:
+        session = ReplaySession(self.directory)
+        [run] = await self.run(session.boundaries(), session, answer)
+        return run, session
+
+    async def run(
+        self, boundaries: Boundaries, scope: RecordingSession | ReplaySession, answer: str | None
+    ) -> list[QueryRun]:
+        pipeline = pipeline_factory(self.stores)(
+            boundaries.understander, boundaries.searcher, boundaries.image_ranker
+        )
+        return await run_queries(
+            [photo_query(answer)],
+            pipeline,
+            make_settings(),
+            clock=FakeClock(),
+            load_image=lambda query: SHOPPER_PHOTO,
+            scope=scope,
+        )
+
+    def recording(self) -> dict:
+        return json.loads((self.directory / "q01_photo.json").read_text(encoding="utf-8"))
+
+    def manifest(self) -> dict:
+        return json.loads((self.directory / "manifest.json").read_text(encoding="utf-8"))
+
+
+@pytest.fixture
+def answered_world(world: StoreWorld, clock: FakeClock, tmp_path: Path) -> AnsweredWorld:
+    stores = [store_for("alpha"), store_for("beta"), store_for("mens", genders=[Gender.MEN])]
+    for store in stores:
+        world.add(store)
+    return AnsweredWorld(
+        world,
+        clock,
+        tmp_path / "recording",
+        stores,
+        FakeUnderstander(guessed_men),
+        FakeImageRanker(embedding=EMBEDDING),
+    )
+
+
+def stores_of(run: QueryRun) -> set[str]:
+    assert run.response is not None
+    return {scored.product.store for scored in run.response.products}
+
+
+class TestTheAnswerIsAppliedByTheRealPipeline:
+    async def test_without_an_answer_a_guessed_gender_excludes_no_store(
+        self, answered_world: AnsweredWorld
+    ) -> None:
+        run, _session = await answered_world.record(None)
+
+        assert stores_of(run) == {"Alpha", "Beta", "Mens"}  # today's behaviour, Rule 8
+        assert run.gender is None
+        assert len(answered_world.recording()["search"]) == 3  # one search, three stores
+
+    async def test_with_the_answer_the_results_scored_are_the_ones_after_it(
+        self, answered_world: AnsweredWorld
+    ) -> None:
+        run, _session = await answered_world.record("women")
+
+        assert stores_of(run) == {"Alpha", "Beta"}  # the men-only store is out of the results
+        assert run.response is not None
+        [skipped] = run.response.stores_skipped
+        assert skipped.store_id == "mens"
+        [item] = run.response.understood.items
+        assert (item.gender, item.gender_source) == (Gender.WOMEN, GenderSource.EXPLICIT)
+        assert run.gender is not None
+        assert run.gender.asked is True
+
+    async def test_the_search_after_the_answer_asks_only_the_stores_that_sell_for_it(
+        self, answered_world: AnsweredWorld
+    ) -> None:
+        await answered_world.record("women")
+
+        searched = [call["stores"] for call in answered_world.recording()["search"]]
+        assert searched == [["alpha"], ["beta"], ["mens"], ["alpha"], ["beta"]]
+
+    async def test_a_garment_whose_gender_was_stated_is_not_searched_again_and_still_replays(
+        self, answered_world: AnsweredWorld
+    ) -> None:
+        tops = make_item_intent(
+            category=Category.TOPS,
+            colour="white",
+            style="shirt",
+            search_keywords=["white shirt", "cotton shirt"],
+            gender=Gender.MEN,
+            gender_source=GenderSource.INFERRED,
+        )
+        shoes = make_item_intent(
+            category=Category.SHOES,
+            colour="white",
+            style="sneakers",
+            search_keywords=["white sneakers", "leather sneakers"],
+            gender=Gender.WOMEN,
+            gender_source=GenderSource.EXPLICIT,
+        )
+        answered_world.understander = FakeUnderstander(
+            make_understand_result(input_type=InputType.OUTFIT_PHOTO, items=[tops, shoes])
+        )
+
+        recorded, _session = await answered_world.record("women")
+
+        searched = [
+            (call["item"]["category"], call["stores"])
+            for call in answered_world.recording()["search"]
+        ]
+        assert searched == [  # the first search, then only the garment that was asked about
+            ("tops", ["alpha"]),
+            ("tops", ["beta"]),
+            ("tops", ["mens"]),
+            ("shoes", ["alpha"]),
+            ("shoes", ["beta"]),
+            ("tops", ["alpha"]),
+            ("tops", ["beta"]),
+        ]
+        assert recorded.response is not None
+        assert [g.result_count > 0 for g in recorded.response.groups] == [True, True]
+        replayed, session = await answered_world.replay("women")
+        assert comparable(replayed.response) == comparable(recorded.response)
+        assert session.final_notes() == []
+
+    async def test_the_search_after_the_answer_makes_no_model_call(
+        self, answered_world: AnsweredWorld
+    ) -> None:
+        await answered_world.record("women")
+
+        assert len(answered_world.understander.calls) == 1
+        assert answered_world.understander.calls[0].rerun_of is None
+        assert len(answered_world.recording()["understand"]) == 1
+
+    async def test_the_photo_reaches_the_model_once_and_the_ranker_scores_both_searches(
+        self, answered_world: AnsweredWorld
+    ) -> None:
+        await answered_world.record("women")
+
+        assert [bool(call.image) for call in answered_world.understander.calls] == [True]
+        scores = answered_world.recording()["image_scores"]
+        assert len(scores) == 2  # the first search, and the search after the answer
+        assert [entry["embedded"] for entry in scores] == [True, True]
+
+    async def test_the_recording_never_holds_the_embedding_itself(
+        self, answered_world: AnsweredWorld
+    ) -> None:
+        await answered_world.record("women")
+
+        assert traces_of_photos(answered_world.directory, [SHOPPER_PHOTO], EMBEDDING) == []
+
+    async def test_the_manifest_keeps_both_live_times_for_the_replay(
+        self, answered_world: AnsweredWorld
+    ) -> None:
+        run, _session = await answered_world.record("women")
+
+        entry = answered_world.manifest()["queries"]["q01_photo"]
+        assert run.confirm_ms is not None
+        assert entry["live_duration_ms"] == run.duration_ms
+        assert entry["live_confirm_ms"] == run.confirm_ms
+
+    async def test_a_query_with_no_answer_records_no_second_time(
+        self, answered_world: AnsweredWorld
+    ) -> None:
+        await answered_world.record(None)
+
+        assert "live_confirm_ms" not in answered_world.manifest()["queries"]["q01_photo"]
+
+
+class TestAnAnsweredRunReplaysOffline:
+    async def test_the_replay_gives_identical_scored_results_with_no_network_and_no_model(
+        self, answered_world: AnsweredWorld
+    ) -> None:
+        recorded, _session = await answered_world.record("women")
+        requests = answered_world.world.all_requests()
+        assert requests > 0
+        model_calls = len(answered_world.understander.calls)
+        scoring_calls = len(answered_world.ranker.calls)
+
+        replayed, session = await answered_world.replay("women")
+
+        assert replayed.failure is None
+        assert comparable(replayed.response) == comparable(recorded.response)
+        assert stores_of(replayed) == {"Alpha", "Beta"}
+        assert answered_world.world.all_requests() == requests  # not one request
+        assert len(answered_world.understander.calls) == model_calls  # not one model call
+        assert len(answered_world.ranker.calls) == scoring_calls  # the model is not run again
+        assert session.mismatches == []
+
+    async def test_every_recorded_call_is_used_in_order_including_the_second_image_scores(
+        self, answered_world: AnsweredWorld
+    ) -> None:
+        await answered_world.record("women")
+
+        _replayed, session = await answered_world.replay("women")
+
+        # "the pipeline made N call(s), the recording holds M" would name a call left unused.
+        assert session.final_notes() == []
+
+    async def test_the_answer_and_the_garments_it_was_given_for_are_the_same_in_the_replay(
+        self, answered_world: AnsweredWorld
+    ) -> None:
+        recorded, _session = await answered_world.record("women")
+
+        replayed, _replay = await answered_world.replay("women")
+
+        assert recorded.gender is not None
+        assert replayed.gender is not None
+        assert replayed.gender.answer == recorded.gender.answer
+        assert replayed.gender.asked is True
+        assert replayed.gender.garments == recorded.gender.garments
+
+    async def test_a_replay_of_a_run_with_no_answer_is_unchanged(
+        self, answered_world: AnsweredWorld
+    ) -> None:
+        recorded, _session = await answered_world.record(None)
+
+        replayed, session = await answered_world.replay(None)
+
+        assert comparable(replayed.response) == comparable(recorded.response)
+        assert replayed.gender is None
+        assert session.final_notes() == []
+
+    async def test_asking_a_question_the_recording_never_asked_is_a_plain_mismatch(
+        self, answered_world: AnsweredWorld
+    ) -> None:
+        await answered_world.record(None)  # recorded without the answer
+
+        replayed, session = await answered_world.replay("women")  # replayed with one
+
+        assert session.mismatches  # the extra search is not in the recording
+        assert "record again" in session.mismatches[0]
+        assert stores_of(replayed) == set()  # nothing was invented to fill the gap
+
+
+class TestTheCommandLineKeepsBothSearches:
+    def test_the_recorded_run_answers_the_seven_photo_queries_and_only_those(
+        self, real_run: RealRun
+    ) -> None:
+        cli = Cli(real_run.root)
+        real_run.run(cli, "--record", str(real_run.recording), "--links", "none")
+
+        run = load_run(real_run.first_run)
+
+        asked = {r.query.id for r in run.runs if r.gender is not None and r.gender.asked}
+        text_only = {r.query.id for r in run.runs if r.query.image is None}
+        assert len(asked) == 7
+        assert len(text_only) == 3
+        assert asked.isdisjoint(text_only)
+        assert all(r.gender is None for r in run.runs if r.query.id in text_only)
+        assert "after the shopper answered women" in cli.printed
+
+    def test_the_run_makes_one_model_call_per_query_and_none_for_an_answer(
+        self, real_run: RealRun
+    ) -> None:
+        real_run.run(Cli(real_run.root), "--record", str(real_run.recording), "--links", "none")
+
+        assert len(real_run.understander.calls) == 10
+        assert all(call.rerun_of is None for call in real_run.understander.calls)
+        gown = json.loads((real_run.recording / "q01_product_gown.json").read_text("utf-8"))
+        assert len(gown["understand"]) == 1
+        assert len(gown["search"]) > 2  # the first search and the search after the answer
+
+    def test_the_notes_and_the_times_are_in_the_report_and_run_json(
+        self, real_run: RealRun
+    ) -> None:
+        real_run.run(Cli(real_run.root), "--record", str(real_run.recording), "--links", "none")
+
+        report = (real_run.first_run / REPORT_FILE).read_text(encoding="utf-8")
+        assert "was answered, as the page does, for" in report
+        assert "q01_product_gown (women)" in report
+        assert "the 30 s limit applies to it alone" in report
+        saved = json.loads((real_run.first_run / "run.json").read_text(encoding="utf-8"))
+        gown = next(q for q in saved["queries"] if q["query"]["id"] == "q01_product_gown")
+        assert gown["gender"]["asked"] is True
+        both = gown["duration_ms"] + gown["gender"]["duration_ms"]
+        assert gown["total_ms"] == pytest.approx(both)
+
+    def test_the_replay_reports_the_recorded_times_of_both_searches(
+        self, real_run: RealRun
+    ) -> None:
+        real_run.run(Cli(real_run.root), "--record", str(real_run.recording), "--links", "none")
+        manifest = json.loads((real_run.recording / "manifest.json").read_text("utf-8"))
+
+        real_run.run(Cli(real_run.root), "--replay", str(real_run.recording))
+
+        replayed = load_run(real_run.results / "replay")
+        gown = next(r for r in replayed.runs if r.query.id == "q01_product_gown")
+        recorded = manifest["queries"]["q01_product_gown"]
+        assert gown.duration_source == "recorded"
+        assert gown.duration_ms == recorded["live_duration_ms"]
+        assert gown.confirm_ms == recorded["live_confirm_ms"]
+        text = (real_run.results / "replay" / REPORT_FILE).read_text(encoding="utf-8")
+        assert "(recorded; +" in text
+        assert "the recording holds" not in text  # every recorded call was used, the second too

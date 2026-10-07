@@ -23,6 +23,12 @@ Every run is saved to a folder under ``eval/results/`` (``run-N`` for a live run
 A live run first warms the pipeline up (loads the image model) and reports how long that took,
 apart from the queries: the 30 s limit is for a search on an app that is already running.
 
+A query may record the shopper's answer to the page's "Who is this for?" question
+(``shopper_gender`` in the query file). When the app would ask (some garment's gender was not
+stated), the harness gives that answer as the page does, with one re-search (see ``confirm.py``),
+and the results of that second search are the ones scored, labelled and link-checked. The 30 s
+limit is checked against the first search alone; the report shows both times and their sum.
+
 ``--queries`` names the queries file. The frozen ``eval/data/queries.yaml`` (the default) is the
 acceptance set: it must have the PRD mix of 10 and it decides the demo. Any other file, such as
 ``eval/data/extra_queries.yaml`` (the 11 extra photos), is an *extra set*: no mix is required, the
@@ -43,6 +49,7 @@ from typing import TextIO
 
 from tests.fakes import FakePipeline
 
+from eval.harness.confirm import describe_stated
 from eval.harness.errors import RunFileError, WiringError
 from eval.harness.labels import LabelSet, export_label_sheet, import_label_sheet
 from eval.harness.links import (
@@ -381,19 +388,54 @@ async def _run_and_check(
 
 
 def _with_recorded_duration(run: QueryRun, replay: ReplaySession) -> QueryRun:
-    """A replay's own time is meaningless; the 30 s rule uses the recorded live figure."""
+    """A replay's own time is meaningless; the 30 s rule uses the recorded live figure. The same
+    goes for the search after the gender question was answered: its recorded time replaces it."""
     if run.failure is not None:
         return run
+    gender = run.gender
+    if gender is not None and gender.asked:
+        gender = gender.model_copy(update={"duration_ms": replay.live_confirm_ms(run.query.id)})
     recorded = replay.live_duration_ms(run.query.id)
     if recorded is None:
-        return replace(run, duration_source="unavailable")
-    return replace(run, duration_ms=recorded, duration_source="recorded")
+        return replace(run, duration_source="unavailable", gender=gender)
+    return replace(run, duration_ms=recorded, duration_source="recorded", gender=gender)
+
+
+def _gender_notes(runs: Sequence[QueryRun]) -> list[str]:
+    """Which queries had the "Who is this for?" question answered, with what, and what was not."""
+    answered = [(r.query.id, r.gender.answer.value) for r in runs if r.gender and r.gender.asked]
+    unused = [(r.query.id, r.gender.answer.value) for r in runs if r.gender and not r.gender.asked]
+    notes: list[str] = []
+    if answered:
+        listing = ", ".join(f"{query_id} ({answer})" for query_id, answer in answered)
+        notes.append(
+            f'The "Who is this for?" question was answered, as the page does, for {listing}. '
+            "After a query's first search the harness ran one re-search with the recorded answer "
+            "applied to every garment whose gender the request had not stated; no photo was sent "
+            "and no model was called. The results scored, labelled and link-checked are the ones "
+            "shown after the answer."
+        )
+    if unused:
+        listing = ", ".join(f"{query_id} ({answer})" for query_id, answer in unused)
+        notes.append(
+            f"The recorded answer was not needed for {listing}: the request already stated the "
+            "gender of every garment, so the page would not ask and no second search ran."
+        )
+    for run in runs:
+        if run.gender is not None and run.gender.typed_differently:
+            stated = describe_stated(run.gender.typed_differently)
+            notes.append(
+                f"{run.query.id}: the recorded answer is {run.gender.answer.value}, but the "
+                f"request stated {stated}. The stated gender stands."
+            )
+    return notes
 
 
 def _run_notes(setup: _Setup, runs: Sequence[QueryRun]) -> list[str]:
     notes: list[str] = []
     if setup.replay is not None:
         notes.extend(setup.replay.final_notes())
+    notes.extend(_gender_notes(runs))
     unservable = [r.query.id for r in runs if r.failure and r.failure.code.startswith("recording")]
     if unservable:
         notes.append(
@@ -554,11 +596,14 @@ def _execute(
 
     def progress(run: QueryRun) -> None:
         if run.response is not None:
-            print(
-                f"{run.query.id}: {run.response.result_count} results in "
-                f"{run.duration_ms / 1000:.1f} s",
-                file=out_stream,
-            )
+            line = f"{run.query.id}: {run.response.result_count} results in "
+            line += f"{run.duration_ms / 1000:.1f} s"
+            if run.gender is not None and run.confirm_ms is not None:
+                line += (
+                    f" (first search), then {run.confirm_ms / 1000:.1f} s after the shopper "
+                    f"answered {run.gender.answer.value}"
+                )
+            print(line, file=out_stream)
         else:
             failure = run.failure.message if run.failure else "no response"
             print(f"{run.query.id}: FAILED ({failure})", file=out_stream)

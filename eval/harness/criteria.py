@@ -37,7 +37,7 @@ from eval.harness.groups import TOP_N, distinct_stores, group_names
 from eval.harness.labels import GroupGood, LabelSet, good_at_10
 from eval.harness.links import LinkCheck
 from eval.harness.runner import QueryRun
-from vga.models import Flag, InputType, SearchResponse, Tier
+from vga.models import Flag, InputType, SearchResponse, StepTiming, Tier
 
 _MAX_LISTED = 5
 _RANK_STEPS = frozenset({"filter", "rank", "image_rank", "shape", "assemble"})
@@ -168,12 +168,12 @@ def _understood_summary(response: SearchResponse) -> str:
     return f"understood as {response.understood.input_type.value}: {items}"
 
 
-def _stage_seconds(response: SearchResponse) -> tuple[float, float, float]:
+def _stage_seconds(timings: Sequence[StepTiming]) -> tuple[float, float, float]:
     """Seconds spent in understand, search and everything after the search."""
-    own = [timing for timing in response.timings if timing.store is None]
+    own = [timing for timing in timings if timing.store is None]
     understand = sum(t.duration_ms for t in own if t.step == "understand")
     searches = [t.duration_ms for t in own if t.step == "search"]
-    fetches = [t.duration_ms for t in response.timings if t.step == "fetch"]
+    fetches = [t.duration_ms for t in timings if t.step == "fetch"]
     search = sum(searches) if searches else max(fetches, default=0.0)
     rank = sum(t.duration_ms for t in own if t.step in _RANK_STEPS)
     return understand / 1000, search / 1000, rank / 1000
@@ -228,21 +228,36 @@ def check_stores(response: SearchResponse, config: CriteriaConfig) -> CriterionR
     return CriterionResult(Criterion.STORES, Status.FAIL, cell, cause, evidence)
 
 
+def _seconds_cell(run: QueryRun, *, recorded: bool) -> str:
+    """The first search's seconds. Where the gender question was answered, the search after the
+    answer and the sum follow in brackets, so the reader sees all three beside the one that
+    counts."""
+    cell = f"{run.duration_ms / 1000:.1f}"
+    after = run.confirm_ms
+    if after is None:
+        return cell + (" (recorded)" if recorded else "")
+    added = f"+{after / 1000:.1f} after the answer = {run.total_ms / 1000:.1f}"
+    return f"{cell} ({'recorded; ' if recorded else ''}{added})"
+
+
 def check_seconds(
     run: QueryRun, response: SearchResponse | None, config: CriteriaConfig
 ) -> CriterionResult:
+    """The 30 s limit, checked against the first search only: it is the wait before the shopper
+    sees anything. The search after the gender question was answered is shown, not judged."""
     if run.duration_source == "unavailable":
         return CriterionResult(Criterion.SECONDS, Status.PENDING, "not recorded")
     seconds = run.duration_ms / 1000
     recorded = run.duration_source == "recorded"
-    cell = f"{seconds:.1f}" + (" (recorded)" if recorded else "")
+    cell = _seconds_cell(run, recorded=recorded)
     if seconds <= config.max_seconds:
         return CriterionResult(Criterion.SECONDS, Status.PASS, cell)
 
     cause = Cause.STORE
     breakdown = "no step timings are available"
-    if response is not None and not recorded and response.timings:
-        understand, search, rank = _stage_seconds(response)
+    timings = run.first_timings
+    if response is not None and not recorded and timings:
+        understand, search, rank = _stage_seconds(timings)
         stages = {Cause.LLM: understand, Cause.STORE: search, Cause.RANKING: rank}
         cause = max(stages, key=lambda stage: stages[stage])
         breakdown = (

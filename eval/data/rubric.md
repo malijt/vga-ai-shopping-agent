@@ -7,6 +7,9 @@ Amended once, on 2026-10-08 and before any acceptance run (plan assumption A23, 
 fifth category): the category row no longer calls "a dress" a miss for every request, and the
 section "Dresses and ethnic wear" with worked examples 4 to 6 was added. Nothing else changed.
 
+Amended a second time on 2026-10-08, also before any acceptance run: the section "Who the request
+is for" was added, because the app now asks "Who is this for?" Nothing else changed.
+
 ## The pass rule (quoted verbatim from `docs/02-prd.md`, "Acceptance test (10 queries)")
 
 > **Pass:** for most of the 10 queries: ≥ 20 results, from ≥ 3 stores, ≤ 30 s, all links open the right product page, and a person marks ≥ 7 of the top 10 as good matches (same category, close colour/style), and each price range is within 1 result of its target count (or flagged "few options"). Record the results in a short table, plus every failure.
@@ -30,6 +33,14 @@ colour). Check three things.
 If the request states a gender, the product must be for that gender or unisex. Price is not part
 of the label (it is scored under "price ranges ok"). Label with `1` (good) or `0` (not good); no
 half marks and no blanks.
+
+### Who the request is for
+
+The app asks "Who is this for?" (Women, Men or Show both) when a request does not say, and a
+headless run cannot answer, so each photo query records the shopper's answer (`shopper_gender` in
+`queries.yaml`) and the harness gives it as the page does. The results you label are the ones
+shown after that answer, and it counts as the request's stated gender in the rule above: a product
+for the other gender is not good.
 
 ### Worked examples (request q06: "black oversized blazer for men under 400 AED")
 

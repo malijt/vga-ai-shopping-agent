@@ -49,7 +49,9 @@ class RecordingScope:
     def begin_query(self, query_id: str) -> None:
         self.events.append(("begin", query_id, None))
 
-    def end_query(self, query_id: str, *, duration_ms: float) -> None:
+    def end_query(
+        self, query_id: str, *, duration_ms: float, confirm_ms: float | None = None
+    ) -> None:
         self.events.append(("end", query_id, duration_ms))
 
 
@@ -214,7 +216,9 @@ class RefusingScope:
             msg = f"{query_id} is not in the recording"
             raise RecordingError(msg)
 
-    def end_query(self, query_id: str, *, duration_ms: float) -> None:
+    def end_query(
+        self, query_id: str, *, duration_ms: float, confirm_ms: float | None = None
+    ) -> None:
         self.ended.append(query_id)
 
 
