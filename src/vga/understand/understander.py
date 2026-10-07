@@ -14,8 +14,8 @@ The path of a request, and where each plan feature lives:
    shopper's cleaned words; a photo-only request gets a friendly error. Every fallback is logged
    at warn level with the request id.
 
-Settings it reads: ``openai_model`` (must be a dated snapshot), ``daily_llm_call_cap``,
-``log_prompts`` and ``request_deadline_s``.
+Settings it reads: ``openai_model`` (a pinned snapshot id, see ``vga.settings``),
+``daily_llm_call_cap``, ``log_prompts`` and ``request_deadline_s``.
 """
 
 import os
@@ -61,7 +61,7 @@ MAX_ROUNDS = 2
 
 MODEL_NOT_SET_MESSAGE = (
     "The AI model is not set up. Set openai_model in config/settings.yaml (or the OPENAI_MODEL "
-    "environment variable) to a dated model snapshot, then restart."
+    "environment variable) to a pinned model snapshot id, then restart."
 )
 API_KEY_MISSING_MESSAGE = (
     "The OpenAI API key is missing. Set OPENAI_API_KEY in your environment or in .env, "
