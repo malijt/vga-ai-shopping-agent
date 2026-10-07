@@ -5,9 +5,55 @@ the eval result that justified it (CLAUDE.md, Non-Negotiables: re-run the eval s
 before changing either). The prompt version and the model id are a matched pair: a result is only
 comparable with another that used the same pair.
 
-How to run the eval: `OPENAI_API_KEY=... OPENAI_MODEL=<dated snapshot> uv run pytest -m live
-tests/understand` runs the 6 golden inputs and all 17 cases of `eval/data/edge_cases.yaml` and
-writes `eval/results/understand-live.md`. Paste its pass/fail counts below.
+How to run the eval: `OPENAI_API_KEY=... uv run pytest -m live tests/understand` (the model comes
+from `config/settings.yaml`) runs the 6 golden inputs and all 17 cases of
+`eval/data/edge_cases.yaml` and writes `eval/results/understand-live.md` with, for every case, what
+was expected, what came back, and the latency, calls and tokens it took. Set
+`VGA_EVAL_REASONING_EFFORT=none` (or another effort) to compare efforts. Paste the counts below.
+The newest entry is first.
+
+## understand-v1: 2026-10-08 (model pinned to gpt-6-luna, first live run)
+
+- **Prompt:** `understand-v1.md`, unchanged from the 2026-10-07 entry below. No prompt edit was
+  needed: every runnable case passed on the first run.
+- **Model:** `gpt-6-luna`, chosen by the user on 2026-10-08. OpenAI lists no dated snapshot for it
+  (https://developers.openai.com/api/docs/models/gpt-6-luna lists only `gpt-6-luna`), so the
+  versioned name is the pin, allowed by name in `UNDATED_SNAPSHOT_IDS` in `src/vga/settings.py`.
+  It replaces the never-run `gpt-5-mini-2025-08-07`. Listed price: $0.10 in / $0.50 out per 1M
+  tokens, about $0.0003 per call at the token counts below.
+- **Call settings:** reasoning effort `low` (the constant `REASONING_EFFORT` in
+  `vga/understand/gateway.py`, now sent for `gpt-6` ids too), `max_output_tokens` 3000, `store=false`,
+  15 s timeout, at most 2 calls per request. The request shape (strict JSON schema through the
+  Responses API, `reasoning.effort`, an image sent as a data URL) was accepted by the API on the
+  first try; no 4xx, 429, 5xx, corrective retry or fallback happened in any run.
+- **Eval score: 20/20 runnable cases passed, in each of 3 full runs.** The 20 are 3 golden inputs
+  (g3, g4, g6) and all 17 edge cases (e01 to e17). **3 golden cases skipped** (g1, g2, g5): they
+  need the shopper photos listed in `eval/data/ASSETS.md`, which have not been supplied, so how the
+  model reads a real product photo, a real outfit photo and a photo with an edit request is
+  **unverified**. 4 of the 17 edge cases (e08, e09, e10, e15: empty, whitespace, 14,000 characters,
+  symbols only) are refused in code before any model call, so they test the code, not the model.
+  The other 16 cases made 16 calls per run (48 in total, plus 1 single-case check before the first
+  run).
+- **Latency** (time `understand()` took, from a developer laptop; the three runs agree): median for
+  a text request 2.8 to 3.1 s (2,955 ms over all 48 calls), median over all calls 3.0 s, worst
+  6.3 s (4.4 to 6.3 s in each run: the photo case e05 twice, the Arabic injection case e03 once).
+  A photo request took 2.9 to 6.2 s. The median is under the 5 s line, so the comparison run with
+  effort `none` was not made and `low` stays. The one cold call before the first run took 5.0 s.
+- **Tokens per call** (the same for every run): 2,453 input on average (about 2,330 for a text
+  request, about 2,980 with a photo) and 91 output, including any hidden reasoning. Nearly all the
+  input is the system prompt and the schema.
+- **What differed between runs:** only the wording of the keywords (for example "navy slim fit
+  chinos men" against "navy slim-fit chinos men", a third keyword on some runs). Verdicts,
+  categories, colours, genders, budgets and the outcome of every case were the same in all three
+  runs. The injected text (an address, a request for the system prompt, "PWNED", a fake `[system]`
+  line, instructions printed in a photo) never reached the output.
+- **Reason:** the user asked for Luna and for real testing to start. The model had only ever been
+  tested through fakes.
+- **Not covered:** the eval's judge checks the verdict, category, colour, gender, budget, links and
+  the absence of the injected text, not whether the keywords are the best ones. Three runs of one
+  prompt are a small sample of a model that is not deterministic. Because the model has no dated
+  snapshot, OpenAI can change what `gpt-6-luna` does without our noticing: re-run this eval from
+  time to time, and before any change of prompt, model or effort.
 
 ## understand-v1: 2026-10-07 (initial prompt)
 
@@ -15,22 +61,22 @@ writes `eval/results/understand-live.md`. Paste its pass/fail counts below.
   message is data, never instructions; a `verdict` so the model can say "nothing to shop for";
   four categories; 2-3 English keywords with no price or gender words; gender `explicit` only when
   the shopper's text says so; budget from the text only; edits kept apart from the item.
-- **Model:** none is pinned in `config/settings.yaml` yet (`openai_model: null`). The snapshot found
-  in OpenAI's model documentation is `gpt-5-mini-2025-08-07` (a newer, dearer alternative is
-  `gpt-5.4-mini-2026-03-17`). The orchestrator pins the one to use. The code refuses to start
-  without a dated snapshot.
+- **Model:** none was pinned in `config/settings.yaml` when this was written (`openai_model: null`).
+  The snapshot found in OpenAI's model documentation was `gpt-5-mini-2025-08-07` (a newer, dearer
+  alternative is `gpt-5.4-mini-2026-03-17`); neither was ever run. `gpt-6-luna` replaced them on
+  2026-10-08.
 - **Call settings:** reasoning effort `low`, `max_output_tokens` 3000 (reasoning tokens count
   against it), `store=false`, 15 s timeout, at most 2 calls per request.
-- **Eval score: NOT RUN.** No `OPENAI_API_KEY` was available when this prompt was written, so
-  neither the live golden run nor the live edge-case run has happened. The six golden fixtures in
-  `tests/understand/golden/` are hand-written, not recorded.
+- **Eval score: NOT RUN when this was written.** No `OPENAI_API_KEY` was available, so no live
+  golden or edge-case run had happened. The first real run is the 2026-10-08 entry above. The six
+  golden fixtures in `tests/understand/golden/` are hand-written, not recorded.
 - **What was checked offline** (`uv run pytest tests/understand`, no network): the real OpenAI SDK
   driven against a fake HTTP server; all 17 edge cases with a scripted well-behaved model, with a
   model that is down, and with a model that obeys the injected text or the text printed in the
   photo; the 6 hand-written golden outputs.
 - **Reason:** first version.
-- **Next step:** run the live eval once with a key, paste the counts here, and fix the prompt
-  (bumping to `understand-v2`) for any case that fails.
+- **Next step (done 2026-10-08):** run the live eval once with a key and paste the counts. All
+  runnable cases passed, so the prompt stayed at `understand-v1`.
 
 ## Known limitations and failure modes
 
@@ -58,3 +104,8 @@ Kept here so that nobody has to rediscover them (genai best practice 13).
   unconfirmed chip instead of being applied.
 - **The photo is sent to OpenAI** (resized, metadata removed, with `store=false`). The app must say
   so before upload (plan 10.1.2).
+- **`gpt-6-luna` has no dated snapshot.** The pin is the model's name, so OpenAI can change its
+  behaviour under us. Nothing in the app detects that; re-run the live eval from time to time.
+- **Real photos are untested.** The live eval has run only with the two synthetic photos in
+  `eval/data/assets/`. g1, g2 and g5 need the shopper's own photos (`eval/data/ASSETS.md`) and are
+  skipped until they are supplied. Latency with a real, larger photo may also differ.
