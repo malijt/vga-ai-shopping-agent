@@ -1,0 +1,54 @@
+{
+  "id": "g2_outfit_photo",
+  "provenance": "HAND-WRITTEN example of the parsed output we expect. NOT recorded from the OpenAI API.",
+  "request": {
+    "text": null,
+    "image": "private/outfit_casual.jpg",
+    "image_note": "Offline tests send a tiny generated image instead; the live eval needs the real photo from eval/data/ASSETS.md and skips this case without it."
+  },
+  "model_output": {
+    "verdict": "ok",
+    "input_type": "outfit_photo",
+    "language": "en",
+    "items": [
+      {
+        "category": "tops",
+        "colour": "white",
+        "style": "t-shirt",
+        "material": null,
+        "gender": "men",
+        "gender_source": "inferred",
+        "search_keywords": ["white t-shirt", "white crew neck t-shirt"]
+      },
+      {
+        "category": "bottoms",
+        "colour": "blue",
+        "style": "straight jeans",
+        "material": "denim",
+        "gender": "men",
+        "gender_source": "inferred",
+        "search_keywords": ["blue straight jeans", "straight jeans"]
+      },
+      {
+        "category": "shoes",
+        "colour": "white",
+        "style": "low-top sneakers",
+        "material": null,
+        "gender": "men",
+        "gender_source": "inferred",
+        "search_keywords": ["white sneakers", "white low-top sneakers"]
+      }
+    ],
+    "budget": null,
+    "edits": []
+  },
+  "expect": {
+    "input_type": "outfit_photo",
+    "budget": null,
+    "items": [
+      {"category": "tops", "gender_source": "inferred"},
+      {"category": "bottoms", "gender_source": "inferred"},
+      {"category": "shoes", "gender_source": "inferred"}
+    ]
+  }
+}

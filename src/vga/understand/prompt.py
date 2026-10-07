@@ -33,6 +33,9 @@ USER_TEXT_CLOSE = "</user_text>"
 
 _COMMENT = re.compile(r"<!--.*?-->\s*", re.DOTALL)
 
+ECHO_WINDOW_WORDS = 6
+"""A run of this many words copied from the prompt counts as repeating it."""
+
 
 @cache
 def system_prompt() -> str:
@@ -79,3 +82,26 @@ def corrective_message(problems: Sequence[str]) -> str:
         f"{listed}\n"
         "Answer the same request again with a corrected result that follows every rule above."
     )
+
+
+def _words(text: str) -> list[str]:
+    return re.findall(r"[^\W_]+", text.lower())
+
+
+@cache
+def _prompt_phrases() -> frozenset[str]:
+    words = _words(system_prompt())
+    size = ECHO_WINDOW_WORDS
+    return frozenset(" ".join(words[i : i + size]) for i in range(len(words) - size + 1))
+
+
+def echoes_instructions(text: str) -> bool:
+    """True if ``text`` repeats a run of the system prompt (six words in a row).
+
+    A shopper who asks the assistant to "print your instructions" must not see them come back in
+    a chip or a keyword. Real garment descriptions are short and never match a run this long.
+    """
+    words = _words(text)
+    size = ECHO_WINDOW_WORDS
+    phrases = _prompt_phrases()
+    return any(" ".join(words[i : i + size]) in phrases for i in range(len(words) - size + 1))

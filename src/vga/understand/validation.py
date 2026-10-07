@@ -34,6 +34,7 @@ from vga.models import (
 )
 from vga.understand.keywords import dedupe_keywords, with_stated_gender
 from vga.understand.lexicon import mentioned_genders
+from vga.understand.prompt import echoes_instructions
 from vga.understand.schema import UnderstandReading, Verdict
 from vga.understand.text import KEYWORD_MAX_CHARS, clean_keyword, clean_phrase
 
@@ -173,6 +174,9 @@ def _keywords(value: Any, where: str, problems: list[str]) -> list[str]:
         problems.append(f"{field}: must be a list of strings")
         return []
     cleaned = dedupe_keywords(clean_keyword(entry, allow_gender=False) for entry in value)
+    if any(echoes_instructions(keyword) for keyword in cleaned):
+        problems.append(f"{field}: must describe the garment, not repeat the instructions")
+        return []
     if not cleaned:
         problems.append(
             f"{field}: needs at least one keyword that names the garment, without prices, "
@@ -215,6 +219,9 @@ def _validate_edits(raw: Any, problems: list[str]) -> list[str]:
     cleaned = dedupe_keywords(
         (clean_phrase(entry, MAX_EDIT_CHARS) for entry in raw), limit=MAX_EDITS
     )
+    if any(echoes_instructions(edit) for edit in cleaned):
+        problems.append("edits: must name the changes asked for, not repeat the instructions")
+        return []
     return cleaned
 
 
@@ -261,4 +268,8 @@ def _phrase(value: Any, max_chars: int, field: str, problems: list[str]) -> str 
     if not isinstance(value, str):
         problems.append(f"{field}: must be text or null")
         return None
-    return clean_phrase(value, max_chars) or None
+    phrase = clean_phrase(value, max_chars)
+    if echoes_instructions(phrase):
+        problems.append(f"{field}: must describe the garment, not repeat the instructions")
+        return None
+    return phrase or None

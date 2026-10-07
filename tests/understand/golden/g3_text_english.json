@@ -1,0 +1,29 @@
+{
+  "id": "g3_text_english",
+  "provenance": "HAND-WRITTEN example of the parsed output we expect. NOT recorded from the OpenAI API.",
+  "request": {"text": "men's navy slim fit chinos", "image": null},
+  "model_output": {
+    "verdict": "ok",
+    "input_type": "text",
+    "language": "en",
+    "items": [
+      {
+        "category": "bottoms",
+        "colour": "navy",
+        "style": "slim fit chinos",
+        "material": null,
+        "gender": "men",
+        "gender_source": "explicit",
+        "search_keywords": ["navy slim fit chinos", "slim fit chinos"]
+      }
+    ],
+    "budget": null,
+    "edits": []
+  },
+  "expect": {
+    "input_type": "text",
+    "language": "en",
+    "budget": null,
+    "items": [{"category": "bottoms", "colour": "navy", "gender": "men", "gender_source": "explicit"}]
+  }
+}

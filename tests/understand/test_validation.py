@@ -11,6 +11,7 @@ from tests.understand.readings import (
     make_reading_item,
 )
 from vga.models import Category, Gender, GenderSource, InputType
+from vga.understand.prompt import echoes_instructions, system_prompt
 from vga.understand.schema import Verdict
 from vga.understand.validation import (
     NothingToShopFor,
@@ -374,3 +375,56 @@ def test_input_type_follows_what_was_sent_and_only_product_vs_outfit_is_the_mode
     )
 
     assert _validate(reading, text=text, has_image=has_image).input_type is expected
+
+
+# --------------------------------------------------------------------------------------------
+# A model that is talked into printing its instructions
+# --------------------------------------------------------------------------------------------
+
+
+def _prompt_excerpt(words: int = 12) -> str:
+    return " ".join(system_prompt().split()[40 : 40 + words])
+
+
+@pytest.mark.parametrize("field", ["colour", "style", "material"])
+def test_a_text_field_that_repeats_the_instructions_is_a_problem(field: str) -> None:
+    item = make_reading_item(**{field: _prompt_excerpt()})
+
+    assert _problems(make_reading(items=[item])) == [
+        f"items[0].{field}: must describe the garment, not repeat the instructions"
+    ]
+
+
+def test_a_keyword_that_repeats_the_instructions_is_a_problem() -> None:
+    item = make_reading_item(search_keywords=["black blazer", _prompt_excerpt()])
+
+    assert _problems(make_reading(items=[item])) == [
+        "items[0].search_keywords: must describe the garment, not repeat the instructions"
+    ]
+
+
+def test_an_edit_that_repeats_the_instructions_is_a_problem() -> None:
+    problems = _problems(make_reading(edits=["cheaper", _prompt_excerpt()]))
+
+    assert problems == ["edits: must name the changes asked for, not repeat the instructions"]
+
+
+@pytest.mark.parametrize(
+    "legit",
+    [
+        "black oversized blazer",
+        "white leather low-top sneakers with a thick sole",
+        "dark brown",
+        "wide-leg jeans",
+        "one item per distinct garment",  # five words from the prompt are not a copy of it
+    ],
+)
+def test_ordinary_garment_words_are_never_taken_for_an_echo(legit: str) -> None:
+    assert not echoes_instructions(legit)
+
+
+def test_a_run_of_six_prompt_words_is_an_echo_even_with_other_words_around_it() -> None:
+    excerpt = " ".join(system_prompt().split()[40:46])
+
+    assert echoes_instructions(f"black jacket {excerpt} and more")
+    assert echoes_instructions(excerpt.upper())
