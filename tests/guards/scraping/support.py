@@ -99,6 +99,10 @@ class GuardWorld(StoreWorld):
         """Replace the image CDN's robots.txt."""
         self._serve_cdn(robots)
 
+    def serve_thumbnails(self, reply: Reply) -> None:
+        """Answer every thumbnail request with ``reply`` instead of a small image."""
+        self._serve_cdn(ALLOW_ALL_ROBOTS, reply)
+
     def seal(self) -> None:
         """Route every request nobody expected into ``stray``. Call once the world is built: a
         route added later would never be reached, because the catch-all would match first."""
@@ -124,13 +128,16 @@ class GuardWorld(StoreWorld):
 
         return answer
 
-    def _serve_cdn(self, robots: str) -> None:
+    def _serve_cdn(self, robots: str, thumbnails: Reply | None = None) -> None:
         def robots_answer(_request: httpx.Request) -> httpx.Response:
             self.cdn_times.append(self.clock.monotonic())
             return text_response(robots)
 
         async def thumbnail_answer(request: httpx.Request) -> httpx.Response:
             self.cdn_times.append(self.clock.monotonic())
+            if thumbnails is not None:
+                self.thumbnails.append(str(request.url))
+                return thumbnails(request)
             return await self._thumbnail(request)
 
         self.router.get(f"{CDN_PREFIX}robots.txt").mock(side_effect=robots_answer)
