@@ -31,7 +31,7 @@ from openai import AsyncOpenAI
 
 from vga.understand.schema import UnderstandReading
 
-API_KEY = "sk-test-key-not-a-real-key-0000000000"
+API_KEY = "fake-openai-key-for-tests-only"
 
 
 @dataclass
