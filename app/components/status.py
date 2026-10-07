@@ -11,7 +11,7 @@ from collections.abc import Sequence
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 
-from app.copy import ERROR_HEADLINE, STEP_LABELS
+from app.copy import ERROR_HEADLINE, SETUP_HEADLINE, STEP_LABELS
 from app.safe_text import plain_text
 from vga.models import Step
 
@@ -49,6 +49,12 @@ class StepProgress:
 def render_error(message: str) -> None:
     """Show an error: a headline, then the plain-language message and what to do next."""
     st.error(ERROR_HEADLINE)
+    st.text(message)
+
+
+def render_setup_problem(message: str) -> None:
+    """Show, before any search, what must be set up first and what to do about it."""
+    st.error(SETUP_HEADLINE)
     st.text(message)
 
 

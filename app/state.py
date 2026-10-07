@@ -5,9 +5,13 @@ Streamlit runs the whole script again after each click, so state lives in
 from sharing magic strings.
 
 What is kept: the last response, a pending search (set when a button is pressed, handled later in
-the same rerun so the buttons can show as disabled while it runs), and the last error. The
-uploaded photo is never copied here: the file uploader widget holds it, and the pipeline decides
-how long the bytes live (plan 15.1.2).
+the same rerun so the buttons can show as disabled while it runs), and the last error.
+
+The uploaded photo is never copied here. Only the file uploader widget holds it, and once a search
+that used it has finished the page drops it: the uploader is given a new key, so Streamlit lets go
+of the old widget and the file with it (BRD Rule 4, plan 15.1.2). What stays for a search again is
+the response, which carries the photo's embedding (a list of numbers, assumption A8) and never the
+photo.
 """
 
 from dataclasses import dataclass
@@ -28,16 +32,22 @@ _PENDING = "pending_search"
 _RESPONSE = "response"
 _ERROR = "last_error"
 _ACTIVE_REQUEST_ID = "active_request_id"
+_PHOTO_GENERATION = "photo_generation"
+_PHOTO_RELEASED = "photo_released"
 
 
 @dataclass(frozen=True)
 class PendingSearch:
     """A search the shopper asked for and the page has not run yet.
 
-    ``chips`` is ``None`` for a new search and holds the shopper's edits for a search again.
+    ``chips`` is ``None`` for a new search from the boxes. It is set for a search again from the
+    last response, and holds the shopper's chip edits (empty when only the price-range mix
+    changed). ``keep_chips`` is true when the shopper's unapplied chip edits must survive the
+    answer, which is the case when only the price-range mix changed.
     """
 
     chips: ChipEdits | None = None
+    keep_chips: bool = False
 
 
 def pending_search() -> PendingSearch | None:
@@ -49,10 +59,26 @@ def is_searching() -> bool:
     return pending_search() is not None
 
 
+def is_changing_mix() -> bool:
+    """True while the pending search is only the price-range mix changing."""
+    pending = pending_search()
+    return pending is not None and pending.keep_chips
+
+
 def request_search(chips: ChipEdits | None = None) -> None:
     """Called from a button's ``on_click``: remember the request and forget the last error."""
     st.session_state[_ERROR] = None
     st.session_state[_PENDING] = PendingSearch(chips=chips)
+
+
+def request_mix_change() -> None:
+    """Called when the price-range mix changes. With results on the page, show the same results
+    in the new mix: a search again with no chip edits, which asks no store and no AI. With no
+    results yet there is nothing to change; the next search reads the mix."""
+    if get_response() is None:
+        return
+    st.session_state[_ERROR] = None
+    st.session_state[_PENDING] = PendingSearch(chips=ChipEdits(), keep_chips=True)
 
 
 def finish_search() -> None:
@@ -75,12 +101,14 @@ def get_response() -> SearchResponse | None:
     return value if isinstance(value, SearchResponse) else None
 
 
-def store_response(response: SearchResponse) -> None:
+def store_response(response: SearchResponse, *, keep_chips: bool = False) -> None:
     """Keep a finished search. The chips start again from what this response detected, so any
-    value the shopper edited in the chips of the previous response is dropped here."""
+    value the shopper edited in the chips of the previous response is dropped here, unless
+    ``keep_chips`` says the detection did not change."""
     st.session_state[_RESPONSE] = response
     st.session_state[_ERROR] = None
-    clear_chip_state()
+    if not keep_chips:
+        clear_chip_state()
     finish_search()
 
 
@@ -107,3 +135,35 @@ def clear_chip_state() -> None:
     """Forget the values in the chip widgets so they show what the response detected."""
     for key in [k for k in st.session_state if str(k).startswith(CHIP_KEY_PREFIX)]:
         del st.session_state[key]
+
+
+# --- The uploaded photo (plan 15.1.2) --------------------------------------------------------
+
+
+def _generation() -> int:
+    value = st.session_state.get(_PHOTO_GENERATION, 0)
+    return value if isinstance(value, int) else 0
+
+
+def photo_key() -> str:
+    """The uploader's current widget key. The first one is ``PHOTO_KEY`` itself; each time the
+    photo is released the number at the end goes up, which is a different widget to Streamlit."""
+    generation = _generation()
+    return PHOTO_KEY if generation == 0 else f"{PHOTO_KEY}_{generation}"
+
+
+def release_photo() -> None:
+    """Let go of the uploaded photo: the uploader gets a new key, so its old widget, and the file
+    it held, are no longer kept. Nothing is copied before: only the response keeps the embedding."""
+    old_key = photo_key()
+    st.session_state[_PHOTO_GENERATION] = _generation() + 1
+    st.session_state.pop(old_key, None)
+
+
+def set_photo_released(released: bool) -> None:
+    """Remember whether the results on the page came from a photo that has since been removed."""
+    st.session_state[_PHOTO_RELEASED] = released
+
+
+def photo_released() -> bool:
+    return st.session_state.get(_PHOTO_RELEASED) is True

@@ -3,10 +3,12 @@ and the one error boundary that never shows a stack trace.
 """
 
 import logging
+from collections.abc import Callable
 
 import pytest
 from streamlit.testing.v1 import AppTest
 
+from app import runner
 from app.components.run_details import timing_line
 from app.components.status import progress_lines
 from app.copy import (
@@ -27,10 +29,38 @@ from tests.fakes import FakePipeline
 from tests.ui.conftest import InstallPipeline
 from tests.ui.helpers import SEARCH_BUTTON, TEXT_BOX, plain_texts, search, visible_strings
 from vga.errors import GENERIC_USER_MESSAGE, InvalidInputError, LlmError
-from vga.models import Category, Gender, Step, StepTiming, StoreStatus
+from vga.models import (
+    Category,
+    Gender,
+    RunOverrides,
+    SearchRequest,
+    SearchResponse,
+    Step,
+    StepTiming,
+    StoreStatus,
+)
+from vga.settings import Settings
 
 SAMPLE = load_sample_response()
 SECRET = "boom: secret internal detail at db.internal:5432"
+
+
+class StepWatcher(FakePipeline):
+    """A fake pipeline that remembers the progress callback each run was given."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.callbacks: list[Callable[[Step], None] | None] = []
+
+    async def run(
+        self,
+        req: SearchRequest,
+        settings: Settings,
+        overrides: RunOverrides | None = None,
+        on_step: Callable[[Step], None] | None = None,
+    ) -> SearchResponse:
+        self.callbacks.append(on_step)
+        return await super().run(req, settings, overrides, on_step)
 
 
 def expander(at: AppTest, prefix: str):
@@ -177,17 +207,18 @@ class TestProgress:
         ]
 
     def test_the_pipeline_receives_the_progress_callback(
-        self, at: AppTest, install_pipeline: InstallPipeline
+        self, at: AppTest, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # The FakePipeline calls on_step for every step; if the page passed no callback, or one
-        # that cannot take a Step, the search would fail.
-        install_pipeline()
+        watcher = StepWatcher()
+        monkeypatch.setattr(runner, "get_pipeline", lambda settings: watcher)
         at.run()
 
         search(at)
 
         assert not at.error
         assert not at.exception
+        assert len(watcher.callbacks) == 1
+        assert callable(watcher.callbacks[0])  # the page's progress display, not None
 
 
 class TestSkippedStores:

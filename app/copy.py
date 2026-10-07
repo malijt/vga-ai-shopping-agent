@@ -61,6 +61,7 @@ FLAG_TEXT: dict[Flag, str] = {
 }
 
 ERROR_HEADLINE = "We could not finish that."
+SETUP_HEADLINE = "Searching is not set up yet."
 NO_RESULTS_HEADLINE = "No results right now."
 NO_RESULTS_TIPS: tuple[str, ...] = (
     "Describe the item more simply, for example its type and colour only.",

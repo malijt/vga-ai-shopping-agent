@@ -8,14 +8,19 @@ from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
+import respx
+import streamlit as st
 from streamlit.testing.v1 import AppTest
 
 from app import runner
-from tests.fakes import FakePipeline, PipelineCall
+from tests.fakes import FakePipeline, FakeUnderstander, PipelineCall
+from tests.pipeline.world import StoreWorld, store_for
 from tests.ui.helpers import search
+from tests.ui.live import LiveSearch, PerLoopFakeClock, build_live_search
 from vga.errors import VgaError
+from vga.interfaces import ImageRanker
 from vga.log import ROOT_LOGGER_NAME
-from vga.models import RunOverrides, SearchRequest, SearchResponse, Step
+from vga.models import RunOverrides, SearchRequest, SearchResponse, Step, StoreConfig
 from vga.settings import Settings
 
 APP_PATH = Path(__file__).resolve().parents[2] / "app" / "main.py"
@@ -95,3 +100,80 @@ def results_at(at: AppTest, pipeline: FakePipeline) -> AppTest:
     """The page after one search that returned the bundled sample (two garments)."""
     at.run()
     return search(at)
+
+
+@pytest.fixture(autouse=True)
+def _no_cached_pipeline() -> Iterator[None]:
+    """``runner`` keeps the real pipeline in Streamlit's resource cache for the whole process. A
+    test that builds one must not leave it for the next."""
+    yield
+    st.cache_resource.clear()
+
+
+# --- The real pipeline behind the page (tests/ui/live.py) -------------------------------------
+
+InstallLive = Callable[..., LiveSearch]
+
+
+@pytest.fixture
+def live_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Live mode: fixture mode off and an API key present, as a configured machine has. The key is
+    a placeholder: the OpenAI call itself is faked. The image model is switched off so that no test
+    can load real weights when the page gets the pipeline ready."""
+    monkeypatch.setenv("VGA_UI_FIXTURE", "0")
+    monkeypatch.setenv("VGA_IMAGE_RANKER", "off")
+    monkeypatch.setenv("OPENAI_API_KEY", "placeholder-not-a-real-key")
+
+
+@pytest.fixture
+def clock() -> PerLoopFakeClock:
+    return PerLoopFakeClock()
+
+
+@pytest.fixture
+def router() -> Iterator[respx.MockRouter]:
+    """Answers every httpx request of the test; one nobody mocked raises, so no test can reach a
+    real store by accident."""
+    with respx.mock(assert_all_called=False, assert_all_mocked=True) as mock:
+        yield mock
+
+
+@pytest.fixture
+def world(router: respx.MockRouter, clock: PerLoopFakeClock) -> StoreWorld:
+    return StoreWorld(router, clock)
+
+
+@pytest.fixture
+def install_live(
+    monkeypatch: pytest.MonkeyPatch,
+    live_mode: None,
+    world: StoreWorld,
+    clock: PerLoopFakeClock,
+    tmp_path: Path,
+) -> InstallLive:
+    """Put the REAL ``SearchPipeline`` behind the page, in live mode. Only the boundaries are
+    faked: store HTTP (two fake stores that sell everything unless ``stores`` is given), OpenAI
+    (``understander``) and the image model."""
+
+    def install(
+        understander: FakeUnderstander | None = None,
+        *,
+        stores: list[StoreConfig] | None = None,
+        image_ranker: ImageRanker | None = None,
+    ) -> LiveSearch:
+        if stores is None:
+            stores = [store_for("alpha"), store_for("beta")]
+        for store in stores:
+            world.add(store)
+        live = build_live_search(
+            world,
+            clock,
+            understander or FakeUnderstander(),
+            log_dir=tmp_path / "pipeline-logs",
+            stores=stores,
+            image_ranker=image_ranker,
+        )
+        monkeypatch.setattr(runner, "get_pipeline", lambda settings: live.pipeline)
+        return live
+
+    return install

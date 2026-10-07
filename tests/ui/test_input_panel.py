@@ -3,13 +3,14 @@
 import pytest
 from streamlit.testing.v1 import AppTest
 
+from app import runner
 from app.components.input_panel import (
     ALLOWED_PHOTO_TYPES,
     MAX_PHOTO_MB,
-    MESSAGE_TOO_LARGE,
     MESSAGE_WRONG_TYPE,
     InputState,
     check_photo,
+    message_too_large,
     sniff_image_kind,
 )
 from tests.factories import make_image_bytes
@@ -75,7 +76,7 @@ class TestSearchButton:
         def script() -> None:
             from app.components.input_panel import render_input_panel
 
-            render_input_panel(disabled=True)
+            render_input_panel(disabled=True, max_photo_bytes=8_000_000)
 
         at = AppTest.from_function(script).run()
 
@@ -151,12 +152,34 @@ class TestPhotoChecks:
 
     def test_an_oversized_photo_shows_a_message_and_blocks_search(self, at: AppTest) -> None:
         at.run()
-        too_big = b"\x89PNG\r\n\x1a\n" + b"0" * (MAX_PHOTO_MB * 1024 * 1024)
+        limit = runner.load_ui_settings().max_image_bytes
+        too_big = b"\x89PNG\r\n\x1a\n" + b"0" * limit
 
         at.file_uploader(key=PHOTO).set_value(("big.png", too_big, "image/png")).run()
 
-        assert [error.value for error in at.error] == [MESSAGE_TOO_LARGE]
+        assert [error.value for error in at.error] == [message_too_large(limit)]
         assert search_button(at).disabled is True
+
+    def test_the_limit_is_the_one_in_the_settings_not_the_uploaders_outer_limit(
+        self, at: AppTest
+    ) -> None:
+        # 8,100,000 bytes is under the uploader's 8 MB (mebibyte) cap but over the pipeline's
+        # max_image_bytes, so the pipeline would refuse it: the page must refuse it first.
+        at.run()
+        limit = runner.load_ui_settings().max_image_bytes
+        between = b"\x89PNG\r\n\x1a\n" + b"0" * (limit + 100_000)
+        assert len(between) < MAX_PHOTO_MB * 1024 * 1024
+
+        at.file_uploader(key=PHOTO).set_value(("big.png", between, "image/png")).run()
+
+        assert [error.value for error in at.error] == [message_too_large(limit)]
+        assert search_button(at).disabled is True
+
+    def test_the_message_names_the_limit_in_plain_megabytes(self) -> None:
+        assert message_too_large(8_000_000) == (
+            "That photo is larger than 8 MB. Choose a smaller PNG, JPG or WebP photo."
+        )
+        assert "2.5 MB" in message_too_large(2_500_000)
 
     def test_a_bad_photo_blocks_search_even_when_there_is_text(self, at: AppTest) -> None:
         at.run()
@@ -198,12 +221,14 @@ class TestCheckPhotoUnit:
     @pytest.mark.parametrize("data", [b"", b"GIF89a....", b"RIFF1234WAVE", b"plain text"])
     def test_other_data_is_not_an_image(self, data: bytes) -> None:
         assert sniff_image_kind(data) is None
-        assert check_photo(data) == MESSAGE_WRONG_TYPE
+        assert check_photo(data, 8_000_000) == MESSAGE_WRONG_TYPE
 
-    def test_a_photo_exactly_at_the_cap_is_accepted(self) -> None:
-        at_cap = b"\x89PNG\r\n\x1a\n" + b"0" * (MAX_PHOTO_MB * 1024 * 1024 - 8)
+    def test_a_photo_exactly_at_the_cap_is_accepted_and_one_byte_more_is_not(self) -> None:
+        cap = 1_000_000
+        at_cap = b"\x89PNG\r\n\x1a\n" + b"0" * (cap - 8)
 
-        assert check_photo(at_cap) is None
+        assert check_photo(at_cap, cap) is None
+        assert check_photo(at_cap + b"0", cap) == message_too_large(cap)
 
     def test_input_needs_text_or_a_photo_and_no_photo_problem(self) -> None:
         assert not InputState().is_valid
