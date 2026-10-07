@@ -175,7 +175,7 @@ class TestTheResultsTable:
         row = self.rows()["q04_outfit_casual"]
 
         assert row[1] == "12 / 12 / 11"
-        assert row[5] == "8/10 / 8/10 / 8/10"
+        assert row[5] == "8 / 8 / 8"
 
     def test_a_weak_query_says_which_price_range_missed_and_by_how_much(self) -> None:
         row = self.rows()["q06_text_blazer_budget"]

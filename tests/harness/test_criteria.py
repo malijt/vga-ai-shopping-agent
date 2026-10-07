@@ -428,7 +428,7 @@ class TestGoodAtTen:
         passing = evaluate_query(run, labels=labels_for(run, {"tops": 7, "bottoms": 7, "shoes": 7}))
         failing = evaluate_query(run, labels=labels_for(run, {"tops": 8, "bottoms": 7, "shoes": 6}))
 
-        assert passing.result(Criterion.GOOD_AT_10).cell == "7/10 / 7/10 / 7/10"
+        assert passing.result(Criterion.GOOD_AT_10).cell == "7 / 7 / 7"
         assert passing.result(Criterion.GOOD_AT_10).status is Status.PASS
         failed = failing.result(Criterion.GOOD_AT_10)
         assert failed.status is Status.FAIL
@@ -483,7 +483,7 @@ class TestGoodAtTen:
         result = evaluate_query(run_of(response, "outfit_photo")).result(Criterion.GOOD_AT_10)
 
         assert result.status is Status.FAIL
-        assert result.cell == "? / max 6/10"
+        assert result.cell == "? / max 6"
 
     def test_a_misdetected_input_type_makes_the_cause_the_llm(self) -> None:
         response = make_response()  # understood as text

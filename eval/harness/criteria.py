@@ -362,14 +362,14 @@ def check_good_at_10(
     for position, (name, size) in enumerate(zip(names, sizes, strict=True)):
         if good is not None:
             figure = good[position]
-            cells.append(figure.cell)
+            cells.append(str(figure.good))
             if figure.good < config.min_good:
                 failing.append(
                     f"{name}: {figure.good}/{config.top_n} good, at least {config.min_good} needed"
                     + _not_good(labels, run.query.id, name)
                 )
         elif size < config.min_good:
-            cells.append(f"max {size}/{config.top_n}")
+            cells.append(f"max {size}")
             failing.append(
                 f"{name}: only {size} result(s) in the top {config.top_n}, so "
                 f"{config.min_good} good matches are impossible (missing places count as not good)"
@@ -387,12 +387,18 @@ def check_good_at_10(
                 f"the query is {run.query.type.value}."
             )
         evidence = f"{_shown(failing)}.{input_note} {_understood_summary(response)}"
-        return CriterionResult(
-            Criterion.GOOD_AT_10, Status.FAIL, " / ".join(cells), cause, evidence
-        )
+        cell = _good_cell(cells, config.top_n)
+        return CriterionResult(Criterion.GOOD_AT_10, Status.FAIL, cell, cause, evidence)
     if good is None:
         return CriterionResult(Criterion.GOOD_AT_10, Status.PENDING, "not labelled")
-    return CriterionResult(Criterion.GOOD_AT_10, Status.PASS, " / ".join(cells))
+    return CriterionResult(Criterion.GOOD_AT_10, Status.PASS, _good_cell(cells, config.top_n))
+
+
+def _good_cell(parts: list[str], top_n: int) -> str:
+    """``8/10`` for one garment; ``8 / 7 / 6`` for an outfit, as the template shows."""
+    if len(parts) == 1:
+        return parts[0] if parts[0] == "?" else f"{parts[0]}/{top_n}"
+    return " / ".join(parts)
 
 
 def _not_good(labels: LabelSet | None, query_id: str, group: str) -> str:

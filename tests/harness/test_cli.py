@@ -20,7 +20,7 @@ from eval.harness.runstore import LABELS_FILE, REPORT_FILE, RUN_FILE, load_run
 from eval.harness.wiring import Wiring, WiringFactory, load_wiring_factory
 
 from tests.factories import make_settings
-from tests.fakes import FakeUnderstander
+from tests.fakes import FakeClock, FakeUnderstander
 from tests.harness.helpers import ToyPipeline
 from tests.harness.live_parts import LiveParts, make_stores, ok_link_fetch, understand_for
 from vga.models import SearchRequest, UnderstandResult
@@ -42,6 +42,7 @@ class Cli:
             list(argv),
             wiring_factory=wiring,
             settings=make_settings(),
+            clock=FakeClock(),
             today=lambda: TODAY,
             root=self.root,
             stdout=self.out,
@@ -204,7 +205,7 @@ class TestLabellingThroughTheCommandLine:
         cli.run("--rescore", str(run_dir), "--labels", str(run_dir / LABELS_FILE))
 
         text = (run_dir / REPORT_FILE).read_text(encoding="utf-8")
-        assert "| q01_product_jacket | 12 / 9 | 4 | 5.5 | 21/21 | 10/10 / 9/10 | yes |" in text
+        assert "| q01_product_jacket | 12 / 9 | 4 | 5.5 | 21/21 | 10 / 9 | yes |" in text
 
     def test_rescoring_changes_only_the_report_never_the_run_or_the_sheet(self, cli: Cli) -> None:
         run_dir = self.labelled(cli, good_queries=7)

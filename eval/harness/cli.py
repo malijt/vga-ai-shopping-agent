@@ -26,7 +26,7 @@ import asyncio
 import re
 import sys
 from collections.abc import Callable, Collection, Mapping, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import date
 from pathlib import Path
 from typing import TextIO
@@ -60,7 +60,7 @@ from eval.harness.runstore import (
 from eval.harness.scoring import ScoredRun, score_run
 from eval.harness.wiring import Wiring, WiringFactory, load_wiring_factory
 from vga.errors import VgaError
-from vga.interfaces import Pipeline, SystemClock
+from vga.interfaces import Clock, Pipeline, SystemClock
 from vga.settings import PROJECT_ROOT, Settings, load_settings
 
 RESULTS_DIR = Path("eval") / "results"
@@ -133,6 +133,7 @@ class _Setup:
     allowed_hosts: Mapping[str, Collection[str]] | None = None
     replay: ReplaySession | None = None
     recording: RecordingSession | None = None
+    clock: Clock = field(default_factory=SystemClock)
 
 
 def _next_run_number(results_dir: Path) -> int:
@@ -288,7 +289,7 @@ async def _run_and_check(
         queries,
         setup.pipeline,
         settings,
-        clock=SystemClock(),
+        clock=setup.clock,
         load_image=setup.load_image,
         scope=setup.scope,
         progress=progress,
@@ -359,6 +360,7 @@ def _execute(
     today: date,
     root: Path,
     settings: Settings,
+    clock: Clock | None,
 ) -> int:
     mode: Mode = "mock" if args.mock else "record" if args.record else "replay"
     if mode == "replay" and args.links not in (None, "none"):
@@ -384,6 +386,8 @@ def _execute(
         setup = _setup_replay(args, settings, wiring_factory)
     else:
         setup = _setup_record(args, settings, wiring_factory, links, root)
+    if clock is not None:
+        setup.clock = clock
 
     def progress(run: QueryRun) -> None:
         if run.response is not None:
@@ -435,6 +439,7 @@ def main(
     *,
     wiring_factory: WiringFactory | None = None,
     settings: Settings | None = None,
+    clock: Clock | None = None,
     today: Callable[[], date] = date.today,
     root: Path = PROJECT_ROOT,
     stdout: TextIO | None = None,
@@ -444,7 +449,8 @@ def main(
     with the inputs or the setup.
 
     ``wiring_factory`` is the programmatic form of ``--wiring``; ``settings`` replaces loading
-    ``config/settings.yaml`` (for tests); ``root`` is the repository root.
+    ``config/settings.yaml`` and ``clock`` replaces the real clock (both for tests); ``root`` is
+    the repository root.
     """
     out_stream = stdout or sys.stdout
     err_stream = stderr or sys.stderr
@@ -453,7 +459,7 @@ def main(
         if args.rescore:
             return _rescore(args, out_stream)
         return _execute(
-            args, out_stream, wiring_factory, today(), root, settings or load_settings()
+            args, out_stream, wiring_factory, today(), root, settings or load_settings(), clock
         )
     except VgaError as exc:
         print(f"error: {exc}", file=err_stream)
