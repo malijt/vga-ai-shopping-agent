@@ -15,4 +15,4 @@ extraction:
 genders:
   - women               # a women-only brand: every product seen was a women's item
 tier_hint: mid_range    # AED 170-970 seen; jackets and blazers mostly 230-300
-enabled: false          # true only after the live smoke test passes (plan 12.x.3)
+enabled: true           # the live smoke test passed on 2026-10-08 (tests/stores/oh-polly, plan 12.x.3)
