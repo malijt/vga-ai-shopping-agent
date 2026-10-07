@@ -25,6 +25,7 @@ from pydantic import Field, ValidationError
 from eval.harness.confirm import GenderAnswer
 from eval.harness.errors import RunFileError
 from eval.harness.links import LinkCheck, LinksMode
+from eval.harness.notrun import NotRun
 from eval.harness.queries import AcceptanceQuery, QuerySet
 from eval.harness.runner import DurationSource, PipelineFailure, QueryRun
 from vga.models import SearchResponse, VgaModel
@@ -96,6 +97,8 @@ class QueryRecord(VgaModel):
     total_ms: float | None = Field(default=None, ge=0)
     """The first search and the search after the answer, added up. Written for the reader of
     ``run.json``; it is worked out again, not read, when the run is loaded."""
+    not_run: NotRun | None = None
+    """Set when the query was not run (its stores were not available, or it was never sent)."""
     link_checks: list[LinkCheck] = Field(default_factory=list)
 
 
@@ -160,6 +163,7 @@ def save_run(directory: Path | str, loaded: LoadedRun, *, overwrite: bool = Fals
                 duration_source=run.duration_source,
                 gender=run.gender,
                 total_ms=run.total_ms,
+                not_run=run.not_run,
                 link_checks=loaded.links.get(run.query.id, []),
             )
         )
@@ -207,6 +211,7 @@ def load_run(directory: Path | str) -> LoadedRun:
                 duration_ms=item.duration_ms,
                 duration_source=item.duration_source,
                 gender=item.gender,
+                not_run=item.not_run,
             )
         )
         if item.link_checks:

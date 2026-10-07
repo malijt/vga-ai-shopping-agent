@@ -214,6 +214,31 @@ class TestTheRulesOfTheFetchEngineApply:
         assert waiting.error.startswith("store_cooldown")
         assert (first.call_count, second.call_count) == (1, 0)  # no request, no retry
 
+    async def test_a_link_a_store_turned_away_is_marked_throttled_not_broken(
+        self, fetch: EngineLinkFetch, router: respx.MockRouter
+    ) -> None:
+        router.get(PRODUCT).mock(return_value=html("Too many requests", 429))
+
+        blocked = await fetch(PRODUCT)
+        in_cooldown = await fetch(f"{PRODUCT}-2")
+
+        assert blocked.throttled is True  # turned away just now
+        assert in_cooldown.throttled is True  # not asked, because the store is cooling down
+
+    async def test_other_failures_are_not_marked_throttled(
+        self, fetch: EngineLinkFetch, router: respx.MockRouter
+    ) -> None:
+        router.get(f"https://{HOST}/robots.txt").mock(
+            return_value=text("User-agent: *\nDisallow: /products/denied\n")
+        )
+        router.get(PRODUCT).mock(return_value=html("<title>x</title>", 404))
+
+        missing = await fetch(PRODUCT)
+        denied = await fetch(f"https://{HOST}/products/denied")
+        unknown = await fetch("https://www.unknown-store.example/products/a")
+
+        assert (missing.throttled, denied.throttled, unknown.throttled) == (False, False, False)
+
     async def test_a_host_that_belongs_to_no_store_is_not_requested(
         self, fetch: EngineLinkFetch, router: respx.MockRouter
     ) -> None:

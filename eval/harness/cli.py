@@ -611,7 +611,15 @@ def _print_verdict(scored: ScoredRun, out: TextIO) -> None:
         print("  It has no demo verdict and does not count towards the 7 of 10 rule.", file=out)
     else:
         print(f"Verdict: {verdict.label}. {verdict.headline}.", file=out)
-    if verdict.pending:
+    if verdict.not_run:
+        decided = len(verdict.passed) + len(verdict.failed) + len(verdict.pending)
+        print(
+            f"  Of the {decided} that ran: {len(verdict.passed)} pass, {len(verdict.failed)} fail, "
+            f"{len(verdict.pending)} undecided. A query that did not run is neither a pass nor "
+            "a fail; repeat the run for it (see the report).",
+            file=out,
+        )
+    elif verdict.pending:
         print(
             f"  {len(verdict.pending)} query(ies) still undecided (labels or links missing).",
             file=out,
@@ -677,7 +685,9 @@ def _execute(
         print(f"Stores in this run ({len(setup.stores)}): {names}", file=out_stream)
 
     def progress(run: QueryRun) -> None:
-        if run.response is not None:
+        if run.not_run is not None:
+            print(f"{run.query.id}: NOT RUN ({run.not_run.reason})", file=out_stream)
+        elif run.response is not None:
             line = f"{run.query.id}: {run.response.result_count} results in "
             line += f"{run.duration_ms / 1000:.1f} s"
             if run.gender is not None and run.confirm_ms is not None:
@@ -735,9 +745,12 @@ def _execute(
     )
     scored, sheet, rows = persist(runs, link_checks, use_labels=True)
 
-    answered = sum(1 for run in runs if run.response is not None)
+    answered = sum(1 for run in runs if run.response is not None and run.not_run is None)
+    not_run = sum(1 for run in runs if run.not_run is not None)
     print(
-        f"{answered} of {len(runs)} queries answered; responses saved in {out / 'responses'}",
+        f"{answered} of {len(runs)} queries answered"
+        + (f" ({not_run} not run)" if not_run else "")
+        + f"; responses saved in {out / 'responses'}",
         file=out_stream,
     )
     print(f"Report: {out / REPORT_FILE}", file=out_stream)

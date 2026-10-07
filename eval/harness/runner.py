@@ -19,10 +19,11 @@ sees anything; the second search's time is kept beside it.
 
 import re
 from collections.abc import Awaitable, Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Literal, Protocol
 
 from eval.harness.confirm import GenderAnswer, read_question, rerun_overrides, rerun_request
+from eval.harness.notrun import NotRun, stores_unavailable
 from eval.harness.queries import AcceptanceQuery
 from vga.errors import VgaError
 from vga.interfaces import Clock, Pipeline
@@ -93,6 +94,10 @@ class QueryRun:
     gender: GenderAnswer | None = None
     """What happened to the "Who is this for?" question; ``None`` when the query records no
     answer."""
+    not_run: NotRun | None = None
+    """Set when the query has no verdict of its own: its stores were not available, or it was
+    never sent (``eval.harness.notrun``). Such a query is neither a pass nor a fail. A throttled
+    query keeps its ``response``, which lists the stores and their reasons."""
 
     @property
     def first_timings(self) -> list[StepTiming]:
@@ -175,14 +180,35 @@ async def run_query(
     clock: Clock,
     image: bytes | None,
 ) -> QueryRun:
-    """Run one query and time it. A failing pipeline becomes a ``PipelineFailure``.
+    """Run one query and time it. A failing pipeline becomes a ``PipelineFailure``; a search
+    whose stores were all unavailable becomes a query that was *not run* (``QueryRun.not_run``).
 
     When the query records the shopper's answer to "Who is this for?" and the app would ask, the
     answer is given as the page gives it (see ``eval.harness.confirm``) and the second response
     is the one returned."""
+    run = await _search_and_answer(query, pipeline, settings, clock=clock, image=image)
+    if run.response is not None and run.failure is None:
+        not_run = stores_unavailable(run.response, settings.store_cooldown_s)
+        if not_run is not None:
+            return replace(run, not_run=not_run)
+    return run
+
+
+async def _search_and_answer(
+    query: AcceptanceQuery,
+    pipeline: Pipeline,
+    settings: Settings,
+    *,
+    clock: Clock,
+    image: bytes | None,
+) -> QueryRun:
     first = await _timed_run(pipeline, build_request(query, image), settings, None, clock)
     if first.response is None or query.shopper_gender is None:
         return QueryRun(query, first.response, first.failure, first.wall_ms, first.duration_ms)
+    if stores_unavailable(first.response, settings.store_cooldown_s) is not None:
+        # Nothing was found, so there is nothing to ask the shopper about, and a second search
+        # would only ask the same stores again.
+        return QueryRun(query, first.response, None, first.wall_ms, first.duration_ms)
 
     question = read_question(first.response.understood, query.shopper_gender)
     if question.edits is None:
