@@ -17,7 +17,7 @@ def test_an_unset_model_is_a_clear_config_error_at_construction() -> None:
 
     assert "openai_model" in str(caught.value)
     assert "OPENAI_MODEL" in str(caught.value)
-    assert "dated" in str(caught.value)
+    assert "pinned" in str(caught.value)
 
 
 def test_an_unset_model_is_reported_before_any_client_is_built(

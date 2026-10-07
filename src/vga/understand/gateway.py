@@ -56,10 +56,13 @@ model's hidden reasoning, which counts against this cap: a cap that is too tight
 cut-off answer."""
 
 REASONING_EFFORT: ReasoningEffort = "low"
-"""Reading a short request needs little reasoning. ``low`` is accepted by the GPT-5 family and by
-GPT-5.4; ``minimal`` is not accepted by every model, so it is not used."""
+"""Reading a short request needs little reasoning. ``low`` is accepted by the GPT-5 family, by
+GPT-5.4 and by GPT-6 (``gpt-6-luna`` accepts ``none``, ``low``, ``medium``, ``high``, ``xhigh``
+and ``max``); ``minimal`` is not accepted by every model, so it is not used. This is the only
+place the effort is chosen: the first live run of ``gpt-6-luna`` (2026-10-08) started here, and
+the result is in ``prompts/CHANGELOG.md``."""
 
-_REASONING_MODEL_PREFIXES = ("gpt-5", "o1", "o3", "o4")
+_REASONING_MODEL_PREFIXES = ("gpt-5", "gpt-6", "o1", "o3", "o4")
 
 
 def supports_reasoning_effort(model: str) -> bool:

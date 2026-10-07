@@ -2,11 +2,18 @@
 
 Run it with::
 
-    OPENAI_API_KEY=... OPENAI_MODEL=gpt-5-mini-2025-08-07 uv run pytest -m live tests/understand
+    OPENAI_API_KEY=... uv run pytest -m live tests/understand
 
-It runs the 6 golden inputs and every case in ``eval/data/edge_cases.yaml`` (about 25 calls), and
-writes a small report to ``eval/results/understand-live.md`` (and ``.json``); set
-``VGA_EVAL_REPORT_DIR`` to put it somewhere else. ``eval/results/`` is git-ignored.
+The model comes from ``config/settings.yaml`` (``OPENAI_MODEL`` overrides it). It runs the 6 golden
+inputs and every case in ``eval/data/edge_cases.yaml`` (about 16 OpenAI calls: the cases that are
+rejected before any call, such as empty text, cost none), and writes a small report to
+``eval/results/understand-live.md`` (and ``.json``) with, for every case, what was expected, what
+came back, and the latency, calls and tokens it took. Set ``VGA_EVAL_REPORT_DIR`` to put the report
+somewhere else. ``eval/results/`` is git-ignored.
+
+``VGA_EVAL_REASONING_EFFORT`` (one of ``none``, ``low``, ``medium``, ``high``, ``xhigh``, ``max``)
+runs the eval with another reasoning effort than the one in ``vga.understand.gateway``, to compare
+two settings without editing the code. The report records the effort used.
 
 It is skipped, not failed, when ``OPENAI_API_KEY`` is missing, and never runs in CI or in a plain
 ``pytest``. Run it again, and record the score in ``src/vga/understand/prompts/CHANGELOG.md``,
@@ -33,10 +40,13 @@ from tests.understand.eval_report import SKIPPED, Report, Row, edge_row, golden_
 from vga.errors import ConfigError
 from vga.settings import Settings, load_dotenv, load_settings
 from vga.understand import CallBudget, OpenAIUnderstander, create_openai_client
+from vga.understand.gateway import REASONING_EFFORT
 
 pytestmark = pytest.mark.live
 
 REPORT_DIR_ENV = "VGA_EVAL_REPORT_DIR"
+EFFORT_ENV = "VGA_EVAL_REASONING_EFFORT"
+EFFORTS = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
 DEFAULT_REPORT_DIR = REPO_ROOT / "eval" / "results"
 
 
@@ -53,9 +63,21 @@ def settings() -> Settings:
     if not loaded.openai_model:
         pytest.fail(
             "openai_model is not set: set OPENAI_MODEL (or openai_model in config/settings.yaml) "
-            "to a dated snapshot such as gpt-5-mini-2025-08-07"
+            "to a pinned snapshot id such as gpt-6-luna"
         )
     return loaded
+
+
+@pytest.fixture(scope="module", autouse=True)
+def reasoning_effort(settings: Settings) -> Iterator[str]:
+    """The effort this run uses: the constant in the gateway, or ``VGA_EVAL_REASONING_EFFORT``."""
+    chosen = os.environ.get(EFFORT_ENV, "").strip() or REASONING_EFFORT
+    if chosen not in EFFORTS:
+        pytest.fail(f"{EFFORT_ENV} must be one of {EFFORTS}, got {chosen!r}")
+    patcher = pytest.MonkeyPatch()
+    patcher.setattr("vga.understand.understander.REASONING_EFFORT", chosen)
+    yield chosen
+    patcher.undo()
 
 
 @pytest.fixture(scope="module")
@@ -64,8 +86,8 @@ def budget() -> CallBudget:
 
 
 @pytest.fixture(scope="module")
-def report(settings: Settings, budget: CallBudget) -> Iterator[Report]:
-    live = Report(model=settings.openai_model)
+def report(settings: Settings, budget: CallBudget, reasoning_effort: str) -> Iterator[Report]:
+    live = Report(model=settings.openai_model, reasoning_effort=reasoning_effort)
     yield live
     live.calls_made = budget.used_today
     target = live.write(Path(os.environ.get(REPORT_DIR_ENV) or DEFAULT_REPORT_DIR))

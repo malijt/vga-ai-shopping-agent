@@ -12,6 +12,7 @@ from vga.models import MixPreset, SettingsOverride, TierMix
 from vga.settings import (
     DEFAULT_SETTINGS_PATH,
     ENV_OVERRIDES,
+    UNDATED_SNAPSHOT_IDS,
     Settings,
     load_dotenv,
     load_settings,
@@ -24,9 +25,10 @@ VALID_REVISION = "0123456789abcdef0123456789abcdef01234567"
 # The FashionSigLIP revision measured in spikes/siglip/REPORT.md. Changing it means re-running
 # the spike's quality check, so this test must change with it.
 MEASURED_SIGLIP_REVISION = "c56244cc94f92419e8369fa71efdaf403b124ce8"
-# The OpenAI snapshot pinned in config/settings.yaml (OpenAI's model page for gpt-5-mini). Changing
-# it means re-running the Understand eval and adding a prompts/CHANGELOG.md entry.
-PINNED_OPENAI_MODEL = "gpt-5-mini-2025-08-07"
+# The OpenAI model pinned in config/settings.yaml: chosen by the user on 2026-10-08; OpenAI lists no
+# dated snapshot for it, so the versioned name is the pin. Changing it means re-running the
+# Understand eval and adding a prompts/CHANGELOG.md entry.
+PINNED_OPENAI_MODEL = "gpt-6-luna"
 
 
 @pytest.fixture
@@ -62,11 +64,23 @@ class TestShippedSettingsFile:
         assert settings.store_cooldown_s == 900
         assert settings.rps_images_per_host == 5
 
-    def test_openai_model_is_pinned_to_a_dated_snapshot(self) -> None:
+    def test_openai_model_is_pinned_to_gpt_6_luna(self) -> None:
         settings = load_settings(DEFAULT_SETTINGS_PATH, env={})
 
         assert settings.openai_model == PINNED_OPENAI_MODEL
-        assert re.search(r"-\d{4}-\d{2}-\d{2}$", PINNED_OPENAI_MODEL)
+
+    def test_the_pinned_model_is_a_dated_snapshot_or_a_verified_undated_one(self) -> None:
+        pinned = load_settings(DEFAULT_SETTINGS_PATH, env={}).openai_model
+
+        assert pinned is not None
+        assert re.search(r"-\d{4}-\d{2}-\d{2}$", pinned) or pinned in UNDATED_SNAPSHOT_IDS
+
+    def test_the_yaml_explains_why_the_model_has_no_date(self) -> None:
+        text = DEFAULT_SETTINGS_PATH.read_text(encoding="utf-8")
+
+        assert "2026-10-08" in text
+        assert "no dated snapshot" in text.lower()
+        assert "CHANGELOG.md" in text
 
     def test_the_environment_can_still_override_the_pinned_model(self) -> None:
         settings = load_settings(DEFAULT_SETTINGS_PATH, env={"OPENAI_MODEL": VALID_SNAPSHOT})
@@ -153,6 +167,37 @@ class TestEnvironmentOverrides:
             == "siglip"
         )
 
+    @pytest.mark.parametrize("empty", ["", "   ", "\t"])
+    def test_an_empty_openai_model_falls_through_to_the_yaml_value(
+        self, settings_file, empty: str
+    ) -> None:
+        path = settings_file(openai_model="gpt-6-luna")
+
+        settings = load_settings(path, env={"OPENAI_MODEL": empty})
+
+        assert settings.openai_model == "gpt-6-luna"
+
+    @pytest.mark.parametrize("empty", ["", "   "])
+    def test_an_empty_openai_model_with_no_yaml_value_is_unset_not_an_empty_string(
+        self, settings_file, empty: str
+    ) -> None:
+        settings = load_settings(settings_file(), env={"OPENAI_MODEL": empty})
+
+        assert settings.openai_model is None
+
+    @pytest.mark.parametrize("empty", ["", "  "])
+    def test_every_optional_variable_left_empty_changes_nothing(self, empty: str) -> None:
+        without = load_settings(DEFAULT_SETTINGS_PATH, env={})
+
+        with_empty = load_settings(DEFAULT_SETTINGS_PATH, env=dict.fromkeys(ENV_OVERRIDES, empty))
+
+        assert with_empty == without
+
+    def test_an_empty_settings_path_means_the_default_file(self) -> None:
+        settings = load_settings(env={"VGA_SETTINGS_PATH": ""})
+
+        assert settings == load_settings(DEFAULT_SETTINGS_PATH, env={})
+
     def test_the_api_key_is_never_a_setting(self) -> None:
         settings = load_settings(DEFAULT_SETTINGS_PATH, env={"OPENAI_API_KEY": FAKE_KEY})
 
@@ -183,6 +228,13 @@ class TestOpenAiModel:
             "gpt-5-mini-2026",
             "model-2026-13-01",
             "model-2026-02-30",
+            "gpt-6-luna-latest",
+            "gpt-5-chat-latest",
+            "luna",
+            "gpt-6",
+            "gpt-6-luna-2",
+            "GPT-6-Luna",
+            "gpt-5.6-luna",
         ],
     )
     def test_alias_style_names_are_rejected_with_a_clear_message(
@@ -195,11 +247,39 @@ class TestOpenAiModel:
         assert "dated snapshot" in detail_of(error)
         assert alias in detail_of(error)
 
+    def test_the_rejection_names_both_allowed_forms(self, settings_file) -> None:
+        with pytest.raises(ConfigError) as error:
+            load_settings(settings_file(openai_model="gpt-6-luna-latest"), env={})
+
+        assert "-YYYY-MM-DD" in detail_of(error)
+        assert "gpt-6-luna" in detail_of(error)
+        assert "undated snapshot" in detail_of(error)
+
     @pytest.mark.parametrize(
         "snapshot", ["gpt-5-mini-2025-08-07", "example-model-2026-01-31", "o3-mini-2025-01-31"]
     )
     def test_dated_snapshots_are_accepted(self, settings_file, snapshot: str) -> None:
         assert load_settings(settings_file(openai_model=snapshot), env={}).openai_model == snapshot
+
+    def test_an_undated_snapshot_from_the_verified_list_is_accepted(self, settings_file) -> None:
+        settings = load_settings(settings_file(openai_model="gpt-6-luna"), env={})
+
+        assert settings.openai_model == "gpt-6-luna"
+
+    def test_the_verified_undated_list_holds_exactly_gpt_6_luna(self) -> None:
+        # Adding an id means reading OpenAI's model page for it first (see the comment on the
+        # constant). This test makes that a deliberate change, not a drive-by edit.
+        assert set(UNDATED_SNAPSHOT_IDS) == {"gpt-6-luna"}
+
+    def test_the_undated_exception_is_the_whole_id_not_a_prefix(self, settings_file) -> None:
+        for longer in ("gpt-6-luna-preview", "gpt-6-luna-mini", "xgpt-6-luna"):
+            with pytest.raises(ConfigError, match="openai_model"):
+                load_settings(settings_file(openai_model=longer), env={})
+
+    def test_the_undated_snapshot_is_accepted_from_the_environment_too(self) -> None:
+        settings = load_settings(DEFAULT_SETTINGS_PATH, env={"OPENAI_MODEL": "gpt-6-luna"})
+
+        assert settings.openai_model == "gpt-6-luna"
 
     def test_unset_is_allowed(self, settings_file) -> None:
         assert load_settings(settings_file(openai_model=None), env={}).openai_model is None
@@ -447,6 +527,26 @@ class TestDotenv:
 
         assert environ["VGA_LOG_LEVEL"] == "ERROR"
 
+    def test_an_empty_real_variable_does_not_block_the_file(self, tmp_path: Path) -> None:
+        file = tmp_path / ".env"
+        file.write_text("OPENAI_MODEL=gpt-6-luna\nVGA_LOG_LEVEL=DEBUG\n", encoding="utf-8")
+        environ = {"OPENAI_MODEL": "", "VGA_LOG_LEVEL": "  "}
+
+        applied = load_dotenv(file, environ)
+
+        assert environ == {"OPENAI_MODEL": "gpt-6-luna", "VGA_LOG_LEVEL": "DEBUG"}
+        assert applied == ["OPENAI_MODEL", "VGA_LOG_LEVEL"]
+
+    def test_an_empty_line_in_the_file_does_not_wipe_a_real_value(self, tmp_path: Path) -> None:
+        file = tmp_path / ".env"
+        file.write_text("OPENAI_MODEL=\nVGA_LOG_LEVEL=\n", encoding="utf-8")
+        environ = {"OPENAI_MODEL": "gpt-6-luna"}
+
+        applied = load_dotenv(file, environ)
+
+        assert environ["OPENAI_MODEL"] == "gpt-6-luna"
+        assert applied == ["VGA_LOG_LEVEL"]
+
     def test_missing_file_is_fine(self, tmp_path: Path) -> None:
         assert load_dotenv(tmp_path / "absent.env", {}) == []
 
@@ -463,3 +563,23 @@ class TestDotenv:
         settings = load_settings(DEFAULT_SETTINGS_PATH)
 
         assert settings.log_level == "ERROR"
+
+    def test_a_dotenv_with_empty_optional_lines_leaves_the_yaml_values_in_force(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The shape of a real .env: the key filled in, every optional variable present but empty.
+        env_file = tmp_path / ".env"
+        env_file.write_text(
+            "OPENAI_API_KEY=\n" + "".join(f"{name}=\n" for name in ENV_OVERRIDES),
+            encoding="utf-8",
+        )
+        for name in ["OPENAI_API_KEY", *ENV_OVERRIDES]:
+            # Register each variable with monkeypatch so it is removed again after the test.
+            monkeypatch.setenv(name, "placeholder")
+            monkeypatch.delenv(name)
+        monkeypatch.setattr("vga.settings.DEFAULT_DOTENV_PATH", env_file)
+
+        settings = load_settings(DEFAULT_SETTINGS_PATH)
+
+        assert settings == load_settings(DEFAULT_SETTINGS_PATH, env={})
+        assert settings.openai_model is not None

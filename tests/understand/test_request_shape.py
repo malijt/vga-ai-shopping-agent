@@ -16,7 +16,7 @@ from tests.understand.fake_openai import answer
 from tests.understand.readings import make_reading, make_reading_budget, make_reading_item
 from vga.models import Category, Gender, GenderSource, InputType, UnderstandResult
 from vga.understand import PROMPT_VERSION
-from vga.understand.gateway import MAX_OUTPUT_TOKENS, OPENAI_TIMEOUT_S
+from vga.understand.gateway import MAX_OUTPUT_TOKENS, OPENAI_TIMEOUT_S, REASONING_EFFORT
 from vga.understand.prompt import system_prompt
 
 
@@ -206,6 +206,7 @@ async def test_the_request_object_is_left_untouched(rig: RigFactory) -> None:
     [
         ("gpt-5-mini-2025-08-07", True),
         ("gpt-5.4-mini-2026-03-17", True),
+        ("gpt-6-luna", True),
         ("o4-mini-2025-04-16", True),
         ("gpt-4.1-mini-2025-04-14", False),
         ("gpt-4o-mini-2024-07-18", False),
@@ -221,3 +222,23 @@ async def test_reasoning_effort_is_sent_only_to_models_that_accept_it(
     body = r.fake.requests[0].body
     assert body["model"] == model
     assert ("reasoning" in body) is sends_reasoning
+
+
+async def test_gpt_6_luna_gets_the_one_named_effort_and_its_undated_id_unchanged(
+    rig: RigFactory,
+) -> None:
+    r = rig(answer(make_reading()), settings_override=make_settings(openai_model="gpt-6-luna"))
+
+    await r.understander.understand(make_search_request(text="black blazer"))
+
+    body = r.fake.requests[0].body
+    assert body["model"] == "gpt-6-luna"
+    assert body["reasoning"] == {"effort": REASONING_EFFORT}
+    assert body["store"] is False
+    assert body["max_output_tokens"] == MAX_OUTPUT_TOKENS
+
+
+def test_the_starting_effort_for_gpt_6_luna_is_low() -> None:
+    # The single constant the call reads. Moving it means re-running the eval and recording both
+    # results in prompts/CHANGELOG.md.
+    assert REASONING_EFFORT == "low"
