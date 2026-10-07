@@ -73,3 +73,14 @@ NO_RESULTS_TIPS: tuple[str, ...] = (
 )
 
 PLACEHOLDER_NO_IMAGE = "No image available"
+
+
+def approximate_price_note(base_currency: str) -> str:
+    """The one sentence shown above results when a card has an "about" price (ADR 0006). The
+    budget box names the base currency and is compared with that figure, so a shopper looking at
+    ``245.000 KWD (about 2,920 AED)`` can tell which number a budget or a price range goes by.
+    ``base_currency`` is ``Settings.base_currency``, a checked three-letter code."""
+    return (
+        f"A price in another currency also shows an approximate {base_currency} figure, "
+        "and price ranges and your budget go by that figure."
+    )
