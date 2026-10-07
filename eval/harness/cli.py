@@ -74,7 +74,7 @@ from eval.harness.queries import (
 )
 from eval.harness.recording import RecordingSession, ReplaySession
 from eval.harness.report import render_report
-from eval.harness.runner import ImageLoader, QueryRun, QueryScope, run_queries
+from eval.harness.runner import ImageLoader, Pacing, QueryRun, QueryScope, run_queries
 from eval.harness.runstore import (
     LABELS_FILE,
     REPORT_FILE,
@@ -92,9 +92,26 @@ from vga.interfaces import Clock, Pipeline, SystemClock
 from vga.models import SearchResponse, StoreConfig
 from vga.settings import PROJECT_ROOT, Settings, load_settings
 
+DEFAULT_PAUSE_S = 30.0
+"""The rest between two queries of a live run. A shopper does not send ten searches in a minute;
+the first recorded run did, and the platform turned every store away."""
+
 RESULTS_DIR = Path("eval") / "results"
 _RUN_DIR = re.compile(r"^(?:run|extras)-(\d+)$")
 _FOLDER_PREFIX: dict[QuerySet, str] = {"acceptance": "run", "extra": "extras"}
+
+
+def _seconds(text: str) -> float:
+    """A number of seconds for an option: a number, not negative."""
+    try:
+        value = float(text)
+    except ValueError:
+        msg = f"{text!r} is not a number of seconds"
+        raise argparse.ArgumentTypeError(msg) from None
+    if value < 0 or value != value:
+        msg = f"{text!r} is not a number of seconds (it must be 0 or more)"
+        raise argparse.ArgumentTypeError(msg)
+    return value
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -154,6 +171,15 @@ def build_parser() -> argparse.ArgumentParser:
         "extra set that does not count towards the pass rule, for example "
         "eval/data/extra_queries.yaml)",
     )
+    parser.add_argument(
+        "--pause",
+        type=_seconds,
+        default=DEFAULT_PAUSE_S,
+        metavar="SECONDS",
+        help="live run (--record) only: rest this long between one query and the next, so the "
+        f"stores are not asked ten searches in a minute (default: {DEFAULT_PAUSE_S:g}; 0 turns it "
+        "off). A mock or replay run never waits.",
+    )
     return parser
 
 
@@ -178,6 +204,8 @@ class _Setup:
     """Set by the run, before the first query."""
     stores: Sequence[StoreConfig] = ()
     """The stores the real application searches, to say so when a run starts."""
+    session_notes: list[str] = field(default_factory=list)
+    """How this live run treated the stores (the pause, the link spacing), for the report."""
 
 
 def _next_run_number(results_dir: Path, prefix: str = "run") -> int:
@@ -364,6 +392,7 @@ async def _run_and_check(
     progress: Callable[[QueryRun], None],
     snapshot: Snapshot,
     on_warm_up: Callable[[WarmUp | None], None],
+    pacing: Pacing | None = None,
 ) -> tuple[list[QueryRun], dict[str, list[LinkCheck]]]:
     """Warm up, then run the queries one by one: search, save, check that query's links, save
     again. One event loop for all of it, because a fetch function or pipeline may keep an HTTP
@@ -398,6 +427,7 @@ async def _run_and_check(
             scope=setup.scope,
             progress=progress,
             after_query=after_query,
+            pacing=pacing,
         )
         if setup.replay is not None:
             runs = [_with_recorded_duration(run, setup.replay) for run in runs]
@@ -455,6 +485,7 @@ def _run_notes(setup: _Setup, runs: Sequence[QueryRun]) -> list[str]:
     notes: list[str] = []
     if setup.replay is not None:
         notes.extend(setup.replay.final_notes())
+    notes.extend(setup.session_notes)
     notes.extend(_gender_notes(runs))
     unservable = [r.query.id for r in runs if r.failure and r.failure.code.startswith("recording")]
     if unservable:
@@ -478,6 +509,15 @@ def _run_notes(setup: _Setup, runs: Sequence[QueryRun]) -> list[str]:
             + " is incomplete (a boundary failed mid-call); it cannot be replayed."
         )
     return notes
+
+
+def _pacing_note(pause_s: float) -> str:
+    if pause_s <= 0:
+        return "This live run sent its queries with no pause between queries (`--pause 0`)."
+    return (
+        f"This live run paused {pause_s:g} s between queries (`--pause`), outside every query's "
+        "seconds, so the stores were not asked ten searches in a minute."
+    )
 
 
 def _back_up(path: Path) -> Path:
@@ -660,8 +700,13 @@ def _execute(
         if warm_up is not None:
             print(_warm_up_line(warm_up), file=out_stream)
 
+    pacing: Pacing | None = None
+    if mode == "record":
+        pacing = Pacing(pause_s=args.pause, say=lambda text: print(text, file=out_stream))
+        setup.session_notes.append(_pacing_note(args.pause))
+
     runs, link_checks = asyncio.run(
-        _run_and_check(setup, queries, settings, links, progress, snapshot, warmed_up)
+        _run_and_check(setup, queries, settings, links, progress, snapshot, warmed_up, pacing)
     )
     scored, sheet, rows = persist(runs, link_checks, use_labels=True)
 

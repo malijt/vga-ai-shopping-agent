@@ -54,6 +54,17 @@ class QueryScope(Protocol):
 
 
 @dataclass(frozen=True)
+class Pacing:
+    """How a live run treats the stores between queries."""
+
+    pause_s: float = 0.0
+    """Rest between one query's end (its link checks included) and the next query's start. It is
+    outside every query's time: a query is timed around its own ``Pipeline.run`` only."""
+    say: Callable[[str], None] | None = None
+    """Told, as it happens, what the runner is about to wait for."""
+
+
+@dataclass(frozen=True)
 class PipelineFailure:
     """Why a query produced no response."""
 
@@ -230,10 +241,19 @@ async def run_queries(
     scope: QueryScope | None = None,
     progress: Callable[[QueryRun], None] | None = None,
     after_query: AfterQuery | None = None,
+    pacing: Pacing | None = None,
 ) -> list[QueryRun]:
-    """Run ``queries`` in order, one at a time, and return one ``QueryRun`` each."""
+    """Run ``queries`` in order, one at a time, and return one ``QueryRun`` each.
+
+    ``pacing`` (a live run only) makes the runner rest between queries, on ``clock``."""
     runs: list[QueryRun] = []
-    for query in queries:
+    for position, query in enumerate(queries):
+        if position > 0 and pacing is not None and pacing.pause_s > 0:
+            if pacing.say is not None:
+                pacing.say(
+                    f"Pausing {pacing.pause_s:g} s before {query.id} to give the stores a rest."
+                )
+            await clock.sleep(pacing.pause_s)
         image = load_image(query)
         try:
             if scope is not None:
