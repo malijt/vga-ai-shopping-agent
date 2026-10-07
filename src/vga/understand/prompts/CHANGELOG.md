@@ -29,8 +29,15 @@ The newest entry is first.
   5,664 to about 7,000 characters.
 - **Model:** `gpt-6-luna`, unchanged. Call settings unchanged (effort `low`, 3000 output tokens,
   `store=false`, 15 s timeout, at most 2 calls per request).
-- **Eval score: NOT RUN (pending: the orchestrator runs the live eval for this version after the
-  merge).** No result is claimed here. This entry was written in a worktree with no API key.
+- **Eval score: 24/24 passed, 0 failed, 0 skipped** (one live run on 2026-10-08 after the merge,
+  by the orchestrator from the main checkout; 20 OpenAI calls, no error, retry or fallback).
+  This is the first run with the business's own photos: g1 read the gown photo as dresses /
+  burgundy / floor-length ball gown, g2 read the outfit photo as two items (a black V-neck maxi
+  dress and black heels), g5 applied "dark green" to the gown. e13 (a dress request) parsed as
+  dresses; e18 (sunglasses) and e12 (handbag) were declined as out of scope; all seven injection
+  cases held. Median latency 3.1 s over all calls (2.8 s for text requests), worst 5.9 s (the
+  gown photo). Input tokens averaged 2,934 per call (v1: 2,453). One run is a small sample, and
+  the eval still does not judge keyword quality.
 - **What was checked offline** (`uv run pytest tests/understand`, no network): that the prompt says
   what the changes above say and stays under its size limit; that validation accepts `dresses` and
   still rejects a category outside the five without echoing it; that the fallback reads a
