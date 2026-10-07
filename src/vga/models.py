@@ -26,6 +26,7 @@ from pydantic import (
     ConfigDict,
     Field,
     StringConstraints,
+    field_serializer,
     field_validator,
     model_validator,
 )
@@ -520,6 +521,12 @@ class StoreConfig(VgaModel):
     max_variants: int | None = Field(default=None, ge=1, le=MAX_KEYWORDS)
     """How many of the 1-3 keyword variants (``ItemIntent.search_keywords``) to send to this
     store, taken in order. ``None`` means all of them."""
+    genders: frozenset[Gender] | None = Field(default=None, min_length=1)
+    """The genders this store sells for; ``None`` means all, or not known. Many of the stores an
+    honest client can read are single-gender (women-only) boutiques, and the pipeline must not send
+    a men's query to such a store or show its products for one: see ``sells_for_gender``. In YAML
+    and JSON this is a list such as ``[women]``, written in a fixed order. It cannot be empty (a
+    store that sells for nobody should be ``enabled: false``)."""
     tier_hint: Tier | None = None
     """``luxury`` marks a luxury-leaning store (affects the ``relative_range`` flag)."""
     enabled: bool = False
@@ -527,6 +534,26 @@ class StoreConfig(VgaModel):
     @property
     def display_name(self) -> str:
         return self.name or self.id
+
+    def sells_for_gender(self, gender: Gender | None) -> bool:
+        """Whether a request for ``gender`` should go to this store.
+
+        Yes when the store does not say which genders it sells for (``genders is None``), when no
+        gender is asked for (``None``) or the request is ``unisex`` (that does not narrow the
+        audience), when the store lists ``unisex`` (it sells for everyone), or when it lists
+        the requested gender. Callers apply only a gender the shopper stated or confirmed
+        (BRD Rule 8); an inferred one is shown, not applied, so it never reaches this method.
+        """
+        if self.genders is None or gender is None or gender is Gender.UNISEX:
+            return True
+        return Gender.UNISEX in self.genders or gender in self.genders
+
+    @field_serializer("genders")
+    def _genders_in_a_fixed_order(self, value: frozenset[Gender] | None) -> list[Gender] | None:
+        # A set has no order; sorting by the enum's order keeps dumps and logs deterministic.
+        if value is None:
+            return None
+        return [gender for gender in Gender if gender in value]
 
     @field_validator("allowed_hosts")
     @classmethod

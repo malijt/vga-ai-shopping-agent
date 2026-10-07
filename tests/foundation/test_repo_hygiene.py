@@ -104,20 +104,42 @@ class TestPackageLayout:
         assert numbers[:5] == ["0001", "0002", "0003", "0004", "0005"]
 
 
+# A variable line in .env.example. It may be commented out (`# NAME=value`): that documents a
+# variable without overriding the YAML default when the file is copied to `.env`.
+_ANY_VARIABLE_LINE = r"^(?:# )?([A-Z][A-Z0-9_]*)=(.*)$"
+_ACTIVE_VARIABLE_LINE = r"^([A-Z][A-Z0-9_]*)=(.*)$"
+
+
 class TestEnvExample:
     def test_lists_exactly_the_documented_variables(self, text: str) -> None:
-        names = re.findall(r"^([A-Z][A-Z0-9_]*)=", text, flags=re.MULTILINE)
+        names = re.findall(_ANY_VARIABLE_LINE, text, flags=re.MULTILINE)
 
-        assert names == ENV_VARIABLES
+        assert [name for name, _ in names] == ENV_VARIABLES
 
     def test_every_variable_has_a_comment_line_directly_above(self, text: str) -> None:
         lines = text.splitlines()
         for index, line in enumerate(lines):
-            if re.match(r"^[A-Z][A-Z0-9_]*=", line):
+            if re.match(_ANY_VARIABLE_LINE, line):
                 assert lines[index - 1].startswith("#"), f"no comment above {line!r}"
 
+    def test_the_image_ranker_is_commented_out_so_the_yaml_default_stays_in_force(
+        self, text: str
+    ) -> None:
+        active = dict(re.findall(_ACTIVE_VARIABLE_LINE, text, flags=re.MULTILINE))
+
+        assert "VGA_IMAGE_RANKER" not in active
+        assert re.search(r"^# VGA_IMAGE_RANKER=off$", text, flags=re.MULTILINE)
+
+    def test_copying_it_to_dot_env_keeps_siglip_as_the_image_ranker(self, text: str) -> None:
+        from vga.settings import DEFAULT_SETTINGS_PATH, load_settings
+
+        active = dict(re.findall(_ACTIVE_VARIABLE_LINE, text, flags=re.MULTILINE))
+        active.pop("VGA_SETTINGS_PATH")
+
+        assert load_settings(DEFAULT_SETTINGS_PATH, env=active).image_ranker == "siglip"
+
     def test_holds_placeholders_only(self, text: str) -> None:
-        values = dict(re.findall(r"^([A-Z][A-Z0-9_]*)=(.*)$", text, flags=re.MULTILINE))
+        values = dict(re.findall(_ACTIVE_VARIABLE_LINE, text, flags=re.MULTILINE))
 
         assert values["OPENAI_API_KEY"] == "sk-your-key-here"
         assert not re.search(r"sk-[A-Za-z0-9_-]{20,}", text)
@@ -126,9 +148,8 @@ class TestEnvExample:
     def test_values_are_accepted_by_the_settings_loader(self, tmp_path: Path) -> None:
         from vga.settings import DEFAULT_SETTINGS_PATH, load_settings
 
-        env = dict(
-            re.findall(r"^([A-Z][A-Z0-9_]*)=(.*)$", (ROOT / ".env.example").read_text(), re.M)
-        )
+        # Commented-out values count too: they are what a user gets after uncommenting them.
+        env = dict(re.findall(_ANY_VARIABLE_LINE, (ROOT / ".env.example").read_text(), re.M))
         env.pop("VGA_SETTINGS_PATH")
 
         load_settings(DEFAULT_SETTINGS_PATH, env=env)

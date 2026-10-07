@@ -1,8 +1,10 @@
 """Behaviour of the shared contracts in vga.models (plan features 1.2.1 to 1.2.3)."""
 
+import json
 from typing import Any
 
 import pytest
+import yaml
 from pydantic import ValidationError
 
 from tests.factories import (
@@ -394,6 +396,106 @@ class TestStoreConfig:
         config = make_store_config(max_response_bytes=750_000, max_variants=2)
 
         assert round_trip(config) == config
+
+    def test_genders_default_to_unset_meaning_all_or_unknown(self) -> None:
+        assert make_store_config().genders is None
+
+    @pytest.mark.parametrize(
+        "genders",
+        [
+            [Gender.WOMEN],
+            ["women"],
+            ["men", "unisex"],
+            [Gender.MEN, Gender.WOMEN, Gender.UNISEX],
+            {"women"},
+            frozenset({Gender.MEN}),
+        ],
+    )
+    def test_genders_accept_a_non_empty_collection_of_known_genders(
+        self, genders: object
+    ) -> None:
+        config = make_store_config(genders=genders)
+
+        assert isinstance(config.genders, frozenset)
+        assert all(isinstance(gender, Gender) for gender in config.genders)
+        assert config.genders
+
+    def test_genders_ignore_order_and_duplicates(self) -> None:
+        a = make_store_config(genders=["women", "men", "women"])
+        b = make_store_config(genders=["men", "women"])
+
+        assert a.genders == b.genders == frozenset({Gender.MEN, Gender.WOMEN})
+        assert a == b
+
+    @pytest.mark.parametrize("genders", [[], (), set(), frozenset()])
+    def test_empty_genders_are_rejected(self, genders: object) -> None:
+        with pytest.raises(ValidationError, match="genders"):
+            make_store_config(genders=genders)
+
+    @pytest.mark.parametrize("genders", [["kids"], ["women", "boys"], "women", [None]])
+    def test_unknown_or_malformed_genders_are_rejected(self, genders: object) -> None:
+        with pytest.raises(ValidationError, match="genders"):
+            make_store_config(genders=genders)
+
+    def test_genders_round_trip_through_json(self) -> None:
+        config = make_store_config(genders=["women", "unisex"])
+
+        assert round_trip(config) == config
+
+    def test_genders_are_written_as_a_list_in_a_fixed_order(self) -> None:
+        # A frozenset has no order of its own, so dumps must not depend on hashing.
+        config = make_store_config(genders={Gender.UNISEX, Gender.WOMEN, Gender.MEN})
+
+        assert config.model_dump(mode="json")["genders"] == ["men", "women", "unisex"]
+        assert json.loads(config.model_dump_json())["genders"] == ["men", "women", "unisex"]
+        assert make_store_config().model_dump(mode="json")["genders"] is None
+
+    def test_genders_round_trip_through_yaml(self) -> None:
+        config = make_store_config(genders=["unisex", "women"])
+
+        text = yaml.safe_dump(config.model_dump(mode="json"))
+        loaded = StoreConfig.model_validate(yaml.safe_load(text))
+
+        assert "genders:\n- women\n- unisex\n" in text
+        assert loaded == config
+
+    def test_a_store_file_can_write_genders_as_a_yaml_list(self) -> None:
+        data = make_store_config().model_dump(mode="json")
+        data["genders"] = yaml.safe_load("[women]")
+
+        assert StoreConfig.model_validate(data).genders == frozenset({Gender.WOMEN})
+
+    @pytest.mark.parametrize("requested", [*Gender, None])
+    def test_a_store_without_genders_sells_for_every_request(
+        self, requested: Gender | None
+    ) -> None:
+        assert make_store_config().sells_for_gender(requested) is True
+
+    @pytest.mark.parametrize(
+        ("genders", "requested", "expected"),
+        [
+            # A women-only boutique: a men's query must not be sent to it.
+            ([Gender.WOMEN], Gender.WOMEN, True),
+            ([Gender.WOMEN], Gender.MEN, False),
+            ([Gender.MEN], Gender.MEN, True),
+            ([Gender.MEN], Gender.WOMEN, False),
+            # Listing both genders is the same as selling for both.
+            ([Gender.MEN, Gender.WOMEN], Gender.MEN, True),
+            ([Gender.MEN, Gender.WOMEN], Gender.WOMEN, True),
+            # A store that lists unisex sells for everyone, alone or with another gender.
+            ([Gender.UNISEX], Gender.MEN, True),
+            ([Gender.UNISEX], Gender.WOMEN, True),
+            ([Gender.UNISEX, Gender.WOMEN], Gender.MEN, True),
+            # Asking for unisex, or for no gender, does not narrow the audience.
+            ([Gender.WOMEN], Gender.UNISEX, True),
+            ([Gender.MEN], Gender.UNISEX, True),
+            ([Gender.WOMEN], None, True),
+        ],
+    )
+    def test_sells_for_gender(
+        self, genders: list[Gender], requested: Gender | None, expected: bool
+    ) -> None:
+        assert make_store_config(genders=genders).sells_for_gender(requested) is expected
 
 
 class TestProduct:
