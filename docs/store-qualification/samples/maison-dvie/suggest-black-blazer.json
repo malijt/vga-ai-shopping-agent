@@ -1,0 +1,121 @@
+{
+ "resources": {
+  "results": {
+   "products": [
+    {
+     "available": true,
+     "body": "Single-breasted shawl lapels blazer in Black color.  Off- centre front button fastening. Sewed in pockets and buttons on the sleeves.",
+     "compare_at_price_max": "0.00",
+     "compare_at_price_min": "0.00",
+     "handle": "black-double-breasted-blazer",
+     "id": 8037474926842,
+     "image": "https://cdn.shopify.com/s/files/1/0654/8160/5370/files/black-blazer-front-view.jpg?v=1697801471",
+     "price": "2500.00",
+     "price_max": "2500.00",
+     "price_min": "2500.00",
+     "tags": [
+      "Autumn / Winter 23",
+      "Women"
+     ],
+     "title": "Black Blazer",
+     "type": "Women blazers",
+     "url": "/products/black-double-breasted-blazer?_pos=1&_psq=black+blazer&_psid=eea409749&_ss=e",
+     "variants": [],
+     "vendor": "Federica Tosi",
+     "featured_image": {
+      "alt": "Black Blazer",
+      "aspect_ratio": 0.667,
+      "height": 1440,
+      "url": "https://cdn.shopify.com/s/files/1/0654/8160/5370/files/black-blazer-front-view.jpg?v=1697801471",
+      "width": 960
+     }
+    },
+    {
+     "available": true,
+     "body": "<p>Upgrade your workwear and evening wardrobe with this uniquely tailored cropped pinstripe jacket. Designed with a distinctive overlapping collar and an offset three-button closure, it offers a fresh, modern twist on traditional suiting.</p>",
+     "compare_at_price_max": "0.00",
+     "compare_at_price_min": "0.00",
+     "handle": "black-blazer-pinstripe",
+     "id": 9253896847610,
+     "image": "https://cdn.shopify.com/s/files/1/0654/8160/5370/files/black_blazer_front_1_e9466e38-15a9-4de8-a59b-dcb09ea500dc.webp?v=1782387778",
+     "price": "2090.00",
+     "price_max": "2090.00",
+     "price_min": "2090.00",
+     "tags": [
+      "SS26",
+      "What's new",
+      "Women"
+     ],
+     "title": "Black Blazer Pinstripe",
+     "type": "Women blazers, Jacket",
+     "url": "/products/black-blazer-pinstripe?_pos=2&_psq=black+blazer&_psid=eea409749&_ss=e",
+     "variants": [],
+     "vendor": "Avavav",
+     "featured_image": {
+      "alt": "Black Blazer Pinstripe",
+      "aspect_ratio": 0.667,
+      "height": 1440,
+      "url": "https://cdn.shopify.com/s/files/1/0654/8160/5370/files/black_blazer_front_1_e9466e38-15a9-4de8-a59b-dcb09ea500dc.webp?v=1782387778",
+      "width": 960
+     }
+    },
+    {
+     "available": true,
+     "body": "Vivetta blazer in black color. Two front buttons. Sewn shut front pockets.Decoration buttons on the sleeves. Pair it with Cady trousers.",
+     "compare_at_price_max": "0.00",
+     "compare_at_price_min": "0.00",
+     "handle": "cady-black-blazer",
+     "id": 8015017246970,
+     "image": "https://cdn.shopify.com/s/files/1/0654/8160/5370/files/black-jacket-front.jpg?v=1694093673",
+     "price": "2910.00",
+     "price_max": "2910.00",
+     "price_min": "2910.00",
+     "tags": [
+      "Autumn / Winter 23",
+      "Women"
+     ],
+     "title": "Cady Black Blazer",
+     "type": "Women blazers",
+     "url": "/products/cady-black-blazer?_pos=3&_psq=black+blazer&_psid=eea409749&_ss=e",
+     "variants": [],
+     "vendor": "Vivetta",
+     "featured_image": {
+      "alt": "Cady Black Blazer",
+      "aspect_ratio": 0.667,
+      "height": 1440,
+      "url": "https://cdn.shopify.com/s/files/1/0654/8160/5370/files/black-jacket-front.jpg?v=1694093673",
+      "width": 960
+     }
+    },
+    {
+     "available": true,
+     "body": "<p>Federica tosi black sequined design blazer with front button fastening. Notched lapels, chest welt pocket and shoulder pads. Two front jetted pockets with american rear vent and button cuffs.</p>",
+     "compare_at_price_max": "3400.00",
+     "compare_at_price_min": "3400.00",
+     "handle": "black-sequined-blazer-copy",
+     "id": 8647674790138,
+     "image": "https://cdn.shopify.com/s/files/1/0654/8160/5370/files/black-sequined-jacket-front.webp?v=1732797197",
+     "price": "1700.00",
+     "price_max": "1700.00",
+     "price_min": "1700.00",
+     "tags": [
+      "EOS_W25",
+      "Women"
+     ],
+     "title": "Black Sequined Blazer",
+     "type": "Women blazers, Jacket",
+     "url": "/products/black-sequined-blazer-copy?_pos=4&_psq=black+blazer&_psid=eea409749&_ss=e",
+     "variants": [],
+     "vendor": "Federica Tosi",
+     "featured_image": {
+      "alt": "Black Sequined Blazer",
+      "aspect_ratio": 0.667,
+      "height": 1440,
+      "url": "https://cdn.shopify.com/s/files/1/0654/8160/5370/files/black-sequined-jacket-front.webp?v=1732797197",
+      "width": 960
+     }
+    }
+   ]
+  }
+ }
+}
