@@ -37,6 +37,13 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 - `httpx2`, which the Understand tests import directly, is now a declared test dependency. `app` and `eval` imports sort as first-party.
 
 **Found**
+- **First real end-to-end searches (real OpenAI, real stores, three text queries, one run each).** All three completed with no error, no warning and no store block.
+  - "black oversized blazer for men under 400 AED": 8.6 s, 15 results from 3 stores. Below the 20-result bar: only three stores carry menswear, and only Sacoor sells men's blazers, all above the budget. The results inside the budget are jackets, not blazers.
+  - The Arabic men's white cotton shirt query: 7.7 s, 23 results from 4 stores. Arabic was read correctly (shirt, white, cotton, men, 200 AED). T-shirts and polos are mixed in with shirts.
+  - "women's high-waisted wide-leg jeans in light blue": 10.0 s, 30 results from 5 stores, every price range full.
+  - Time splits about evenly: 4 s understanding, 2.5-3.7 s store search; filtering, ranking and price ranges take a few milliseconds.
+- Two ranking bugs from those runs, being fixed: trousers titled "khakis" passed the filter for a blazer request, and a "Boys" T-shirt was returned for an explicit men's request.
+- When a thin price range borrows from its neighbour, the two ranges' price spans overlap ("Premium 380-915", "Luxury 549-2,650"). It is flagged "few options", but the header can still mislead. Left for tuning.
 - Only two readable AED stores sell real abayas (Hanayen and Maison Arabelle), and none sells an everyday abaya below AED 600. An abaya search will struggle to reach three stores.
 - Six stores cannot serve both the men's queries and the dress queries: three stores carry menswear, so at most three are left for dresses, and three stores at six results each is 18, below the 20-result bar.
 - Shopify's older default robots.txt disallows `/search` and the newer one leaves it open. Five of the eight abaya or kaftan sellers checked close search, so robots.txt has to be the first request to any new store.
