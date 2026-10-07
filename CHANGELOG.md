@@ -22,6 +22,7 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 - This changelog is maintained from now on (user request).
 
 **Added**
+- **The acceptance harness answers "Who is this for?" the way the page does.** A photo query can record the shopper's answer (`shopper_gender`); after the first search the harness gives it, with no photo and no OpenAI call, and scores the results shown after the answer. The 30 s limit is applied to the first search, the wait before the shopper sees anything; the report shows the first search, the search after the answer and their sum. A query with no recorded answer runs as before. A recording replays offline with the extra search included.
 - **"Who is this for?" on the page.** When a garment's gender was guessed or not given, the page asks above the results, with Women, Men and Show both. Women or Men searches again with that gender and no OpenAI call; Show both closes the question and changes nothing. It is not asked when the shopper typed the gender.
 - **Dinar prices on the page, the labelling sheet and the debug dump:** `245.000 KWD (about 2,920 AED)`, with one sentence above the results saying that price ranges and the budget go by the AED figure.
 - **Store adapters for the three Kuwaiti stores (Modules 12.11-12.13): Bazza Alzouman, Hamsa and Manal Smaoui.** Each passed a live smoke test through the project's own engine (HTTP 200, 4 searches per store, no block or challenge) and is enabled. **Thirteen stores are now enabled.** Bazza Alzouman and Hamsa are searched for dresses only.
