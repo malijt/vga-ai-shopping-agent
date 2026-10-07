@@ -20,6 +20,9 @@ VALID_SNAPSHOT = "example-model-2026-01-31"
 # Low-entropy and built at run time, so no secret scanner mistakes it for a real key.
 FAKE_KEY = "sk-" + "a" * 24
 VALID_REVISION = "0123456789abcdef0123456789abcdef01234567"
+# The FashionSigLIP revision measured in spikes/siglip/REPORT.md. Changing it means re-running
+# the spike's quality check, so this test must change with it.
+MEASURED_SIGLIP_REVISION = "c56244cc94f92419e8369fa71efdaf403b124ce8"
 
 
 @pytest.fixture
@@ -55,17 +58,26 @@ class TestShippedSettingsFile:
         assert settings.store_cooldown_s == 900
         assert settings.rps_images_per_host == 5
 
-    def test_models_start_unset_and_ranker_off(self) -> None:
+    def test_openai_model_is_still_unset(self) -> None:
+        assert load_settings(DEFAULT_SETTINGS_PATH, env={}).openai_model is None
+
+    def test_siglip_is_pinned_to_the_measured_revision_and_switched_on(self) -> None:
         settings = load_settings(DEFAULT_SETTINGS_PATH, env={})
 
-        assert settings.openai_model is None
-        assert settings.siglip_revision is None
-        assert settings.image_ranker == "off"
+        assert settings.siglip_revision == MEASURED_SIGLIP_REVISION
+        assert settings.image_ranker == "siglip"
 
-    def test_yaml_file_agrees_with_the_code_defaults(self) -> None:
-        from_file = load_settings(DEFAULT_SETTINGS_PATH, env={})
+    def test_yaml_file_agrees_with_the_code_defaults_except_the_siglip_decision(self) -> None:
+        from_file = load_settings(DEFAULT_SETTINGS_PATH, env={}).model_dump()
+        defaults = Settings().model_dump()
 
-        assert from_file == Settings()
+        differing = {name for name in defaults if from_file[name] != defaults[name]}
+
+        assert differing == {"image_ranker", "siglip_revision"}
+
+    def test_the_code_default_ranker_stays_off(self) -> None:
+        assert Settings().image_ranker == "off"
+        assert Settings().siglip_revision is None
 
 
 class TestTierMix:
@@ -265,6 +277,89 @@ class TestOtherFields:
         path.write_text("", encoding="utf-8")
 
         assert load_settings(path, env={}) == Settings()
+
+
+class TestSiglipScoreRange:
+    """``clip((cos - lo) / (hi - lo), 0, 1)`` needs 0 <= lo < hi <= 1 (spikes/siglip/REPORT.md)."""
+
+    def test_defaults_are_the_measured_constants(self) -> None:
+        settings = Settings()
+
+        assert settings.siglip_cos_lo == 0.45
+        assert settings.siglip_cos_hi == 0.90
+
+    def test_the_shipped_file_carries_the_same_constants(self) -> None:
+        settings = load_settings(DEFAULT_SETTINGS_PATH, env={})
+
+        assert (settings.siglip_cos_lo, settings.siglip_cos_hi) == (0.45, 0.90)
+
+    @pytest.mark.parametrize(("lo", "hi"), [(0.3, 0.8), (0, 1), (0.0, 0.01), (0.99, 1.0)])
+    def test_valid_ranges_are_accepted(self, settings_file, lo: float, hi: float) -> None:
+        settings = load_settings(settings_file(siglip_cos_lo=lo, siglip_cos_hi=hi), env={})
+
+        assert (settings.siglip_cos_lo, settings.siglip_cos_hi) == (lo, hi)
+
+    def test_one_value_alone_is_checked_against_the_default_of_the_other(
+        self, settings_file
+    ) -> None:
+        assert load_settings(settings_file(siglip_cos_lo=0.1), env={}).siglip_cos_lo == 0.1
+        assert load_settings(settings_file(siglip_cos_hi=0.7), env={}).siglip_cos_hi == 0.7
+        with pytest.raises(ConfigError, match="siglip_cos_lo"):
+            load_settings(settings_file(siglip_cos_lo=0.95), env={})
+        with pytest.raises(ConfigError, match="siglip_cos_lo"):
+            load_settings(settings_file(siglip_cos_hi=0.4), env={})
+
+    @pytest.mark.parametrize(("lo", "hi"), [(0.5, 0.5), (0.9, 0.45), (1, 0), (0, 0)])
+    def test_lo_must_be_below_hi(self, settings_file, lo: float, hi: float) -> None:
+        with pytest.raises(ConfigError) as error:
+            load_settings(settings_file(siglip_cos_lo=lo, siglip_cos_hi=hi), env={})
+
+        assert "siglip_cos_lo" in detail_of(error)
+        assert "siglip_cos_hi" in detail_of(error)
+        assert "must be below" in detail_of(error)
+
+    @pytest.mark.parametrize(
+        ("name", "value"),
+        [
+            ("siglip_cos_lo", -0.1),
+            ("siglip_cos_lo", 1.1),
+            ("siglip_cos_hi", -0.5),
+            ("siglip_cos_hi", 1.5),
+            ("siglip_cos_lo", float("nan")),
+            ("siglip_cos_hi", float("inf")),
+        ],
+    )
+    def test_values_outside_zero_to_one_are_rejected(
+        self, settings_file, name: str, value: float
+    ) -> None:
+        with pytest.raises(ConfigError, match=name):
+            load_settings(settings_file(**{name: value}), env={})
+
+    def test_a_non_number_is_rejected(self, settings_file) -> None:
+        with pytest.raises(ConfigError, match="siglip_cos_hi"):
+            load_settings(settings_file(siglip_cos_hi="high"), env={})
+
+
+class TestMaxResponseBytes:
+    def test_default_is_two_megabytes(self) -> None:
+        assert Settings().max_response_bytes == 2_000_000
+
+    def test_the_shipped_file_carries_the_same_cap(self) -> None:
+        assert load_settings(DEFAULT_SETTINGS_PATH, env={}).max_response_bytes == 2_000_000
+
+    @pytest.mark.parametrize("value", [1, 500_000, 10_000_000])
+    def test_positive_values_are_accepted(self, settings_file, value: int) -> None:
+        assert (
+            load_settings(settings_file(max_response_bytes=value), env={}).max_response_bytes
+            == value
+        )
+
+    @pytest.mark.parametrize("value", [0, -1, -2_000_000, 1.5, "big"])
+    def test_zero_negative_and_non_integer_values_are_rejected(
+        self, settings_file, value: object
+    ) -> None:
+        with pytest.raises(ConfigError, match="max_response_bytes"):
+            load_settings(settings_file(max_response_bytes=value), env={})
 
 
 class TestWithOverrides:

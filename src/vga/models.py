@@ -514,6 +514,12 @@ class StoreConfig(VgaModel):
     """Requests per second to this store. ``None`` means ``Settings.rps_per_store``."""
     timeout_s: float | None = Field(default=None, gt=0, le=30)
     """Per-request timeout. ``None`` means ``Settings.timeout_s``."""
+    max_response_bytes: int | None = Field(default=None, gt=0)
+    """Size cap, in bytes, for one HTTP response from this store. ``None`` means
+    ``Settings.max_response_bytes``."""
+    max_variants: int | None = Field(default=None, ge=1, le=MAX_KEYWORDS)
+    """How many of the 1-3 keyword variants (``ItemIntent.search_keywords``) to send to this
+    store, taken in order. ``None`` means all of them."""
     tier_hint: Tier | None = None
     """``luxury`` marks a luxury-leaning store (affects the ``relative_range`` flag)."""
     enabled: bool = False

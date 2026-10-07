@@ -4,10 +4,12 @@ Config comes from here and from the environment only (never from code constants 
 Precedence, highest first: real environment variables, then ``.env``, then the YAML file, then the
 defaults below. See ``.env.example`` for the variables.
 
-Two fields are deliberately unset until the build decides them (plan assumption A10 and Phase 3):
-``openai_model`` and ``siglip_revision``. They may be ``None`` at load time. When set they must be
-pinned: a dated OpenAI snapshot id, and a 40-character Hugging Face commit hash. Aliases such as
-``gpt-5-mini`` or ``main`` are rejected, because a pinned version must not change under us.
+Two fields are unset in the code defaults because the build decides them (plan assumption A10 and
+Phase 3): ``openai_model`` and ``siglip_revision``. They may be ``None`` at load time (the shipped
+``config/settings.yaml`` pins ``siglip_revision`` since the Phase 3 spike; ``openai_model`` is still
+unset). When set they must be pinned: a dated OpenAI snapshot id, and a 40-character Hugging Face
+commit hash. Aliases such as ``gpt-5-mini`` or ``main`` are rejected, because a pinned version must
+not change under us.
 """
 
 import os
@@ -89,6 +91,9 @@ class Settings(VgaModel):
     rps_images_per_host: float = Field(default=5.0, gt=0, le=20)
     store_cache_ttl_s: int = Field(default=600, ge=0)
     store_cooldown_s: int = Field(default=900, ge=0)
+    max_response_bytes: int = Field(default=2_000_000, gt=0)
+    """Size cap, in bytes, for one HTTP response. ``StoreConfig.max_response_bytes`` overrides it
+    for a single store."""
     user_agent: str = DEFAULT_USER_AGENT
 
     # --- ranking and price ranges ---------------------------------------------------------
@@ -101,6 +106,11 @@ class Settings(VgaModel):
     # --- models ---------------------------------------------------------------------------
     image_ranker: Literal["siglip", "off"] = "off"
     siglip_revision: str | None = None
+    siglip_cos_lo: float = Field(default=0.45, ge=0, le=1)
+    siglip_cos_hi: float = Field(default=0.90, ge=0, le=1)
+    """Image cosine to 0-1 score: ``clip((cos - siglip_cos_lo) / (siglip_cos_hi - siglip_cos_lo),
+    0, 1)``. Measured in ``spikes/siglip/REPORT.md``; ``siglip_cos_lo`` must be below
+    ``siglip_cos_hi``."""
     openai_model: str | None = None
     daily_llm_call_cap: int = Field(default=200, ge=0)
 
@@ -110,6 +120,16 @@ class Settings(VgaModel):
     log_prompts: bool = False
     debug_dump: bool = False
     ui_fixture: bool = False
+
+    @model_validator(mode="after")
+    def _siglip_range_is_ordered(self) -> Self:
+        if self.siglip_cos_lo >= self.siglip_cos_hi:
+            msg = (
+                f"siglip_cos_lo ({self.siglip_cos_lo}) must be below siglip_cos_hi "
+                f"({self.siglip_cos_hi}): together they map an image cosine to a 0-1 score"
+            )
+            raise ValueError(msg)
+        return self
 
     @field_validator("image_ranker", mode="before")
     @classmethod

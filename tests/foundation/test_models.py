@@ -366,6 +366,35 @@ class TestStoreConfig:
         with pytest.raises(ValidationError):
             make_store_config(rps=50)
 
+    def test_response_cap_and_variant_limit_default_to_the_settings(self) -> None:
+        config = make_store_config()
+
+        assert config.max_response_bytes is None
+        assert config.max_variants is None
+
+    @pytest.mark.parametrize("value", [1, 500_000, 8_000_000])
+    def test_response_cap_accepts_positive_values(self, value: int) -> None:
+        assert make_store_config(max_response_bytes=value).max_response_bytes == value
+
+    @pytest.mark.parametrize("value", [0, -1, 1.5])
+    def test_response_cap_must_be_a_positive_whole_number(self, value: float) -> None:
+        with pytest.raises(ValidationError, match="max_response_bytes"):
+            make_store_config(max_response_bytes=value)
+
+    @pytest.mark.parametrize("value", [1, 2, 3])
+    def test_variant_limit_accepts_one_to_three(self, value: int) -> None:
+        assert make_store_config(max_variants=value).max_variants == value
+
+    @pytest.mark.parametrize("value", [0, 4, -1, 2.5])
+    def test_variant_limit_outside_one_to_three_is_rejected(self, value: float) -> None:
+        with pytest.raises(ValidationError, match="max_variants"):
+            make_store_config(max_variants=value)
+
+    def test_response_cap_and_variant_limit_survive_a_round_trip(self) -> None:
+        config = make_store_config(max_response_bytes=750_000, max_variants=2)
+
+        assert round_trip(config) == config
+
 
 class TestProduct:
     REQUIRED = ["title", "price", "currency", "image_url", "product_url", "store"]
