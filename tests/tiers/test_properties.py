@@ -11,7 +11,7 @@ import pytest
 
 from tests.factories import make_product, make_scored_product, make_scores, make_settings
 from tests.tiers.helpers import LUXURY_STORE, PLAIN_STORE, assert_invariants
-from vga.models import Budget, ScoredProduct, StoreConfig, TierMix
+from vga.models import TIER_ORDER, Budget, ScoredProduct, StoreConfig, TierMix
 from vga.settings import Settings
 from vga.tiers import ShapeResult, mix_to_counts, shape
 
@@ -93,19 +93,67 @@ def test_targets_always_sum_to_the_total(seed: int) -> None:
     assert targets == list(mix_to_counts(case.settings.tier_mix, case.total).values())
 
 
+def usable_products(case: Case) -> dict[str, ScoredProduct]:
+    """Each distinct product once, with its best copy that clears the minimum match score."""
+    best: dict[str, ScoredProduct] = {}
+    for scored in case.products:
+        key = scored.product.key
+        if scored.scores.total < case.settings.min_match_score:
+            continue
+        if key not in best or scored.scores.total > best[key].scores.total:
+            best[key] = scored
+    return best
+
+
 @pytest.mark.parametrize("seed", SEEDS)
-def test_without_a_budget_the_count_is_the_total_or_everything_the_cap_allows(seed: int) -> None:
-    # Nothing but the cap and the pool size may hold results back: no budget, one currency.
+def test_the_count_is_never_more_than_the_total_or_than_the_cap_allows(seed: int) -> None:
     case = random_case(seed, single_currency=True, with_budget=False)
     result = run(case)
-    usable = {
-        scored.product.key: scored
-        for scored in case.products
-        if scored.scores.total >= case.settings.min_match_score
-    }
-    per_store = Counter(scored.product.store for scored in usable.values())
+    per_store = Counter(scored.product.store for scored in usable_products(case).values())
     available = sum(min(case.settings.max_per_store, count) for count in per_store.values())
-    assert sum(tier.count for tier in result.tiers) == min(case.total, available)
+    assert sum(tier.count for tier in result.tiers) <= min(case.total, available)
+
+
+@pytest.mark.parametrize("seed", SEEDS)
+def test_every_product_sits_in_its_own_price_range_or_a_neighbouring_one(seed: int) -> None:
+    case = random_case(seed, single_currency=True)
+    result = run(case)
+    if result.borders is None:
+        assert not result.products
+        return
+    for position, tier in enumerate(result.tiers):
+        for scored in tier.results:
+            natural = TIER_ORDER.index(result.borders.tier_for(scored.product.price))
+            assert abs(natural - position) <= 1, (scored.product.price, tier.name)
+
+
+@pytest.mark.parametrize("seed", SEEDS)
+def test_a_short_range_leaves_no_product_it_may_borrow_unused(seed: int) -> None:
+    # A range that ends below its target must have used every product of its own range and of
+    # the ranges next to it that it was allowed to take. Whatever it did not take must be
+    # blocked: its store is at the cap, or it is over the budget and the range is Budget or
+    # Mid-range. The shaper must not give up early.
+    case = random_case(seed, single_currency=True)
+    result = run(case)
+    if result.borders is None:
+        return
+    shown = {scored.product.key for scored in result.products}
+    loads = Counter(scored.product.store for scored in result.products)
+    ceiling = None
+    if case.budget is not None and case.budget.currency == result.currency:
+        ceiling = case.budget.max_price
+    for position, tier in enumerate(result.tiers):
+        if tier.count >= tier.target_count:
+            continue
+        for key, scored in usable_products(case).items():
+            natural = TIER_ORDER.index(result.borders.tier_for(scored.product.price))
+            if key in shown or abs(natural - position) > 1:
+                continue
+            at_cap = loads[scored.product.store] >= case.settings.max_per_store
+            over_for_this_range = (
+                ceiling is not None and scored.product.price > ceiling and position < 2
+            )
+            assert at_cap or over_for_this_range, (tier.name, scored.product.price)
 
 
 @pytest.mark.parametrize("seed", SEEDS)

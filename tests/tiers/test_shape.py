@@ -135,19 +135,40 @@ def test_a_thin_range_borrows_from_the_cheaper_side_first_when_both_sides_are_eq
     assert [p.product.price for p in premium.results] == [300.0, 349.0, 399.0]
 
 
-def test_when_the_nearest_range_has_nothing_to_lend_the_next_nearest_is_used() -> None:
+def test_a_thin_range_never_borrows_from_a_range_two_or_more_steps_away() -> None:
     # Mix 25/35/25/15 of 30 = targets 8/11/7/4. Mid-range owns 8 and needs 3 more. Budget has no
-    # spare product (8 of 8 used), Premium has 1, Luxury has 4. Mid-range takes Premium's one and
-    # then Luxury's best two spare, which are the next nearest.
+    # spare product (8 of 8 used), Premium has 1 (699), and Luxury has 4 spare (1,600 AED and
+    # up) but is two steps away. Mid-range takes only Premium's one: 9 of 11, flagged.
     mix = TierMix(budget=25, mid_range=35, premium=25, luxury=15)
     pool = make_pool(PRD_PRICES)
     result = shape(pool, make_settings(tier_mix=mix), None, (LUXURY_STORE,))
 
     _, mid, _, _ = result.tiers
-    assert tier_counts(result) == (8, 11, 7, 4)
-    assert [p.product.price for p in mid.results][-3:] == [699.0, 1600.0, 1900.0]
-    assert mid.price_max == 1900.0
+    assert tier_counts(result) == (8, 9, 7, 4)
+    assert [p.product.price for p in mid.results][-2:] == [299.0, 699.0]
+    assert mid.price_max == 699.0
     assert Flag.FEW_OPTIONS in mid.flags
+
+
+@pytest.mark.parametrize(
+    ("mix", "thin_index", "lender_index"),
+    [
+        pytest.param(TierMix(budget=60, mid_range=10, premium=10, luxury=20), 0, 1, id="budget"),
+        pytest.param(TierMix(budget=10, mid_range=10, premium=10, luxury=70), 3, 2, id="luxury"),
+    ],
+)
+def test_budget_borrows_only_from_mid_range_and_luxury_only_from_premium(
+    mix: TierMix, thin_index: int, lender_index: int
+) -> None:
+    result = shape(make_pool(PRD_PRICES), make_settings(tier_mix=mix), None, (LUXURY_STORE,))
+    borders = result.borders
+    assert borders is not None
+    thin = result.tiers[thin_index]
+    assert Flag.FEW_OPTIONS in thin.flags
+    assert thin.count < thin.target_count  # the gap is not closed from farther away
+    for scored in thin.results:
+        natural = list(TIER_ORDER).index(borders.tier_for(scored.product.price))
+        assert abs(natural - thin_index) <= 1
 
 
 def test_a_range_that_borrowed_enough_is_still_flagged_few_options() -> None:
@@ -165,18 +186,20 @@ def test_a_borrowed_product_is_shown_in_the_range_it_fills_and_widens_its_price_
     result = shape(make_pool(PRD_PRICES), make_settings(tier_mix=mix), None, (LUXURY_STORE,))
     mid = result.tiers[1]
     assert all(p.tier is Tier.MID_RANGE for p in mid.results)
-    assert (mid.price_min, mid.price_max) == (140.0, 1900.0)
-    assert mid.display_label == "Mid-range · 140-1,900 AED · 11 results"
+    assert (mid.price_min, mid.price_max) == (140.0, 699.0)
+    assert mid.display_label == "Mid-range · 140-699 AED · 9 results"
 
 
 def test_thin_ranges_are_served_cheapest_first() -> None:
-    # Both Budget (wants 12, owns 8) and Mid-range (wants 9, owns 8) are thin under value first,
-    # and both want the spare products of Premium. Budget is served first and takes them.
-    mix = TierMix(budget=40, mid_range=30, premium=20, luxury=10)
-    pool = make_pool(PRD_PRICES)
-    result = shape(pool, make_settings(tier_mix=mix), None, (LUXURY_STORE,))
-    budget_prices = [p.product.price for p in result.tiers[0].results]
-    assert {629.0, 699.0} <= set(budget_prices)  # Premium's two spare products went to Budget
+    # Mix 30/10/30/30 of 30 = targets 9/3/9/9. Budget and Premium each own 8 and are one short;
+    # both neighbour Mid-range, which owns 8 and needs only 3, so it has 5 spare (209, 229, ...).
+    # Budget is served first and takes the best spare (209); Premium then takes the next (229).
+    mix = TierMix(budget=30, mid_range=10, premium=30, luxury=30)
+    result = shape(make_pool(PRD_PRICES), make_settings(tier_mix=mix), None, (LUXURY_STORE,))
+    budget, _, premium, _ = result.tiers
+    assert tier_counts(result) == (9, 3, 9, 8)
+    assert budget.results[-1].product.price == 209.0
+    assert premium.results[0].product.price == 229.0
 
 
 def test_an_empty_range_has_no_price_span_and_the_few_options_flag() -> None:
@@ -226,14 +249,14 @@ def test_budget_and_mid_range_never_hold_a_product_over_budget() -> None:
 
 
 def test_over_budget_products_may_fill_a_thin_premium_or_luxury_range() -> None:
-    # Mix 10/10/10/70 of 30 with a budget of 100 AED: Luxury wants 21 and owns 8, so it borrows
-    # Premium's 5 spare products and all 8 Mid-range products. Whatever the source, the flag
-    # follows the price.
+    # Mix 10/10/10/70 of 30 with a budget of 100 AED: Luxury wants 21 and owns 8, and borrows
+    # Premium's 5 spare products (449-699 AED, over budget and flagged). Mid-range's products are
+    # two steps away, so Luxury stops at 13. Whatever the source, the flag follows the price.
     budget = Budget(max_price=100, currency="AED")
     mix = TierMix(budget=10, mid_range=10, premium=10, luxury=70)
     result = shape(make_pool(PRD_PRICES), make_settings(tier_mix=mix), budget, (LUXURY_STORE,))
     luxury = result.tiers[3]
-    assert luxury.count == 21
+    assert luxury.count == 13
     for scored in luxury.results:
         assert (Flag.OVER_BUDGET in scored.flags) == (scored.product.price > 100)
 

@@ -23,14 +23,17 @@ How a request is shaped, in order (the PRD section "Price ranges and the final l
    the one least filled relative to its target going first and ties going to the cheaper range, so
    a dominant store's slots are spread over the ranges instead of being spent on the cheapest one.
 6. Fill thin ranges. A range whose own products cannot reach its target is thin: it gets the
-   ``few_options`` flag and borrows the missing products from the nearest range, best score first,
+   ``few_options`` flag and borrows the missing products from an ADJACENT range, best score first,
    taking only products the other ranges did not need for their own targets.
 
-   "Nearest" means the fewest steps along Budget, Mid-range, Premium, Luxury; when the range below
-   and the range above are equally near, the CHEAPER one is tried first. If the nearest range has
-   too little to give, the next nearest is tried, and so on, until the gap is filled or no product
-   is left. Thin ranges are served cheapest first. A borrowed product is shown in the range it fills
-   (its ``tier`` is that range), and the range's price span covers it, so the span stays honest.
+   Adjacent means the range directly below or directly above: Budget may borrow only from
+   Mid-range, Mid-range from Budget or Premium, Premium from Mid-range or Luxury, Luxury only from
+   Premium. When both neighbours have spare products the CHEAPER one is tried first. Nothing is
+   ever borrowed from two or more steps away, because each range's header shows its real price
+   span (PRD R16) and a 1,600 AED item must not make a "Budget" list. If the neighbours cannot
+   fill the gap, fewer results are returned. Thin ranges are served cheapest first. A borrowed
+   product is shown in the range it fills (its ``tier`` is that range), and the range's price span
+   covers it, so the span stays honest.
 7. Budget (plan assumption A4). With a budget, Budget and Mid-range may only hold products within
    it (price at or below the budget). Premium and Luxury may hold products over it; each carries
    the ``over_budget`` flag. A budget in another currency than the products is not applied (a
@@ -69,15 +72,10 @@ _MAY_EXCEED_BUDGET = frozenset({Tier.PREMIUM, Tier.LUXURY})
 
 
 def _donor_order(tier: Tier) -> tuple[Tier, ...]:
-    """Other ranges from nearest to farthest; equally near, the cheaper range comes first."""
+    """The ranges a thin ``tier`` may borrow from: only the one directly below and the one
+    directly above, the cheaper one first. Budget has only Mid-range, Luxury only Premium."""
     position = TIER_ORDER.index(tier)
-    others = (other for other in TIER_ORDER if other is not tier)
-    return tuple(
-        sorted(
-            others,
-            key=lambda other: (abs(TIER_ORDER.index(other) - position), TIER_ORDER.index(other)),
-        )
-    )
+    return tuple(other for other in TIER_ORDER if abs(TIER_ORDER.index(other) - position) == 1)
 
 
 _DONOR_ORDER: dict[Tier, tuple[Tier, ...]] = {tier: _donor_order(tier) for tier in TIER_ORDER}
@@ -183,7 +181,7 @@ class _Picker:
         return frozenset(tier for tier in TIER_ORDER if self._is_short(tier))
 
     def fill_gaps(self) -> None:
-        """Step 6: thin ranges borrow from the nearest ranges' leftovers, cheapest range first."""
+        """Step 6: thin ranges borrow from their neighbours' leftovers, cheapest range first."""
         for tier in TIER_ORDER:
             for donor in _DONOR_ORDER[tier]:
                 for candidate in self._pools[donor]:

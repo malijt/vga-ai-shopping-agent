@@ -172,18 +172,20 @@ SCENARIOS = [
         flags=(NONE, NONE, NONE, flags_of(R)),
     ),
     Scenario(
-        # 30 products all at 150 AED: every border is 150, so all are Budget. Budget takes its 8;
-        # Mid-range, Premium and Luxury have no products of their own (F) and fill from Budget's
-        # leftovers, so all 30 are shown and every range spans exactly 150 AED.
+        # 30 products all at 150 AED: every border is 150, so all are Budget. Budget takes its 8.
+        # Mid-range has no products of its own (F) and borrows 8 from its neighbour Budget.
+        # Premium and Luxury have none of their own (F) and their neighbours (Mid-range, Luxury,
+        # Premium) have nothing spare, so they stay empty: Budget's other 14 products are two or
+        # more steps away and are not used. 16 results in all.
         name="all_prices_equal",
         products=make_pool([150.0] * 30),
-        counts=(8, 8, 7, 7),
+        counts=(8, 8, 0, 0),
         flags=(NONE, FEW, FEW, FEW),
         labels=(
             "Budget · 150 AED · 8 results",
             "Mid-range · 150 AED · 8 results",
-            "Premium · 150 AED · 7 results",
-            "Luxury · 150 AED · 7 results",
+            "Premium · no results",
+            "Luxury · no results",
         ),
     ),
     Scenario(
@@ -314,21 +316,47 @@ SCENARIOS = [
     ),
     Scenario(
         # "Value first" on the PRD pool (8 per quarter): Budget wants 12 and Mid-range 9 but own
-        # only 8 each (F). Budget borrows Premium's 2 spare, then 2 from Luxury (the next nearest);
-        # Mid-range then takes 1 from Luxury. Counts reach 12/9/6/3 = 30 of the 32 products.
+        # only 8 each (F). Budget's only neighbour, Mid-range, has nothing spare, and Premium's 2
+        # spare products are two steps away, so Budget stays at 8. Mid-range takes the best of
+        # Premium's spare (699). 8/9/6/3 = 26 of the 32 products.
         name="value_first_preset_thin_fill",
         products=make_prd_pool(),
         mix=MixPreset.VALUE_FIRST.mix,
-        counts=(12, 9, 6, 3),
+        counts=(8, 9, 6, 3),
         flags=(FEW, FEW, NONE, NONE),
+        prices=(
+            (45.0, 59.0, 72.0, 89.0, 99.0, 112.0, 125.0, 139.0),
+            (140.0, 169.0, 189.0, 209.0, 229.0, 249.0, 279.0, 299.0, 699.0),
+            (300.0, 349.0, 399.0, 499.0, 549.0, 629.0),
+            (700.0, 890.0, 1100.0),
+        ),
+    ),
+    Scenario(
+        # Mix 60/10/10/20 of 30 = targets 18/3/3/6 on the PRD prices without score tweaks. Budget
+        # owns 8 and wants 18. Its only neighbour, Mid-range, has 5 spare (209-299 AED) and lends
+        # them: 13. Premium has 5 spare (449-699 AED) and Luxury 2, but they are two and three
+        # steps away, so Budget stays 5 short (F) and no product over 299 AED appears in it.
+        name="product_two_ranges_away_is_not_borrowed",
+        products=make_pool(PRD_PRICES),
+        mix=TierMix(budget=60, mid_range=10, premium=10, luxury=20),
+        counts=(13, 3, 3, 6),
+        flags=(FEW, NONE, NONE, NONE),
+        prices=(
+            (45.0, 59.0, 72.0, 89.0, 99.0, 112.0, 125.0, 139.0, 209.0, 229.0, 249.0, 279.0, 299.0),
+            (140.0, 169.0, 189.0),
+            (300.0, 349.0, 399.0),
+            (700.0, 890.0, 1100.0, 1350.0, 1600.0, 1900.0),
+        ),
     ),
     Scenario(
         # A 0% share is allowed: 0/0/50/50 of 30 gives targets 0/0/15/15. Budget and Mid-range
-        # are not flagged (nothing was wanted from them) and lend their products upwards.
+        # are not flagged (nothing was wanted from them). Premium owns 8 and borrows 7 of
+        # Mid-range's 8 spare. Luxury owns 8 and its only neighbour, Premium, has nothing spare,
+        # so it stays at 8 (F); Budget's products are three steps away.
         name="zero_share_ranges_lend_upwards",
         products=make_prd_pool(),
         mix=TierMix(budget=0, mid_range=0, premium=50, luxury=50),
-        counts=(0, 0, 15, 15),
+        counts=(0, 0, 15, 8),
         flags=(NONE, NONE, FEW, FEW),
     ),
     Scenario(
