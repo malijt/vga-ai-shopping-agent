@@ -26,7 +26,7 @@ import asyncio
 import csv
 import re
 import sys
-from collections.abc import Callable, Collection, Mapping, Sequence
+from collections.abc import Awaitable, Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import date
 from pathlib import Path
@@ -55,6 +55,7 @@ from eval.harness.runstore import (
     LoadedRun,
     Mode,
     RunMeta,
+    WarmUp,
     load_run,
     save_run,
 )
@@ -135,6 +136,11 @@ class _Setup:
     replay: ReplaySession | None = None
     recording: RecordingSession | None = None
     clock: Clock = field(default_factory=SystemClock)
+    close: Callable[[], Awaitable[None]] | None = None
+    """Releases what the real application holds open (its HTTP client). Called once, on the
+    event loop the run used."""
+    warm_up: WarmUp | None = None
+    """Set by the run, before the first query."""
 
 
 def _next_run_number(results_dir: Path) -> int:
@@ -246,6 +252,7 @@ def _setup_record(
         link_fetch=wiring.link_fetch,
         allowed_hosts=allowed_hosts_from_stores(wiring.stores),
         recording=session,
+        close=wiring.aclose,
     )
 
 
@@ -277,6 +284,29 @@ def _link_tools(
     return setup.link_fetch, setup.allowed_hosts or {}
 
 
+async def _warm_up(setup: _Setup) -> WarmUp | None:
+    """Load the image model before the first timed query, and say how long that took.
+
+    The 30 s limit is about a search on an app that is already running (plan 16.1.1), so the
+    model's load time must not land inside the first photo query. Only a live run loads anything:
+    a replay serves the recorded scores and a mock has no model. A pipeline with no ``warm_up``
+    has nothing to load either."""
+    if setup.mode != "record":
+        return None
+    warm = getattr(setup.pipeline, "warm_up", None)
+    if warm is None:
+        return None
+    started = setup.clock.monotonic()
+    ready = False
+    detail: str | None = None
+    try:
+        ready = bool(await warm())
+    except Exception as exc:  # a warm-up that raises must not stop the run; it is reported
+        detail = f"{type(exc).__name__}: {exc}"
+    elapsed_ms = max(setup.clock.monotonic() - started, 0.0) * 1000.0
+    return WarmUp(duration_ms=elapsed_ms, ready=ready, detail=detail)
+
+
 async def _run_and_check(
     setup: _Setup,
     queries: list[AcceptanceQuery],
@@ -284,28 +314,35 @@ async def _run_and_check(
     links: LinksMode,
     progress: Callable[[QueryRun], None],
     checkpoint: Callable[[list[QueryRun]], None],
+    on_warm_up: Callable[[WarmUp | None], None],
 ) -> tuple[list[QueryRun], dict[str, list[LinkCheck]]]:
-    """Run the queries, save them, then check links. One event loop for all of it, because a
-    fetch function or pipeline may keep an HTTP client that belongs to the loop it first ran in.
+    """Warm up, run the queries, save them, then check links. One event loop for all of it,
+    because a fetch function or pipeline may keep an HTTP client that belongs to the loop it
+    first ran in.
 
     ``checkpoint`` is called with the finished runs before the first link is fetched, so the
     expensive part of a live run is on disk even if the link phase is interrupted."""
-    runs = await run_queries(
-        queries,
-        setup.pipeline,
-        settings,
-        clock=setup.clock,
-        load_image=setup.load_image,
-        scope=setup.scope,
-        progress=progress,
-    )
-    if setup.replay is not None:
-        runs = [_with_recorded_duration(run, setup.replay) for run in runs]
-    checkpoint(runs)
-    if links is LinksMode.NONE:
-        return runs, {}
-    fetch, allowed = _link_tools(setup, runs)
-    return runs, await _check_links(runs, links, fetch, allowed)
+    try:
+        on_warm_up(await _warm_up(setup))
+        runs = await run_queries(
+            queries,
+            setup.pipeline,
+            settings,
+            clock=setup.clock,
+            load_image=setup.load_image,
+            scope=setup.scope,
+            progress=progress,
+        )
+        if setup.replay is not None:
+            runs = [_with_recorded_duration(run, setup.replay) for run in runs]
+        checkpoint(runs)
+        if links is LinksMode.NONE:
+            return runs, {}
+        fetch, allowed = _link_tools(setup, runs)
+        return runs, await _check_links(runs, links, fetch, allowed)
+    finally:
+        if setup.close is not None:
+            await setup.close()
 
 
 def _with_recorded_duration(run: QueryRun, replay: ReplaySession) -> QueryRun:
@@ -328,6 +365,14 @@ def _run_notes(setup: _Setup, runs: Sequence[QueryRun]) -> list[str]:
             "The replay could not serve " + ", ".join(unservable) + " from the recording (not "
             "recorded, incomplete, or the pipeline asked for something else). Those queries "
             "count as failed; the others ran. This is a limit of the recording, not a store fault."
+        )
+    warm_up = setup.warm_up
+    if warm_up is not None and not warm_up.ready:
+        notes.append(
+            "Image scoring was not available when the run started"
+            + (f" ({warm_up.detail})" if warm_up.detail else "")
+            + ": photo queries were ranked on text and price only, so this run does not show what "
+            "the finished app does with a photo. The reason is in the log."
         )
     if setup.recording is not None and setup.recording.incomplete:
         notes.append(
@@ -382,6 +427,20 @@ def _export_sheet(runs: Sequence[QueryRun], out: Path) -> tuple[Path, int]:
 
 def _load_labels(path: str | None, runs: Sequence[QueryRun]) -> LabelSet | None:
     return import_label_sheet(path, runs) if path else None
+
+
+def _warm_up_line(warm_up: WarmUp) -> str:
+    took = f"{warm_up.duration_ms / 1000:.1f} s"
+    if warm_up.ready:
+        return (
+            f"Warm-up: done in {took}, before the first query and outside every query's time. "
+            "Image scoring is ready."
+        )
+    return (
+        f"Warm-up: done in {took}, but image scoring is NOT available, so photo queries will be "
+        "ranked on text and price only. The reason is in the log. The image model needs "
+        "`uv sync --group ml` and `uv run --group ml python -m vga.rank.image.download`."
+    )
 
 
 def _print_verdict(scored: ScoredRun, out: TextIO) -> None:
@@ -468,6 +527,7 @@ def _execute(
             price_range_mix=list(settings.tier_mix.as_tuple()),
             source=setup.source,
             notes=_run_notes(setup, runs),
+            warm_up=setup.warm_up,
         )
         loaded = LoadedRun(meta, runs, link_checks)
         # The folder was checked before the run (`_ensure_output_is_free`). By now it may hold
@@ -482,8 +542,13 @@ def _execute(
     def checkpoint(runs: list[QueryRun]) -> None:
         persist(runs, {}, use_labels=False)
 
+    def warmed_up(warm_up: WarmUp | None) -> None:
+        setup.warm_up = warm_up
+        if warm_up is not None:
+            print(_warm_up_line(warm_up), file=out_stream)
+
     runs, link_checks = asyncio.run(
-        _run_and_check(setup, queries, settings, links, progress, checkpoint)
+        _run_and_check(setup, queries, settings, links, progress, checkpoint, warmed_up)
     )
     scored, sheet, rows = persist(runs, link_checks, use_labels=True)
 

@@ -11,13 +11,14 @@ from the real application therefore comes in through ``Wiring``:
 - ``link_fetch``: a polite page fetch for the link checker. May be ``None`` for an offline setup.
 - ``build_boundaries``: builds the real ``Understander``, ``StoreSearcher`` and ``ImageRanker``.
   Only called for ``--record``, so ``--replay`` needs no OpenAI key and starts no model.
+- ``aclose``: releases whatever the real parts hold open. Only awaited after a live run.
 
 A wiring module exposes one function, ``(Settings) -> Wiring``, and is named on the command line
 as ``--wiring package.module:function``.
 """
 
 import importlib
-from collections.abc import Callable, Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 
 from eval.harness.errors import WiringError
@@ -44,6 +45,9 @@ class Wiring:
     stores: Sequence[StoreConfig]
     link_fetch: LinkFetch | None = None
     build_boundaries: Callable[[], Boundaries] | None = None
+    aclose: Callable[[], Awaitable[None]] | None = None
+    """Releases what the real parts hold open (the store engine's HTTP client). The harness
+    awaits it once, on the event loop it ran everything on, after the last link is checked."""
 
 
 WiringFactory = Callable[[Settings], Wiring]

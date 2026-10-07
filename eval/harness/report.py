@@ -208,6 +208,20 @@ def _rank_stage(scored: ScoredRun) -> list[str]:
     return _table(header, rows or [["none", "", "", "", ""]])
 
 
+def _warm_up_lines(scored: ScoredRun) -> list[str]:
+    """The warm-up, apart from the queries: loading the image model is not part of any search."""
+    warm_up = scored.loaded.meta.warm_up
+    if warm_up is None:
+        return []
+    state = "ready" if warm_up.ready else "NOT available (photo queries ranked on text and price)"
+    return [
+        f"Warm-up before the first query: {warm_up.duration_ms / 1000:.1f} s; image scoring "
+        f"{state}. This time is not inside any query's seconds above: the 30 s limit is for a "
+        "search on an app that is already running.",
+        "",
+    ]
+
+
 def _timings(scored: ScoredRun) -> list[str]:
     runs = scored.loaded.runs
     steps = [
@@ -227,7 +241,8 @@ def _timings(scored: ScoredRun) -> list[str]:
         ]
         for s in store_summaries(runs)
     ]
-    lines = ["Per step, across all queries (seconds):", ""]
+    lines = _warm_up_lines(scored)
+    lines += ["Per step, across all queries (seconds):", ""]
     lines += _table(("Step", "Runs", "Mean s", "Max s"), steps or [["none", "", "", ""]])
     lines += ["", "Per store, across all queries:", ""]
     lines += _table(

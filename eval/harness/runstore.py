@@ -37,6 +37,20 @@ LABELS_FILE = "labels.csv"
 Mode = Literal["mock", "record", "replay"]
 
 
+class WarmUp(VgaModel):
+    """Loading the image model once before the first query (plan 16.1.1).
+
+    The 30 s limit is about a search on an app that is already running, so this time is reported
+    here and is never inside any query's time."""
+
+    duration_ms: float = Field(ge=0)
+    ready: bool
+    """``False`` when image scoring is unavailable: photo queries then rank on text and price
+    only, and the run does not show what the finished app does."""
+    detail: str | None = None
+    """What went wrong, when the warm-up raised instead of answering."""
+
+
 class RunMeta(VgaModel):
     """What kind of run this was."""
 
@@ -51,6 +65,8 @@ class RunMeta(VgaModel):
     """Where a replay's recording came from."""
     notes: list[str] = Field(default_factory=list)
     """Plain notes from the run itself, copied into the report."""
+    warm_up: WarmUp | None = None
+    """The warm-up before the first query. ``None`` for a mock or replay run: nothing is loaded."""
 
 
 class FailureRecord(VgaModel):
