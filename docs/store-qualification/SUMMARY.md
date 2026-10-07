@@ -156,6 +156,25 @@ Still thin after the change:
 
 Not tested in this pass and worth a look if coverage stays thin: Gul Ahmed UAE (South Asian), Al Boushiya and Elilhaam (evening gowns), Shaira and four other luxury modest-wear stores, Steve Madden Middle East (heels).
 
+## Update: Module 2.6, the designer brands the user named (2026-10-08)
+
+The user named eight Kuwaiti designer brands. Full record: [designer-store-qualification.md](designer-store-qualification.md).
+
+| Brand | Verdict | Currency | Price seen | Report |
+|---|---|---|---|---|
+| Bazza Alzouman | readable (Shopify) | KWD | 206-380 | [bazza-alzouman.md](bazza-alzouman.md) |
+| Hamsa | readable (Shopify) | KWD | garments 55-365 | [hamsa-kw.md](hamsa-kw.md) |
+| Manal Smaoui | readable (Shopify) | KWD | 5-85 | [manal-smaoui.md](manal-smaoui.md) |
+| Heba Shaikh | readable (Shopify) | GBP | 35-950 | [heba-shaikh.md](heba-shaikh.md) |
+| N.BEE | no online store of its own (Instagram only) | | | |
+| Montaha Couture | not readable: invalid security certificate | | | [montaha-couture.md](montaha-couture.md) |
+| Yousef Al-Jasmi | not readable: no robots.txt, home page redirects to an unrelated domain | | | [yousef-aljasmi.md](yousef-aljasmi.md) |
+| Marzook | not tested: handbags and accessories are out of scope | | | |
+
+**Decision (user, 2026-10-08): add the three dinar stores.** Each result shows the dinar price plus an approximate AED figure from a fixed rate; price ranges and budgets use the AED figure (plan assumption A28). Heba Shaikh is a reserve. The store limit becomes 13.
+
+What it adds: evening gowns (Bazza Alzouman), a third abaya store (Hamsa) and mid-priced kaftans and sets (Manal Smaoui). What it does not add: an abaya below about AED 600, or anything in the budget range.
+
 ## Not verified
 
 Terms of use for every store. Behaviour from any other network. What a non-member pays at Luxury For You. Pagination and Shopify limits above 10. The UCP/MCP endpoints (never requested). Tier hints for dropped stores (from public descriptions, not observed prices).

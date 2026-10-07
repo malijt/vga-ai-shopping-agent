@@ -18,7 +18,7 @@ photo and/or text
 4. Show         top 30 split into Budget / Mid / Premium / Luxury by your % mix, max 6 per store, link to store page
 ```
 
-**Key point:** we visit up to 10 store **search pages**, not 60 product pages. A search page already lists 20-50 products with price, image and link.
+**Key point:** we visit up to 13 store **search pages**, not 60 product pages. A search page already lists 20-50 products with price, image and link.
 
 ## Inputs
 
@@ -99,7 +99,7 @@ photo and/or text
 | Step | Expected |
 |---|---|
 | Understand (LLM) | 1-3 s |
-| Search up to 10 stores in parallel | 3-8 s |
+| Search up to 13 stores in parallel | 3-8 s |
 | Rank (incl. image similarity on about 30-50 thumbnails) | 2-8 s |
 | Price ranges and mix | under 0.1 s |
 | **Total** | **about 10-20 s** (limit for the demo: 30 s) |
@@ -121,5 +121,5 @@ An outfit photo with 4 garments needs about 4× the search pages: about 6-10 s f
 
 1. Is input type (product vs outfit photo) detected automatically? Proposed: yes, the LLM decides.
 2. Arabic text only for the LLM step, with English store search. Is that enough?
-3. Show price in each store's currency only? (Proposed: yes, UAE first so AED.)
+3. Show price in each store's currency only? **Decided 2026-10-08:** the store's own price is shown; for a store that does not price in AED, an approximate AED figure from a fixed rate is shown beside it and is used for price ranges and budgets.
 4. Is the even 25/25/25/25 default mix right, and are quartile borders from this search acceptable, or do you want fixed AED bands per category?

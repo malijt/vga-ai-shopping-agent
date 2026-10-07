@@ -7,7 +7,7 @@ file as the always-on summary and open the matching doc when you need full depth
 ## Project Context
 
 - **What it is:** a one-day demo. A shopper gives a photo, text (English or Arabic), or both. One
-  OpenAI call understands the request, the app searches up to 10 GCC fashion stores' own search pages
+  OpenAI call understands the request, the app searches up to 13 GCC fashion stores' own search pages
   live, ranks the products, and shows the top 30 split into Budget / Mid-range / Premium / Luxury.
   Every result links to the store's own product page.
 - **Categories (five):** tops, outerwear, bottoms, shoes and, since 2026-10-08, **dresses** (dresses,
@@ -25,7 +25,11 @@ file as the always-on summary and open the matching doc when you need full depth
   Giordano UAE, Nautica UAE, Sacoor Brothers UAE, Oh Polly UAE, Club L London UAE, Maison D'Vie and,
   since the user raised the limit from six on 2026-10-08 to cover dresses and modest wear, Hanayen,
   Maison Arabelle, Nishat Linen UAE and Signature Studio. A store is enabled only after a live smoke
-  test through the project's own engine. Three more readable stores are in reserve. Reaching big retailers is
+  test through the project's own engine. Three more readable stores are in reserve.
+- **Second currency (decided by the user 2026-10-08):** three Kuwaiti designer stores (Bazza Alzouman,
+  Hamsa, Manal Smaoui) are being added. They price in KWD. A result shows the store's own price plus
+  an approximate AED figure from a fixed rate in `config/settings.yaml`; price ranges and budgets use
+  the AED figure. There is no live exchange-rate call. Reaching big retailers is
   planned as later Phases 17-19 (agent endpoints, store APIs/headless with a terms sign-off, a
   category + sitemap index). Do not start those without the user's go-ahead.
 - **What it is not (yet):** not multi-tenant, no accounts, no billing or credits, no database, no
