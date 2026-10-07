@@ -20,7 +20,7 @@ Point 4 (the page shows the same product as the card) is left to the human label
 """
 
 import re
-from collections.abc import Awaitable, Callable, Collection, Mapping, Sequence
+from collections.abc import Awaitable, Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from urllib.parse import parse_qs, urlsplit
@@ -250,11 +250,14 @@ class LinkChecker:
         fetch: LinkFetch,
         allowed_hosts: Mapping[str, Collection[str]],
         rules: LinkRules | None = None,
+        known: Iterable[LinkCheck] = (),
     ) -> None:
+        """``known`` are checks an earlier session of the same run already made: those URLs are
+        not asked again."""
         self._fetch = fetch
         self._allowed_hosts = allowed_hosts
         self._rules = rules or LinkRules()
-        self._seen: dict[str, LinkCheck] = {}
+        self._seen: dict[str, LinkCheck] = {check.url: check for check in known}
 
     @property
     def requests_made(self) -> int:

@@ -26,6 +26,16 @@ apart from the queries: the 30 s limit is for a search on an app that is already
 The queries run one at a time. Each is searched, saved, and has its links checked before the next
 one starts (so a run that is stopped or interrupted keeps everything finished so far).
 
+**Being gentle with the stores (a live run only).** The platform limits a client address across all
+its shops, and a shopper never sends ten searches in a minute, so ``--record`` waits ``--pause``
+seconds (default 30) between one query and the next and sends at most one link request every
+``--link-interval`` seconds (default 2) across all stores. If a query finds every store blocked
+or in cooldown it is *not run* (neither a pass nor a fail, no rows in the labelling sheet) and the
+run stops there instead of asking the stores again; ``--keep-going`` sends the rest anyway. A run
+with any query not run has the verdict INCOMPLETE. ``--record DIR --only q03,q07`` finishes such a
+run later: it runs just those queries into the same run folder and recording (see ``resume.py``).
+A mock or replay run contacts no store and never waits or stops.
+
 A query may record the shopper's answer to the page's "Who is this for?" question
 (``shopper_gender`` in the query file). When the app would ask (some garment's gender was not
 stated), the harness gives that answer as the page does, with one re-search (see ``confirm.py``),
@@ -53,7 +63,7 @@ from typing import TextIO
 from tests.fakes import FakePipeline
 
 from eval.harness.confirm import describe_stated
-from eval.harness.errors import RunFileError, WiringError
+from eval.harness.errors import ResumeError, RunFileError, WiringError
 from eval.harness.followup import incomplete_lines
 from eval.harness.labels import LabelSet, export_label_sheet, import_label_sheet
 from eval.harness.links import (
@@ -75,6 +85,13 @@ from eval.harness.queries import (
 )
 from eval.harness.recording import RecordingSession, ReplaySession
 from eval.harness.report import render_report
+from eval.harness.resume import (
+    Continuation,
+    already_checked,
+    links_to_keep,
+    parse_only,
+    plan_continuation,
+)
 from eval.harness.runner import (
     ImageLoader,
     Pacing,
@@ -94,6 +111,7 @@ from eval.harness.runstore import (
     save_run,
 )
 from eval.harness.scoring import ScoredRun, score_run
+from eval.harness.session import Session, session_note
 from eval.harness.spacing import DEFAULT_LINK_INTERVAL_S, SpacedLinkFetch
 from eval.harness.wiring import Wiring, WiringFactory, load_wiring_factory
 from vga.errors import VgaError
@@ -163,7 +181,10 @@ def build_parser() -> argparse.ArgumentParser:
         "the run's own folder)",
     )
     parser.add_argument(
-        "--overwrite", action="store_true", help="allow --out to be a folder that already has files"
+        "--overwrite",
+        action="store_true",
+        help="allow --out to be a folder that already has files; with --only, also run a query "
+        "again that already has a result, replacing it",
     )
     parser.add_argument("--run", type=int, metavar="N", help="run number shown in the report")
     parser.add_argument("--labels", metavar="CSV", help="a filled labelling sheet to score")
@@ -205,6 +226,14 @@ def build_parser() -> argparse.ArgumentParser:
         "store blocked or in cooldown (by default the run stops there: asking stores that have "
         "just turned the search away only asks them again)",
     )
+    parser.add_argument(
+        "--only",
+        metavar="IDS",
+        help="finish a live run: with --record on the run's own recording folder, run just these "
+        "queries (ids separated by commas, for example q03,q07) into the same run folder, next "
+        "to the ones already there. The finished queries are not sent again; the report is "
+        "rebuilt over all of them",
+    )
     return parser
 
 
@@ -229,8 +258,12 @@ class _Setup:
     """Set by the run, before the first query."""
     stores: Sequence[StoreConfig] = ()
     """The stores the real application searches, to say so when a run starts."""
-    session_notes: list[str] = field(default_factory=list)
-    """How this live run treated the stores (the pause, the link spacing), for the report."""
+    session: Session | None = None
+    """How this live session treats the stores (the pause, the link spacing), for the report."""
+    earlier_session_notes: list[str] = field(default_factory=list)
+    """The notes of the sessions that fed this run folder before this one (``--only``)."""
+    known_links: list[LinkCheck] = field(default_factory=list)
+    """Link checks an earlier session made, so those URLs are not asked again."""
 
 
 def _next_run_number(results_dir: Path, prefix: str = "run") -> int:
@@ -329,6 +362,8 @@ def _setup_record(
     links: LinksMode,
     root: Path,
     planned: Sequence[str],
+    *,
+    resume: bool,
 ) -> _Setup:
     wiring = _wiring(args, settings, factory)
     if wiring.build_boundaries is None:
@@ -340,7 +375,7 @@ def _setup_record(
     # Build the live parts before the recording folder exists: a missing key or model is found
     # here, in plain words, and leaves nothing behind.
     boundaries = wiring.build_boundaries()
-    session = RecordingSession(args.record, planned=planned)
+    session = RecordingSession(args.record, planned=planned, resume=resume)
     live = session.wrap(boundaries)
     return _Setup(
         mode="record",
@@ -379,7 +414,11 @@ class _LinkPhase:
             if self._setup.link_fetch is None:
                 msg = "The wiring has no link_fetch, so links cannot be checked."
                 raise WiringError(msg)
-            self._checker = LinkChecker(self._setup.link_fetch, self._setup.allowed_hosts or {})
+            self._checker = LinkChecker(
+                self._setup.link_fetch,
+                self._setup.allowed_hosts or {},
+                known=self._setup.known_links,
+            )
         return await self._checker.check_all(products)
 
 
@@ -507,11 +546,19 @@ def _gender_notes(runs: Sequence[QueryRun]) -> list[str]:
     return notes
 
 
-def _run_notes(setup: _Setup, runs: Sequence[QueryRun]) -> list[str]:
+def _session_notes(setup: _Setup) -> list[str]:
+    """One note for every live session that fed this run folder, this one last."""
+    if setup.session is None:
+        return []
+    return [*setup.earlier_session_notes, session_note(setup.session, setup.warm_up)]
+
+
+def _run_notes(setup: _Setup, runs: Sequence[QueryRun], warm_up: WarmUp | None) -> list[str]:
+    """The notes for the report. ``warm_up`` is the run's own (the first session's)."""
     notes: list[str] = []
     if setup.replay is not None:
         notes.extend(setup.replay.final_notes())
-    notes.extend(setup.session_notes)
+    notes.extend(_session_notes(setup))
     notes.extend(_gender_notes(runs))
     unservable = [r.query.id for r in runs if r.failure and r.failure.code.startswith("recording")]
     if unservable:
@@ -520,7 +567,6 @@ def _run_notes(setup: _Setup, runs: Sequence[QueryRun]) -> list[str]:
             "recorded, incomplete, or the pipeline asked for something else). Those queries "
             "count as failed; the others ran. This is a limit of the recording, not a store fault."
         )
-    warm_up = setup.warm_up
     if warm_up is not None and not warm_up.ready:
         notes.append(
             "Image scoring was not available when the run started"
@@ -535,27 +581,6 @@ def _run_notes(setup: _Setup, runs: Sequence[QueryRun]) -> list[str]:
             + " is incomplete (a boundary failed mid-call); it cannot be replayed."
         )
     return notes
-
-
-def _pacing_note(pause_s: float) -> str:
-    if pause_s <= 0:
-        return "This live run sent its queries with no pause between queries (`--pause 0`)."
-    return (
-        f"This live run paused {pause_s:g} s between queries (`--pause`), outside every query's "
-        "seconds, so the stores were not asked ten searches in a minute."
-    )
-
-
-def _link_interval_note(interval_s: float) -> str:
-    if interval_s <= 0:
-        return (
-            "Link checks were not spaced out (`--link-interval 0`); only the fetch engine's own "
-            "limits applied."
-        )
-    return (
-        f"Link checks sent at most one link request every {interval_s:g} s across all stores "
-        "(`--link-interval`), on top of the fetch engine's own per-store limit."
-    )
 
 
 def _back_up(path: Path) -> Path:
@@ -666,20 +691,22 @@ def _execute(
     clock: Clock | None,
 ) -> int:
     mode: Mode = "mock" if args.mock else "record" if args.record else "replay"
+    only = parse_only(args.only) if args.only is not None else None
+    if only is not None and mode != "record":
+        msg = "--only finishes a live run: use it with --record, on the run's own recording."
+        raise ResumeError(msg)
     if mode == "replay" and args.links not in (None, "none"):
         msg = (
             "--replay makes no network call, so it cannot check links. "
             "Drop --links, or use --links none."
         )
         raise WiringError(msg)
-    links = (
-        LinksMode(args.links)
-        if args.links
-        else (LinksMode.NONE if mode == "replay" else LinksMode.ALL)
-    )
+    links_asked = LinksMode(args.links) if args.links else None
+    links = links_asked or (LinksMode.NONE if mode == "replay" else LinksMode.ALL)
     query_set = query_set_of(args.queries)
     out, number, overwrite = _resolve_output(args, mode, root, query_set)
-    _ensure_output_is_free(out, overwrite)
+    if only is None:
+        _ensure_output_is_free(out, overwrite)
 
     # Only the frozen acceptance set must have the PRD mix; an extra set has none to check.
     queries: list[AcceptanceQuery] = load_queries(
@@ -688,19 +715,51 @@ def _execute(
         require_images=mode == "record",
         check_mix=query_set == "acceptance",
     )
+    # Finishing a run: the folder's earlier sessions are kept, and this one runs the named queries.
+    continuation: Continuation | None = None
+    if only is not None:
+        continuation = plan_continuation(
+            out,
+            queries,
+            only,
+            query_set=query_set,
+            links_asked=links_asked,
+            overwrite=bool(args.overwrite),
+        )
+        links = continuation.links
+    earlier = continuation.earlier if continuation else None
+    to_run = list(continuation.selected) if continuation else queries
+    earlier_runs = earlier.runs if earlier else []
+    earlier_links = links_to_keep(earlier, {query.id for query in to_run}) if earlier else {}
+
     if mode == "mock":
         setup = _setup_mock()
     elif mode == "replay":
         setup = _setup_replay(args, settings, wiring_factory)
     else:
         setup = _setup_record(
-            args, settings, wiring_factory, links, root, [query.id for query in queries]
+            args,
+            settings,
+            wiring_factory,
+            links,
+            root,
+            [query.id for query in queries],
+            resume=continuation is not None,
         )
     if clock is not None:
         setup.clock = clock
     if setup.stores:
         names = ", ".join(store.id for store in setup.stores)
         print(f"Stores in this run ({len(setup.stores)}): {names}", file=out_stream)
+    if earlier is not None and continuation is not None:
+        setup.earlier_session_notes = list(earlier.meta.session_notes)
+        setup.known_links = already_checked(earlier)
+        print(
+            f"Continuing {out.name}: this session runs "
+            f"{', '.join(query.id for query in to_run)}; the other "
+            f"{len(queries) - len(to_run)} queries are left as they are and not sent again.",
+            file=out_stream,
+        )
 
     def progress(run: QueryRun) -> None:
         if run.not_run is not None:
@@ -718,21 +777,37 @@ def _execute(
             failure = run.failure.message if run.failure else "no response"
             print(f"{run.query.id}: FAILED ({failure})", file=out_stream)
 
+    def whole_run(new_runs: Sequence[QueryRun]) -> list[QueryRun]:
+        """Every query of the run folder, in the order of the queries file: this session's where
+        it ran, the earlier session's where it did not, and "not sent yet" for the rest. What is
+        saved after every query is this view, so an interrupted or stopped run can be finished."""
+        return in_query_order(queries, earlier_runs, new_runs)
+
     def persist(
-        runs: list[QueryRun], link_checks: dict[str, list[LinkCheck]], *, use_labels: bool
+        new_runs: Sequence[QueryRun],
+        new_links: Mapping[str, list[LinkCheck]],
+        *,
+        use_labels: bool,
     ) -> tuple[ScoredRun, Path, int]:
+        runs = whole_run(new_runs)
+        # The first session's own figures stay the run's: the date, the mix and the warm-up.
+        first = earlier.meta if earlier is not None else None
+        warm_up = first.warm_up if first is not None else setup.warm_up
         meta = RunMeta(
             number=number,
             query_set=query_set,
             mode=mode,
-            date=today,
+            date=first.date if first is not None else today,
             links=links,
-            price_range_mix=list(settings.tier_mix.as_tuple()),
+            price_range_mix=first.price_range_mix
+            if first is not None
+            else list(settings.tier_mix.as_tuple()),
             source=setup.source,
-            notes=_run_notes(setup, runs),
-            warm_up=setup.warm_up,
+            notes=_run_notes(setup, runs, warm_up),
+            session_notes=_session_notes(setup),
+            warm_up=warm_up,
         )
-        loaded = LoadedRun(meta, runs, link_checks)
+        loaded = LoadedRun(meta, runs, {**earlier_links, **new_links})
         # The folder was checked before the run (`_ensure_output_is_free`). By now it may hold
         # the recording, written there on purpose, so this save must not call that a collision.
         save_run(out, loaded, overwrite=True)
@@ -743,9 +818,7 @@ def _execute(
         return scored, sheet, rows
 
     def snapshot(runs: Sequence[QueryRun], checks: Mapping[str, list[LinkCheck]]) -> None:
-        # The queries not reached yet are saved as "not sent yet", so a run that is interrupted
-        # reads as incomplete (not as a shorter run) and can be finished with --only.
-        persist(in_query_order(queries, (), runs), dict(checks), use_labels=False)
+        persist(runs, checks, use_labels=False)
 
     def warmed_up(warm_up: WarmUp | None) -> None:
         setup.warm_up = warm_up
@@ -759,18 +832,25 @@ def _execute(
             say=lambda text: print(text, file=out_stream),
             stop_when_throttled=not args.keep_going,
         )
-        setup.session_notes.append(_pacing_note(args.pause))
+        setup.session = Session(
+            number=len(setup.earlier_session_notes) + 1,
+            day=today,
+            ran=tuple(query.id for query in to_run) if continuation else None,
+            pause_s=args.pause,
+            link_interval_s=args.link_interval,
+            links=links,
+        )
         if setup.link_fetch is not None and links is not LinksMode.NONE:
             setup.link_fetch = SpacedLinkFetch(setup.link_fetch, args.link_interval, setup.clock)
-            setup.session_notes.append(_link_interval_note(args.link_interval))
 
-    runs, link_checks = asyncio.run(
-        _run_and_check(setup, queries, settings, links, progress, snapshot, warmed_up, pacing)
+    new_runs, new_links = asyncio.run(
+        _run_and_check(setup, to_run, settings, links, progress, snapshot, warmed_up, pacing)
     )
+    runs = whole_run(new_runs)
     if mode == "record":
         for line in incomplete_lines(runs, args):
             print(line, file=out_stream)
-    scored, sheet, rows = persist(runs, link_checks, use_labels=True)
+    scored, sheet, rows = persist(new_runs, new_links, use_labels=True)
 
     answered = sum(1 for run in runs if run.response is not None and run.not_run is None)
     not_run = sum(1 for run in runs if run.not_run is not None)

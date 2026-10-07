@@ -58,6 +58,13 @@ class LabelSheetError(HarnessError):
     default_code = "label_sheet"
 
 
+class ResumeError(HarnessError):
+    """``--only`` cannot finish this run: the folder is not a live run, a query is unknown or
+    already has a result, or a setting differs from the run's."""
+
+    default_code = "resume"
+
+
 class WiringError(HarnessError):
     """The live wiring (real pipeline, stores, link fetch) is missing or unusable."""
 

@@ -70,6 +70,10 @@ class RunMeta(VgaModel):
     """Where a replay's recording came from."""
     notes: list[str] = Field(default_factory=list)
     """Plain notes from the run itself, copied into the report."""
+    session_notes: list[str] = Field(default_factory=list)
+    """One note for each live session that fed this folder (the first run, then each ``--only``
+    that finished it): when, which queries, the pause and the link spacing. Kept so that a run
+    finished later still says how every part of it was made."""
     warm_up: WarmUp | None = None
     """The warm-up before the first query. ``None`` for a mock or replay run: nothing is loaded."""
 
