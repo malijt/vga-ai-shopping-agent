@@ -25,9 +25,10 @@ VALID_REVISION = "0123456789abcdef0123456789abcdef01234567"
 # The FashionSigLIP revision measured in spikes/siglip/REPORT.md. Changing it means re-running
 # the spike's quality check, so this test must change with it.
 MEASURED_SIGLIP_REVISION = "c56244cc94f92419e8369fa71efdaf403b124ce8"
-# The OpenAI snapshot pinned in config/settings.yaml (OpenAI's model page for gpt-5-mini). Changing
-# it means re-running the Understand eval and adding a prompts/CHANGELOG.md entry.
-PINNED_OPENAI_MODEL = "gpt-5-mini-2025-08-07"
+# The OpenAI model pinned in config/settings.yaml: chosen by the user on 2026-10-08; OpenAI lists no
+# dated snapshot for it, so the versioned name is the pin. Changing it means re-running the
+# Understand eval and adding a prompts/CHANGELOG.md entry.
+PINNED_OPENAI_MODEL = "gpt-6-luna"
 
 
 @pytest.fixture
@@ -63,11 +64,23 @@ class TestShippedSettingsFile:
         assert settings.store_cooldown_s == 900
         assert settings.rps_images_per_host == 5
 
-    def test_openai_model_is_pinned_to_a_dated_snapshot(self) -> None:
+    def test_openai_model_is_pinned_to_gpt_6_luna(self) -> None:
         settings = load_settings(DEFAULT_SETTINGS_PATH, env={})
 
         assert settings.openai_model == PINNED_OPENAI_MODEL
-        assert re.search(r"-\d{4}-\d{2}-\d{2}$", PINNED_OPENAI_MODEL)
+
+    def test_the_pinned_model_is_a_dated_snapshot_or_a_verified_undated_one(self) -> None:
+        pinned = load_settings(DEFAULT_SETTINGS_PATH, env={}).openai_model
+
+        assert pinned is not None
+        assert re.search(r"-\d{4}-\d{2}-\d{2}$", pinned) or pinned in UNDATED_SNAPSHOT_IDS
+
+    def test_the_yaml_explains_why_the_model_has_no_date(self) -> None:
+        text = DEFAULT_SETTINGS_PATH.read_text(encoding="utf-8")
+
+        assert "2026-10-08" in text
+        assert "no dated snapshot" in text.lower()
+        assert "CHANGELOG.md" in text
 
     def test_the_environment_can_still_override_the_pinned_model(self) -> None:
         settings = load_settings(DEFAULT_SETTINGS_PATH, env={"OPENAI_MODEL": VALID_SNAPSHOT})

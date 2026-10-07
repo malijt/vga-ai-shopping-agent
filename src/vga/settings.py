@@ -5,12 +5,12 @@ Precedence, highest first: real environment variables, then ``.env``, then the Y
 defaults below. See ``.env.example`` for the variables.
 
 Two fields are unset in the code defaults because the build decides them (plan assumption A10 and
-Phase 3): ``openai_model`` and ``siglip_revision``. They may be ``None`` at load time (the shipped
-``config/settings.yaml`` pins ``siglip_revision`` since the Phase 3 spike; ``openai_model`` is still
-unset). When set they must be pinned: a dated OpenAI snapshot id (or an
-undated id from ``UNDATED_SNAPSHOT_IDS``, for a model OpenAI publishes only as a snapshot), and a
-40-character Hugging Face commit hash. Aliases such as ``gpt-5-mini`` or ``main`` are rejected,
-because a pinned version must not change under us.
+Phase 3): ``openai_model`` and ``siglip_revision``. They may be ``None`` at load time; the shipped
+``config/settings.yaml`` pins both (``siglip_revision`` since the Phase 3 spike, ``openai_model`` to
+``gpt-6-luna`` since 2026-10-08). When set they must be pinned: a dated OpenAI snapshot id (or an
+undated id from ``UNDATED_SNAPSHOT_IDS``, for a model OpenAI publishes only under its versioned
+name), and a 40-character Hugging Face commit hash. Aliases such as ``gpt-5-mini`` or ``main`` are
+rejected, because a pinned version must not change under us.
 
 An empty value in the environment (``OPENAI_MODEL=`` in ``.env``, for example) means "not set": the
 YAML value is used. It is never an error and never an empty string.
