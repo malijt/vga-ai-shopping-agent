@@ -12,4 +12,4 @@ extraction:
     - name: shopify
 tier_hint: premium
 # genders is left unset on purpose: the store sells for men (36 of 40 records seen) and women (4 of 40).
-enabled: false           # true only after the live smoke test passes
+enabled: true            # live smoke test passed 2026-10-08 (3 queries ok, 8-9 valid products each)
