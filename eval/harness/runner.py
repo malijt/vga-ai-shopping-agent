@@ -106,11 +106,17 @@ async def run_queries(
     runs: list[QueryRun] = []
     for query in queries:
         image = load_image(query)
-        if scope is not None:
-            scope.begin_query(query.id)
-        run = await run_query(query, pipeline, settings, clock=clock, image=image)
-        if scope is not None:
-            scope.end_query(query.id, duration_ms=run.duration_ms)
+        try:
+            if scope is not None:
+                scope.begin_query(query.id)
+        except VgaError as exc:
+            # A replay cannot serve this query (not recorded, or recorded incompletely). That is
+            # this query's failure, reported as such; the other queries still run.
+            run = QueryRun(query, None, _failure_from(exc), 0.0, 0.0)
+        else:
+            run = await run_query(query, pipeline, settings, clock=clock, image=image)
+            if scope is not None:
+                scope.end_query(query.id, duration_ms=run.duration_ms)
         runs.append(run)
         if progress is not None:
             progress(run)

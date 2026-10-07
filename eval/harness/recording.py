@@ -81,28 +81,37 @@ _ERROR_TYPES: dict[str, type[VgaError]] = {
 }
 
 
-def _refuse_image_data(value: Any, where: str = "recording") -> None:
-    """Raise if a payload holds bytes or a key that names a photo or an embedding."""
+_FREE_FORM = frozenset({"dropped", "scores"})
+"""Fields whose keys are data, not field names: drop reasons (``{"image": 3}`` could mean "no image
+URL") and image scores (keyed by URL). Their keys are not checked; their values still are."""
+
+
+def _refuse_image_data(value: Any, where: str = "recording", *, check_keys: bool = True) -> None:
+    """Raise if a payload holds bytes or a field that names a photo or an embedding."""
     if isinstance(value, bytes | bytearray):
         msg = f"refusing to save binary data at {where}: photos are never recorded"
         raise RecordingError(msg)
     if isinstance(value, dict):
         for key, item in value.items():
-            if key in _FORBIDDEN_KEYS:
+            if check_keys and key in _FORBIDDEN_KEYS:
                 msg = (
                     f"refusing to save a {key!r} field at {where}: "
                     "photos and embeddings are never recorded"
                 )
                 raise RecordingError(msg)
-            _refuse_image_data(item, f"{where}.{key}")
+            _refuse_image_data(item, f"{where}.{key}", check_keys=key not in _FREE_FORM)
     elif isinstance(value, list):
         for position, item in enumerate(value):
-            _refuse_image_data(item, f"{where}[{position}]")
+            _refuse_image_data(item, f"{where}[{position}]", check_keys=check_keys)
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
     _refuse_image_data(payload, path.name)
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    # Write beside the target and swap it in, so an interrupt cannot leave half a file where a
+    # complete recording used to be.
+    partial = path.with_name(path.name + ".tmp")
+    partial.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    partial.replace(path)
 
 
 def _read_json(path: Path, what: str) -> dict[str, Any]:
@@ -284,7 +293,11 @@ class _Replay:
 
 
 def _next_entry(
-    replay: _Replay, entries: list[dict[str, Any] | None], used: int, kind: str
+    session: "ReplaySession",
+    replay: _Replay,
+    entries: list[dict[str, Any] | None],
+    used: int,
+    kind: str,
 ) -> dict[str, Any]:
     entry = entries[used] if used < len(entries) else None
     if entry is None:
@@ -293,7 +306,7 @@ def _next_entry(
             f"recording holds {len(entries)}. The pipeline now behaves differently from the "
             "recorded run (for example it asks for another search); record again to test that."
         )
-        raise RecordingMismatchError(msg)
+        raise session.mismatch(msg)
     return entry
 
 
@@ -318,6 +331,8 @@ class ReplaySession:
         self._current: _Replay | None = None
         self.notes: list[str] = []
         """Plain notes for the report: calls the pipeline did not use, scores that were missing."""
+        self.mismatches: list[str] = []
+        """Every time the pipeline asked for something the recording does not hold."""
         self._missing_scores = 0
 
     def live_duration_ms(self, query_id: str) -> float | None:
@@ -345,6 +360,15 @@ class ReplaySession:
             msg = "a replayed boundary was called outside a query; call begin_query first"
             raise RecordingError(msg)
         return self._current
+
+    def mismatch(self, message: str) -> RecordingMismatchError:
+        """Remember that the replay diverged from the recording, and return the error to raise.
+
+        The error alone is not enough: a pipeline that catches it and degrades would look clean.
+        The report lists every mismatch in its notes either way."""
+        if message not in self.mismatches:
+            self.mismatches.append(message)
+        return RecordingMismatchError(message)
 
     def note_missing_scores(self, count: int) -> None:
         self._missing_scores += count
@@ -386,7 +410,8 @@ class ReplaySession:
 
     def final_notes(self) -> list[str]:
         """Notes collected so far, plus a count of products that had no recorded image score."""
-        notes = list(self.notes)
+        notes = [f"Replay diverged from the recording: {message}" for message in self.mismatches]
+        notes += self.notes
         if self._missing_scores:
             notes.append(
                 f"{self._missing_scores} product(s) had no recorded image score and were scored "
@@ -401,7 +426,9 @@ class _ReplayUnderstander:
 
     async def understand(self, req: SearchRequest) -> UnderstandResult:
         replay = self._session.current()
-        entry = _next_entry(replay, replay.understand, replay.used_understand, "understand")
+        entry = _next_entry(
+            self._session, replay, replay.understand, replay.used_understand, "understand"
+        )
         replay.used_understand += 1
         error = entry.get("error")
         if error is not None:
@@ -416,7 +443,7 @@ class _ReplaySearcher:
 
     async def search(self, item: ItemIntent, stores: Sequence[StoreConfig]) -> list[StoreResult]:
         replay = self._session.current()
-        entry = _next_entry(replay, replay.search, replay.used_search, "search")
+        entry = _next_entry(self._session, replay, replay.search, replay.used_search, "search")
         replay.used_search += 1
         asked = [store.id for store in stores]
         if entry["stores"] != asked:
@@ -425,14 +452,14 @@ class _ReplaySearcher:
                 f"but the recording searched {entry['stores']}. Record again to test a changed "
                 "store list."
             )
-            raise RecordingMismatchError(msg)
+            raise self._session.mismatch(msg)
         if ItemIntent.model_validate(entry["item"]) != item:
             msg = (
                 f"{replay.query_id}: search call {replay.used_search} asked for a different item "
                 "(category, attributes or keywords) than the recording holds. A replay cannot "
                 "judge changed keywords: record again to test that."
             )
-            raise RecordingMismatchError(msg)
+            raise self._session.mismatch(msg)
         return [StoreResult.model_validate(result) for result in entry["results"]]
 
 
@@ -444,7 +471,9 @@ class _ReplayImageRanker:
         self, query: QueryImage | None, products: Sequence[Product]
     ) -> dict[str, float | None]:
         replay = self._session.current()
-        entry = _next_entry(replay, replay.image_scores, replay.used_image_scores, "image score")
+        entry = _next_entry(
+            self._session, replay, replay.image_scores, replay.used_image_scores, "image score"
+        )
         replay.used_image_scores += 1
         recorded: dict[str, float | None] = entry["scores"]
         scores: dict[str, float | None] = {}

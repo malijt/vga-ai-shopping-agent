@@ -8,6 +8,7 @@ neither the network nor the model.
 import asyncio
 import base64
 import json
+import re
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -262,7 +263,8 @@ class TestWhatIsSaved:
             assert base64.b64encode(PHOTO).decode() not in text
             assert "embedding" not in text
             assert '"image"' not in text
-            assert "0.1, 0.2" not in text
+            # The fake ranker puts the embedding (0.1, 0.2, 0.3) on the photo query.
+            assert not re.search(r"\b0\.[123]\b", text)
 
     async def test_a_directory_that_already_holds_a_recording_is_refused(
         self, tmp_path: Path
@@ -331,6 +333,67 @@ class TestWhatIsSaved:
 
         saved = json.loads((tmp_path / "rec" / "q04_outfit.json").read_text(encoding="utf-8"))
         assert [call["item"]["category"] for call in saved["search"]] == ["tops", "shoes"]
+
+
+class TestRobustness:
+    def test_free_form_drop_reasons_may_be_named_image_or_photo(self) -> None:
+        # `StoreResult.dropped` is {reason: count}; a store adapter may well name a reason "image".
+        _refuse_image_data({"results": [{"dropped": {"image": 3, "photo": 1, "bytes": 2}}]})
+        _refuse_image_data({"scores": {"https://x.example/image": 0.5}})
+
+    def test_a_photo_field_in_a_structured_place_is_still_refused(self) -> None:
+        with pytest.raises(RecordingError, match="'image'"):
+            _refuse_image_data({"results": [{"products": [{"image": "x"}]}]})
+        with pytest.raises(RecordingError, match="binary"):
+            _refuse_image_data({"dropped": {"image": b"\x89PNG"}})
+
+    async def test_a_recording_leaves_no_half_written_files_behind(self, tmp_path: Path) -> None:
+        await record(tmp_path / "rec", LiveParts())
+
+        assert not list((tmp_path / "rec").glob("*.tmp"))
+
+    async def test_an_incomplete_query_fails_that_query_and_the_others_still_replay(
+        self, tmp_path: Path
+    ) -> None:
+        await record(tmp_path / "rec", LiveParts())
+        outfit = tmp_path / "rec" / "q04_outfit.json"
+        data = json.loads(outfit.read_text(encoding="utf-8"))
+        data["incomplete"] = True
+        outfit.write_text(json.dumps(data), encoding="utf-8")
+
+        replayed = await replay(tmp_path / "rec")
+
+        assert [run.response is not None for run in replayed] == [True, False, True]
+        assert replayed[1].failure is not None
+        assert replayed[1].failure.code == "recording"
+        assert "incomplete" in replayed[1].failure.message
+
+    async def test_a_query_missing_from_the_recording_fails_only_that_query(
+        self, tmp_path: Path
+    ) -> None:
+        await record(tmp_path / "rec", LiveParts())
+        manifest = tmp_path / "rec" / MANIFEST_FILE
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        del data["queries"]["q06_text"]
+        manifest.write_text(json.dumps(data), encoding="utf-8")
+
+        replayed = await replay(tmp_path / "rec")
+
+        assert [run.response is not None for run in replayed] == [True, True, False]
+        assert replayed[2].failure is not None
+        assert "q06_text" in replayed[2].failure.message
+
+    async def test_a_mismatch_is_noted_even_if_the_pipeline_swallows_the_error(
+        self, tmp_path: Path
+    ) -> None:
+        await record(tmp_path / "rec", LiveParts())
+        session = ReplaySession(tmp_path / "rec")
+        session.begin_query("q06_text")
+
+        with pytest.raises(RecordingMismatchError):
+            await session.searcher.search(make_item_intent(), make_stores()[:1])
+
+        assert any("Replay diverged" in note for note in session.final_notes())
 
 
 class TestReplayRefusesWhatWasNotRecorded:

@@ -6,7 +6,7 @@ from datetime import date
 from pathlib import Path
 
 import pytest
-from eval.harness.errors import RunFileError
+from eval.harness.errors import RecordingError, RunFileError
 from eval.harness.links import LinkCheck, LinksMode
 from eval.harness.queries import AcceptanceQuery
 from eval.harness.runner import PipelineFailure, QueryRun, QueryScope, run_queries
@@ -202,7 +202,36 @@ class TestTiming:
         assert own_is_longer[0].duration_source == "measured"
 
 
+class RefusingScope:
+    """A scope that cannot start one query, as a replay cannot when it was not recorded."""
+
+    def __init__(self, refuses: str) -> None:
+        self._refuses = refuses
+        self.ended: list[str] = []
+
+    def begin_query(self, query_id: str) -> None:
+        if query_id == self._refuses:
+            msg = f"{query_id} is not in the recording"
+            raise RecordingError(msg)
+
+    def end_query(self, query_id: str, *, duration_ms: float) -> None:
+        self.ended.append(query_id)
+
+
 class TestAFailingQuery:
+    async def test_a_query_the_scope_cannot_start_fails_alone_and_is_never_run(self) -> None:
+        pipeline = FakePipeline()
+        scope = RefusingScope("q06_text")
+
+        runs = await run_all(pipeline, scope=scope)
+
+        assert [run.response is not None for run in runs] == [True, False, True]
+        assert runs[1].failure is not None
+        assert runs[1].failure.code == "recording"
+        assert "q06_text is not in the recording" in runs[1].failure.message
+        assert len(pipeline.calls) == 2
+        assert scope.ended == ["q01_photo", "q09_photo_text"]
+
     async def test_a_vga_error_is_kept_with_its_code_and_plain_message(self) -> None:
         error = InvalidInputError("Please add a photo.", detail="secret internals")
 
