@@ -17,6 +17,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 import streamlit as st
+
 from app import state
 from app.copy import (
     BUTTON_APPLY_CHIPS,
@@ -25,7 +26,6 @@ from app.copy import (
     GENDER_LABELS,
     GENDER_NOT_SET,
 )
-
 from vga.models import (
     DEFAULT_CURRENCY,
     Budget,

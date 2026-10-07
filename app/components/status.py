@@ -9,10 +9,10 @@ code, but nothing here trusts that enough to hand it to a function that reads ma
 from collections.abc import Sequence
 
 import streamlit as st
-from app.copy import ERROR_HEADLINE, STEP_LABELS
-from app.safe_text import plain_text
 from streamlit.delta_generator import DeltaGenerator
 
+from app.copy import ERROR_HEADLINE, STEP_LABELS
+from app.safe_text import plain_text
 from vga.models import Step
 
 WARNING_MAX_CHARS = 300

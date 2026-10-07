@@ -6,8 +6,8 @@ the deferred list until a stakeholder asks for them). The choice is returned as 
 """
 
 import streamlit as st
-from app import state
 
+from app import state
 from vga.models import DEFAULT_CURRENCY, Budget, MixPreset, SettingsOverride, TierMix
 
 BUDGET_MAX = 1_000_000.0

@@ -11,9 +11,9 @@ The "No image available" placeholder below covers a missing or unusable image ad
 """
 
 import streamlit as st
+
 from app.copy import FLAG_TEXT, NOT_LISTED, PLACEHOLDER_NO_IMAGE
 from app.safe_text import format_price, label_fragment, plain_text
-
 from vga.models import ScoredProduct
 
 TITLE_MAX_CHARS = 120

@@ -6,10 +6,10 @@ Both say what to try next instead of leaving a dead end.
 from collections.abc import Sequence
 
 import streamlit as st
+
 from app import state
 from app.copy import EXAMPLE_QUERIES, NO_RESULTS_HEADLINE, NO_RESULTS_TIPS
 from app.safe_text import plain_text
-
 from vga.models import SearchResponse, StoreReport
 
 REASON_MAX_CHARS = 200

@@ -6,8 +6,8 @@ plain text: store ids and reasons come from configuration and from the pipeline.
 """
 
 import streamlit as st
-from app.safe_text import plain_text
 
+from app.safe_text import plain_text
 from vga.models import SearchResponse, StepTiming
 
 LINE_MAX_CHARS = 200

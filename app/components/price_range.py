@@ -9,9 +9,9 @@ text.
 from collections.abc import Sequence
 
 import streamlit as st
+
 from app.components.result_card import render_result_card
 from app.copy import FLAG_TEXT
-
 from vga.models import ScoredProduct, TierResult
 
 CARDS_PER_ROW = 3

@@ -10,9 +10,9 @@ its entry (plan 13.1.1); this check only gives the shopper a message next to the
 from dataclasses import dataclass
 
 import streamlit as st
+
 from app import state
 from app.copy import BUTTON_SEARCH, NOTE_PHOTO
-
 from vga.models import MAX_TEXT_CHARS
 
 MAX_PHOTO_MB = 8

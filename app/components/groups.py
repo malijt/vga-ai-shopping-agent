@@ -5,9 +5,9 @@ shows one group per garment, each under its own heading with the same four price
 """
 
 import streamlit as st
+
 from app.components.price_range import render_price_range
 from app.copy import CATEGORY_LABELS
-
 from vga.models import GarmentGroup, SearchResponse
 
 
