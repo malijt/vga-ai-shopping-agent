@@ -2,6 +2,7 @@
 
 import re
 
+import pytest
 from streamlit.testing.v1 import AppTest
 from streamlit.testing.v1.element_tree import Markdown
 
@@ -12,9 +13,11 @@ from app.copy import (
     NOTE_AI,
     NOTE_DEMO,
     NOTE_PHOTO,
+    SETUP_HEADLINE,
 )
 from tests.fakes import FakePipeline
-from tests.ui.helpers import SEARCH_BUTTON, TEXT_BOX, nodes, search, visible_strings
+from tests.ui.helpers import SEARCH_BUTTON, TEXT_BOX, nodes, plain_texts, search, visible_strings
+from vga.understand.understander import API_KEY_MISSING_MESSAGE, MODEL_NOT_SET_MESSAGE
 
 
 class TestStartup:
@@ -37,26 +40,57 @@ class TestStartup:
 
         assert [info.value for info in at.info] == [runner.FIXTURE_NOTICE]
 
-    def test_without_fixture_mode_the_page_says_the_live_search_is_not_connected(
-        self, at: AppTest, monkeypatch
+    def test_a_configured_live_page_has_no_example_notice_and_no_setup_message(
+        self, at: AppTest, live_mode: None
     ) -> None:
-        monkeypatch.setenv("VGA_UI_FIXTURE", "0")
+        at.run()
+
+        assert not at.info
+        assert not at.error
+        assert at.button(key=SEARCH_BUTTON).disabled is True  # only because nothing is typed yet
+
+    def test_without_a_key_the_page_says_what_to_set_up_before_any_search(
+        self, at: AppTest, live_mode: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("OPENAI_API_KEY")
 
         at.run()
 
-        assert [info.value for info in at.info] == [runner.NOT_CONNECTED_NOTICE]
-
-    def test_pressing_search_without_a_pipeline_shows_the_not_connected_message(
-        self, at: AppTest, monkeypatch
-    ) -> None:
-        monkeypatch.setenv("VGA_UI_FIXTURE", "0")
-        at.run()
-
-        search(at)
-
+        assert [error.value for error in at.error] == [SETUP_HEADLINE]
+        assert API_KEY_MISSING_MESSAGE in plain_texts(at)
         assert not at.exception
-        assert at.error[0].value  # the headline
-        assert runner.NOT_CONNECTED_NOTICE in [text.value for text in at.text]
+
+    def test_without_a_key_the_search_button_stays_off_even_with_text(
+        self, at: AppTest, live_mode: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("OPENAI_API_KEY")
+        at.run()
+
+        at.text_input(key=TEXT_BOX).set_value("black blazer").run()
+
+        assert at.button(key=SEARCH_BUTTON).disabled is True
+        assert at.text_input(key=TEXT_BOX).value == "black blazer"  # what was typed is kept
+
+    def test_without_a_model_the_page_says_what_to_set_up(
+        self, at: AppTest, live_mode: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        without_model = runner.load_ui_settings().model_copy(update={"openai_model": None})
+        monkeypatch.setattr(runner, "load_ui_settings", lambda: without_model)
+
+        at.run()
+
+        assert [error.value for error in at.error] == [SETUP_HEADLINE]
+        assert MODEL_NOT_SET_MESSAGE in plain_texts(at)
+
+    def test_fixture_mode_needs_no_key_and_shows_no_setup_message(
+        self, at: AppTest, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+        at.run()
+
+        assert not at.error
+        assert [info.value for info in at.info] == [runner.FIXTURE_NOTICE]
 
 
 class TestWords:

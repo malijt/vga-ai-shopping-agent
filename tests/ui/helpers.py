@@ -68,3 +68,41 @@ def search(at: AppTest, text: str = EXAMPLE_TEXT) -> AppTest:
     at.text_input(key=TEXT_BOX).set_value(text).run()
     at.button(key=SEARCH_BUTTON).click().run()
     return at
+
+
+def photo_key(at: AppTest) -> str:
+    """The photo uploader's current widget key: it changes each time a finished search lets go of
+    the photo (``app.state.photo_key``)."""
+    generation = at.session_state.get("photo_generation", 0)
+    return PHOTO if generation == 0 else f"{PHOTO}_{generation}"
+
+
+def holds_bytes(value: object, needle: bytes, _seen: set[int] | None = None) -> bool:
+    """Whether ``needle`` (a photo) is anywhere inside ``value``: as bytes, inside an uploaded
+    file, or in any attribute, item or field, however deep. Pydantic fields that are excluded from
+    dumps are looked at too, because they are still in memory."""
+    seen = _seen if _seen is not None else set()
+    if id(value) in seen or isinstance(value, str | int | float | bool | type(None)):
+        return False
+    seen.add(id(value))
+    if isinstance(value, bytes | bytearray | memoryview):
+        return needle in bytes(value)
+    getvalue = getattr(value, "getvalue", None)
+    if callable(getvalue):
+        try:
+            return holds_bytes(getvalue(), needle, seen)
+        except (OSError, ValueError):
+            return False
+    if isinstance(value, dict):
+        return any(holds_bytes(item, needle, seen) for item in [*value.keys(), *value.values()])
+    if isinstance(value, list | tuple | set | frozenset):
+        return any(holds_bytes(item, needle, seen) for item in value)
+    attributes = getattr(value, "__dict__", None)
+    if isinstance(attributes, dict):
+        return any(holds_bytes(item, needle, seen) for item in attributes.values())
+    return False
+
+
+def session_holds_bytes(at: AppTest, needle: bytes) -> bool:
+    """Whether anything the page remembers between runs holds the photo."""
+    return any(holds_bytes(at.session_state[key], needle) for key in at.session_state)

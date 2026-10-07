@@ -216,14 +216,59 @@ class TestApply:
         assert overrides.settings is not None
         assert overrides.settings.tier_mix == MixPreset.VALUE_FIRST.mix
 
-    def test_the_search_again_uses_what_is_in_the_boxes_now(
+    def test_the_search_again_names_the_earlier_search_and_sends_no_text_and_no_photo(
         self, results_at: AppTest, pipeline: FakePipeline
     ) -> None:
+        first = pipeline.calls[-1].req
         results_at.text_input(key=TEXT_BOX).set_value("something else").run()
 
         results_at.button(key=APPLY).click().run()
 
-        assert pipeline.calls[-1].req.text == "something else"
+        again = pipeline.calls[-1].req
+        assert again.rerun_of == first.request_id
+        assert again.text is None
+        assert again.image is None
+        assert again.request_id != first.request_id
+
+    def test_each_search_again_names_the_one_before_it(
+        self, results_at: AppTest, pipeline: FakePipeline
+    ) -> None:
+        results_at.button(key=APPLY).click().run()
+        second = pipeline.calls[-1].req
+
+        results_at.button(key=APPLY).click().run()
+
+        assert pipeline.calls[-1].req.rerun_of == second.request_id
+
+    def test_the_search_again_carries_the_photos_embedding_not_the_photo(
+        self, at: AppTest, install_pipeline: InstallPipeline
+    ) -> None:
+        embedding = [0.25, -0.5, 0.75]
+        fake = install_pipeline(SAMPLE.model_copy(update={"query_embedding": embedding}))
+        at.run()
+        search(at)
+
+        at.button(key=APPLY).click().run()
+
+        overrides = fake.calls[-1].overrides
+        assert overrides is not None
+        assert overrides.query_embedding == embedding
+        assert fake.calls[-1].req.image is None
+
+    def test_search_again_works_with_empty_boxes_because_it_needs_neither(
+        self, results_at: AppTest, pipeline: FakePipeline
+    ) -> None:
+        results_at.text_input(key=TEXT_BOX).set_value("").run()
+        calls_before = len(pipeline.calls)
+
+        assert results_at.button(key=APPLY).disabled is False
+        assert (
+            results_at.button(key=SEARCH_BUTTON).disabled is True
+        )  # a NEW search still needs input
+        results_at.button(key=APPLY).click().run()
+
+        assert len(pipeline.calls) == calls_before + 1
+        assert not any("keep your photo or description" in m.value for m in results_at.markdown)
 
     def test_after_a_successful_apply_the_chips_start_again_from_the_new_detection(
         self, results_at: AppTest
@@ -245,13 +290,6 @@ class TestApply:
         assert results_at.error
         assert results_at.text_input(key="chip_0_colour").value == "navy"
         assert results_at.button(key=APPLY).disabled is False
-
-    def test_search_again_is_blocked_when_the_boxes_are_empty(self, results_at: AppTest) -> None:
-        results_at.text_input(key=TEXT_BOX).set_value("").run()
-
-        assert results_at.button(key=APPLY).disabled is True
-        assert any("keep your photo or description" in m.value for m in results_at.markdown)
-        assert results_at.button(key=SEARCH_BUTTON).disabled is True
 
 
 class TestReset:

@@ -3,8 +3,13 @@
 The button is disabled until there is valid input and while a search runs, so an empty or broken
 request cannot be sent (prevent the error rather than report it). The browser already limits the
 file picker to image types and sizes, but a determined or confused client can send anything, so the
-photo is checked again here by its first bytes, not by its file name. The pipeline checks again at
-its entry (plan 13.1.1); this check only gives the shopper a message next to the uploader.
+photo is checked again here by its first bytes, not by its file name, and against the size limit in
+the settings (``max_image_bytes``), which is the one the pipeline enforces. The pipeline checks
+again at its entry (plan 13.1.1); this check only gives the shopper a message next to the uploader
+before anything is sent.
+
+The uploader's key changes each time a finished search lets go of the photo (``state.photo_key``),
+so the file is not kept after its search (plan 15.1.2).
 """
 
 from dataclasses import dataclass
@@ -16,7 +21,9 @@ from app.copy import BUTTON_SEARCH, NOTE_PHOTO
 from vga.models import MAX_TEXT_CHARS
 
 MAX_PHOTO_MB = 8
-"""Largest photo accepted. ``.streamlit/config.toml`` sets the same number for the server."""
+"""The outer limit on a photo, in megabytes: the uploader and ``.streamlit/config.toml`` stop
+anything bigger before the page code runs. The exact limit is ``Settings.max_image_bytes``, checked
+by ``check_photo``; it is a little under this."""
 ALLOWED_PHOTO_TYPES = ["png", "jpg", "jpeg", "webp"]
 
 TEXT_COMMIT_PAUSE = "250ms"
@@ -26,9 +33,18 @@ the still-disabled button would be lost (seen in a browser). A request is short,
 enough."""
 
 MESSAGE_WRONG_TYPE = "That file is not a PNG, JPG or WebP photo. Choose another file."
-MESSAGE_TOO_LARGE = (
-    f"That photo is larger than {MAX_PHOTO_MB} MB. Choose a smaller PNG, JPG or WebP photo."
+MESSAGE_PHOTO_USED = (
+    "Your photo was used for this search and has been removed. "
+    "You can still change what the AI detected below and search again."
 )
+
+
+def message_too_large(max_bytes: int) -> str:
+    """The message for a photo over the limit, naming the limit in megabytes."""
+    return (
+        f"That photo is larger than {max_bytes / 1_000_000:g} MB. "
+        "Choose a smaller PNG, JPG or WebP photo."
+    )
 
 
 @dataclass(frozen=True)
@@ -56,17 +72,25 @@ def sniff_image_kind(data: bytes) -> str | None:
     return None
 
 
-def check_photo(data: bytes) -> str | None:
-    """A plain-language message when the photo cannot be used, else ``None``."""
-    if len(data) > MAX_PHOTO_MB * 1024 * 1024:
-        return MESSAGE_TOO_LARGE
+def check_photo(data: bytes, max_bytes: int) -> str | None:
+    """A plain-language message when the photo cannot be used, else ``None``. ``max_bytes`` is
+    ``Settings.max_image_bytes``."""
+    if len(data) > max_bytes:
+        return message_too_large(max_bytes)
     if sniff_image_kind(data) is None:
         return MESSAGE_WRONG_TYPE
     return None
 
 
-def render_input_panel(*, disabled: bool) -> InputState:
-    """Draw the panel and return what is in it. ``disabled`` is true while a search runs."""
+def render_input_panel(
+    *, disabled: bool, max_photo_bytes: int, search_blocked: bool = False
+) -> InputState:
+    """Draw the panel and return what is in it.
+
+    ``disabled`` is true while a search runs. ``max_photo_bytes`` is ``Settings.max_image_bytes``.
+    ``search_blocked`` is true when the page has said why no search can work yet (no API key): the
+    boxes stay usable but the button stays off.
+    """
     photo_column, text_column = st.columns(2, gap="large")
 
     with photo_column:
@@ -75,15 +99,17 @@ def render_input_panel(*, disabled: bool) -> InputState:
             type=ALLOWED_PHOTO_TYPES,
             accept_multiple_files=False,
             max_upload_size=MAX_PHOTO_MB,
-            key=state.PHOTO_KEY,
+            key=state.photo_key(),
             disabled=disabled,
         )
         st.markdown(NOTE_PHOTO)
+        if uploaded is None and state.photo_released():
+            st.markdown(MESSAGE_PHOTO_USED)
         photo: bytes | None = None
         photo_error: str | None = None
         if uploaded is not None:
             data = uploaded.getvalue()
-            photo_error = check_photo(data)
+            photo_error = check_photo(data, max_photo_bytes)
             photo = None if photo_error else data
         if photo_error:
             st.error(photo_error)
@@ -104,7 +130,7 @@ def render_input_panel(*, disabled: bool) -> InputState:
         BUTTON_SEARCH,
         key=state.SEARCH_KEY,
         type="primary",
-        disabled=disabled or not inputs.is_valid,
+        disabled=disabled or search_blocked or not inputs.is_valid,
         on_click=state.request_search,
     )
     return inputs

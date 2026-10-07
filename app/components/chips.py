@@ -229,11 +229,11 @@ def _render_budget(budget: Budget | None, *, disabled: bool) -> None:
     )
 
 
-def render_chips(understood: UnderstandResult, *, disabled: bool, can_search: bool) -> None:
+def render_chips(understood: UnderstandResult, *, disabled: bool) -> None:
     """Draw the chips for the current detection.
 
-    ``disabled`` is true while a search runs. ``can_search`` is false when the input panel has
-    nothing to search with (a new request needs the photo or text again, assumption A8).
+    ``disabled`` is true while a search runs. Searching again needs nothing in the input boxes:
+    it works from the earlier detection and the photo's embedding, not from the photo (A8).
     """
     st.header("Detected by AI", anchor=False)
     st.markdown("Check what the AI understood. Change anything that is wrong, then search again.")
@@ -247,7 +247,7 @@ def render_chips(understood: UnderstandResult, *, disabled: bool, can_search: bo
             BUTTON_APPLY_CHIPS,
             key=APPLY_KEY,
             on_click=_apply_changes,
-            disabled=disabled or not can_search,
+            disabled=disabled,
         )
         st.button(
             BUTTON_RESET_CHIPS,
@@ -255,5 +255,3 @@ def render_chips(understood: UnderstandResult, *, disabled: bool, can_search: bo
             on_click=state.clear_chip_state,
             disabled=disabled,
         )
-    if not can_search:
-        st.markdown("To search again, keep your photo or description in the boxes above.")

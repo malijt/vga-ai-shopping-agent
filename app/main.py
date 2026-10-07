@@ -1,10 +1,11 @@
 """The shopping page: layout only. Logic lives in ``app.components`` and ``app.flow``.
 
-Run from the repository root:  ``uv run streamlit run app/main.py``  (add ``VGA_UI_FIXTURE=1`` to
-see the page with sample results; there is no live search connected yet).
+Run from the repository root:  ``uv run streamlit run app/main.py``  (it needs ``OPENAI_API_KEY``;
+add ``VGA_UI_FIXTURE=1`` instead to see the page with sample results, with no key and no network).
 
-Page order, top to bottom: title and trust notes, the input panel, any error, what the AI
-detected (chips), the search itself while it runs, then the results or the first-screen help.
+Page order, top to bottom: title and trust notes, anything that stops a search from working, the
+input panel, any error, what the AI detected (chips), the search itself while it runs, then the
+results or the first-screen help.
 """
 # ruff: noqa: E402  (the repository root is put on sys.path before the app imports below)
 
@@ -27,7 +28,7 @@ from app.components.groups import render_groups
 from app.components.input_panel import render_input_panel
 from app.components.run_details import render_run_details
 from app.components.sidebar import render_sidebar
-from app.components.status import render_error, render_notes
+from app.components.status import render_error, render_notes, render_setup_problem
 from app.copy import APP_TITLE, NOTE_AI, NOTE_DEMO
 from app.direction import apply_text_direction
 from vga.log import configure_logging
@@ -52,10 +53,22 @@ def render_page() -> None:
     notice = runner.mode_notice(settings)
     if notice:
         st.info(notice)
+    problem = runner.setup_problem(settings)
+    if problem:
+        render_setup_problem(problem)
+    runner.get_ready(settings)
 
     searching = state.is_searching()
-    settings_override = render_sidebar(disabled=searching)
-    inputs = render_input_panel(disabled=searching)
+    # The price-range mix is the one control that starts a search itself (on_change), so its new
+    # value reaches the page in the same run that marks the search as pending. Streamlit drops
+    # the value of a widget that is drawn disabled in that run, and the choice would snap back. It
+    # stays enabled while its own change is being applied; every other control is disabled.
+    settings_override = render_sidebar(disabled=searching and not state.is_changing_mix())
+    inputs = render_input_panel(
+        disabled=searching,
+        max_photo_bytes=settings.max_image_bytes,
+        search_blocked=problem is not None,
+    )
 
     error = state.last_error()
     if error:
@@ -63,7 +76,7 @@ def render_page() -> None:
 
     response = state.get_response()
     if response is not None:
-        render_chips(response.understood, disabled=searching, can_search=inputs.is_valid)
+        render_chips(response.understood, disabled=searching)
 
     flow.run_pending_search(inputs, settings_override)
 
@@ -71,6 +84,7 @@ def render_page() -> None:
         render_welcome(disabled=searching)
     elif response.result_count == 0:
         render_no_results(response)
+        render_notes(response.warnings)
         render_run_details(response)
     else:
         render_notes(response.warnings)
