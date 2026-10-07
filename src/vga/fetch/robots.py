@@ -13,7 +13,9 @@ The decisions follow RFC 9309 and the findings of the store qualification:
 - A rule whose value starts with neither ``/`` nor ``*`` (Namshi's ``Disallow: ?q=``) matches
   nothing under the RFC, but plainly means "any URL containing it", so it is read as if it began
   with ``*``.
-- A ``Crawl-delay`` slows the host's rate limiter; it never speeds it up.
+- A ``Crawl-delay`` slows the rate limiter of the store the host belongs to (the store's own hosts
+  share one queue); it never speeds it up, and the longest delay any of the store's hosts asks
+  for applies.
 - A block while fetching robots.txt (403, 429, challenge page) is a block like any other: the
   store goes into cooldown. Fetching robots.txt follows the same client rules as every request.
 
@@ -155,7 +157,9 @@ class RobotsChecker:
         rules = Protego.parse(MALFORMED_RULE.sub(r"\1*", text))
         delay = rules.crawl_delay(self._user_agent)
         if delay:
-            self._client.limiter.set_min_interval(host, float(delay))
+            self._client.limiter.set_min_interval(
+                self._client.contact_key(store, host), float(delay), source=host
+            )
             log.info(
                 "robots.txt asks for a crawl delay",
                 extra={"store": store.id, "host": host, "delay_s": float(delay)},

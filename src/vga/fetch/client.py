@@ -6,8 +6,11 @@ One honest ``httpx`` client, and these rules for every request, whatever it is f
   browser); no proxy, no cookies, no extra headers, no impersonation;
 - https only, every URL and every redirect hop checked against the store's ``allowed_hosts``
   (``vga.fetch.allowlist``); at most 3 redirects; a redirect to another registered domain stops
-  the request instead of following the store to its new home;
-- one slot per request from the per-host rate limiter, before the request is sent;
+  the request instead of following the store to its new home; and a redirect is followed only
+  after the caller's ``vet_redirect`` (robots.txt of the page it leads to) agrees;
+- one slot per request, before it is sent, from a rate limiter that works per *store* across all
+  the hosts of the store's own site (the bare domain and ``www.``, say) and per host for any
+  other host such as a shared image CDN;
 - a total time limit and a response size limit; a response that grows past the cap is aborted;
 - a 401, 403 or 429, a login redirect or a bot-challenge page means the store is *blocked*: the
   request is not repeated, and the key it belongs to is put in cooldown (``vga.fetch.ratelimit``);
@@ -19,12 +22,13 @@ The client holds no store knowledge beyond what a ``StoreConfig`` says about hos
 import asyncio
 import http.cookiejar
 import urllib.request
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
 from urllib.parse import urljoin, urlsplit
 
 import httpx
 
-from vga.fetch.allowlist import check_url, normalise_host, registered_domain
+from vga.fetch.allowlist import belongs_to_store_site, check_url, normalise_host, registered_domain
 from vga.fetch.blocking import (
     BLOCKING_STATUSES,
     LOGIN_PATH,
@@ -50,6 +54,11 @@ from vga.settings import Settings
 
 log = get_logger(__name__)
 
+RedirectCheck = Callable[[str, StoreConfig], Awaitable[None]]
+"""Asked about the target of a redirect before it is followed: it returns to allow it and raises a
+``FetchError`` to refuse it. The store search passes ``RobotsChecker.ensure_allowed`` so that a
+redirect never gets round the robots.txt of the page it leads to."""
+
 MAX_REDIRECTS = 3
 ACCEPT_PAGE = "application/json, text/html;q=0.9, text/plain;q=0.8, */*;q=0.5"
 ACCEPT_IMAGE = "image/*"
@@ -66,7 +75,9 @@ class FetchPolicy:
     timeout_s: float
     max_bytes: int
     cooldown_key: str
-    """What a block puts in cooldown: the store id for pages, ``host:<name>`` for image hosts."""
+    """What a block puts in cooldown, and what a cooldown stops: ``PoliteClient.contact_key`` of
+    the host asked, so the store id for every host of the store's own site (pages, robots.txt and
+    thumbnails alike) and ``host:<name>`` for any other host, such as a shared image CDN."""
     accept: str = ACCEPT_PAGE
 
 
@@ -165,26 +176,31 @@ class PoliteClient:
         )
 
     @staticmethod
-    def _is_store_host(store: StoreConfig, host: str) -> bool:
-        """True for the store's own domain (its search host and its sub-domains), false for a
-        separate CDN such as ``cdn.shopify.com``."""
-        page_host = normalise_host(urlsplit(store.search_url_template).hostname or "")
-        return registered_domain(host) == registered_domain(page_host)
+    def contact_key(store: StoreConfig, host: str) -> str:
+        """Who a request to ``host`` is addressed to, for the rate limit and for cooldowns: the
+        store (its id) for any host of the store's own site, else that host alone
+        (``host:<name>``, which cannot clash with a store id). The BRD's "about one request a
+        second" and "not contacted again during its cooldown" are both per store, so the bare
+        domain and its ``www.`` share one queue and one cooldown; a shared image CDN is another
+        party with its own."""
+        return store.id if belongs_to_store_site(store, host) else f"host:{normalise_host(host)}"
 
     def image_policy(self, store: StoreConfig, host: str, *, timeout_s: float) -> FetchPolicy:
         """Limits for a thumbnail. A host that belongs to the store itself keeps the store's
-        rate; only a separate image CDN gets the faster ``rps_images_per_host`` (assumption A5).
-        A block puts that image host, never the store, in cooldown."""
+        rate and, with it, the store's cooldown: a store that has just refused us is not asked for
+        thumbnails on its own host, and a thumbnail it refuses puts the store in cooldown. Only a
+        separate image CDN gets the faster ``rps_images_per_host`` (assumption A5) and its own
+        cooldown, so a CDN that refuses us never puts the store in cooldown."""
         rps = (
             store.rps or self.settings.rps_per_store
-            if self._is_store_host(store, host)
+            if belongs_to_store_site(store, host)
             else self.settings.rps_images_per_host
         )
         return FetchPolicy(
             rps=rps,
             timeout_s=timeout_s,
             max_bytes=store.max_response_bytes or self.settings.max_response_bytes,
-            cooldown_key=f"host:{host}",
+            cooldown_key=self.contact_key(store, host),
             accept=ACCEPT_IMAGE,
         )
 
@@ -194,32 +210,46 @@ class PoliteClient:
         rate and timeout and its own cooldown key, so a CDN that refuses us never puts the store
         in cooldown."""
         page = self.page_policy(store)
-        if self._is_store_host(store, host):
+        if belongs_to_store_site(store, host):
             return page
         return replace(
             page,
             rps=self.settings.rps_images_per_host,
             timeout_s=IMAGE_TIMEOUT_S,
-            cooldown_key=f"host:{host}",
+            cooldown_key=self.contact_key(store, host),
         )
 
     # ------------------------------------------------------------------------------------
     # Fetching
     # ------------------------------------------------------------------------------------
 
-    async def fetch(self, url: str, store: StoreConfig, policy: FetchPolicy) -> FetchResponse:
+    async def fetch(
+        self,
+        url: str,
+        store: StoreConfig,
+        policy: FetchPolicy,
+        *,
+        vet_redirect: RedirectCheck | None = None,
+    ) -> FetchResponse:
         """GET ``url`` for ``store`` and return the final response (any status except a block).
+
+        The caller has already checked ``url`` itself against robots.txt. ``vet_redirect`` is how
+        the client keeps that promise for the pages a redirect leads to: it is called with each
+        redirect target, after the allow-list check and before the request, and a ``FetchError``
+        it raises ends the fetch. Every request except a robots.txt fetch should pass one; a
+        robots.txt is the file that rules are read from, so there is nothing to check it against.
 
         Raises a ``FetchError`` subclass for everything that is not a response: a refused URL,
         a block, a cooldown, a timeout, a too-large body, a transport failure.
         """
-        host = check_url(url, store.allowed_hosts)
-        first_domain = registered_domain(host)
+        first_domain = registered_domain(check_url(url, store.allowed_hosts))
         current = url
-        for _ in range(MAX_REDIRECTS + 1):
+        for hop in range(MAX_REDIRECTS + 1):
             host = check_url(current, store.allowed_hosts)
             self._raise_if_cooling(policy.cooldown_key)
-            await self.limiter.acquire(host, policy.rps)
+            if hop > 0 and vet_redirect is not None:
+                await vet_redirect(current, store)
+            await self.limiter.acquire(self.contact_key(store, host), policy.rps)
             # Another task may have been turned away while this one waited for its slot.
             self._raise_if_cooling(policy.cooldown_key)
             raw = await self._send(current, policy, store.id)

@@ -523,6 +523,112 @@ async def test_a_block_on_the_stores_own_host_while_fetching_its_robots_blocks_t
     assert engine.client.cooldowns.remaining("oh-polly") > 0
 
 
+async def test_a_thumbnail_redirected_to_another_host_needs_that_hosts_robots_txt_to_allow_it(
+    engine: StoreSearchEngine, router: respx.MockRouter
+) -> None:
+    router.get("https://ohpolly.ae/robots.txt").mock(return_value=text_response(""))
+    router.get("https://ohpolly.ae/cdn/1.jpg").mock(
+        return_value=httpx.Response(301, headers={"location": "https://www.ohpolly.ae/cdn/1.jpg"})
+    )
+    www_robots = router.get("https://www.ohpolly.ae/robots.txt").mock(
+        return_value=text_response("User-agent: *\nDisallow: /cdn/\n")
+    )
+    landing = router.get("https://www.ohpolly.ae/cdn/1.jpg").mock(return_value=image_response())
+
+    data = await engine.fetch_image(oh_polly_product(image_url="https://ohpolly.ae/cdn/1.jpg"))
+
+    assert data is None
+    assert www_robots.call_count == 1
+    assert landing.call_count == 0
+
+
+async def test_a_thumbnail_redirected_to_a_host_whose_robots_txt_allows_it_is_fetched(
+    engine: StoreSearchEngine, router: respx.MockRouter
+) -> None:
+    router.get("https://ohpolly.ae/robots.txt").mock(return_value=text_response(""))
+    router.get("https://ohpolly.ae/cdn/1.jpg").mock(
+        return_value=httpx.Response(301, headers={"location": "https://www.ohpolly.ae/cdn/1.jpg"})
+    )
+    router.get("https://www.ohpolly.ae/robots.txt").mock(return_value=text_response(""))
+    router.get("https://www.ohpolly.ae/cdn/1.jpg").mock(return_value=image_response())
+
+    data = await engine.fetch_image(oh_polly_product(image_url="https://ohpolly.ae/cdn/1.jpg"))
+
+    assert data == PNG
+
+
+OWN_HOST_IMAGE = "https://ohpolly.ae/cdn/1.jpg"
+
+
+def engine_with_images_on_the_stores_own_host(
+    settings: Settings, clock: FakeClock, router: respx.MockRouter
+) -> tuple[StoreSearchEngine, respx.Route]:
+    """Oh Polly serving its thumbnails itself; its robots.txt allows everything."""
+    store = shopify_store(allowed_hosts=["ohpolly.ae", "cdn.shopify.com"])
+    engine = StoreSearchEngine(settings, StoreRegistry([store]), clock=clock)
+    router.get("https://ohpolly.ae/robots.txt").mock(return_value=text_response(""))
+    images = router.get(url__startswith="https://ohpolly.ae/cdn/").mock(
+        return_value=image_response()
+    )
+    return engine, images
+
+
+async def test_a_thumbnail_on_the_stores_own_host_is_not_requested_while_the_store_is_cooling(
+    settings: Settings, clock: FakeClock, router: respx.MockRouter
+) -> None:
+    engine, images = engine_with_images_on_the_stores_own_host(settings, clock, router)
+    store = engine.registry.by_display_name("Oh Polly")
+    assert store is not None
+    await engine.robots.ensure_allowed("https://ohpolly.ae/search?q=blazer", store)  # the search
+    engine.client.cooldowns.start("oh-polly")  # ... and the store refused it
+
+    data = await engine.fetch_image(oh_polly_product(image_url=OWN_HOST_IMAGE))
+
+    assert data is None
+    assert images.call_count == 0
+
+
+async def test_nothing_at_all_is_requested_from_a_cooling_store_for_a_thumbnail(
+    settings: Settings, clock: FakeClock, router: respx.MockRouter
+) -> None:
+    engine, _images = engine_with_images_on_the_stores_own_host(settings, clock, router)
+    engine.client.cooldowns.start("oh-polly")
+
+    data = await engine.fetch_image(oh_polly_product(image_url=OWN_HOST_IMAGE))
+
+    assert data is None
+    assert router.calls.call_count == 0  # not the thumbnail, and not its robots.txt either
+
+
+async def test_a_thumbnail_on_the_image_cdn_is_still_fetched_while_the_store_is_cooling(
+    engine: StoreSearchEngine, router: respx.MockRouter
+) -> None:
+    route = router.get(url__startswith=CDN).mock(return_value=image_response())
+    engine.client.cooldowns.start("oh-polly")
+
+    data = await engine.fetch_image(oh_polly_product())
+
+    assert data == PNG  # cdn.shopify.com did not refuse us
+    assert route.call_count == 1
+
+
+async def test_a_block_on_a_thumbnail_from_the_stores_own_host_cools_the_store_down(
+    settings: Settings, clock: FakeClock, router: respx.MockRouter
+) -> None:
+    engine, images = engine_with_images_on_the_stores_own_host(settings, clock, router)
+    images.mock(return_value=httpx.Response(403))
+
+    results = [
+        await engine.fetch_image(oh_polly_product(n, image_url=f"https://ohpolly.ae/cdn/{n}.jpg"))
+        for n in range(1, 4)
+    ]
+
+    assert results == [None, None, None]
+    assert images.call_count == 1  # the other two were never asked for
+    assert engine.client.cooldowns.remaining("oh-polly") > 0
+    assert engine.client.cooldowns.remaining("host:ohpolly.ae") == 0
+
+
 async def test_a_robots_refusal_for_an_image_is_logged_with_its_reason(
     engine: StoreSearchEngine,
     router: respx.MockRouter,

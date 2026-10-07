@@ -481,3 +481,52 @@ async def test_a_crawl_delay_slows_the_host_down(
     await client.fetch(f"https://{HOST}/page", store, client.page_policy(store))
 
     assert clock.monotonic() - started >= 3.0 - 1e-9
+
+
+def two_host_store() -> StoreConfig:
+    return make_store_config(
+        search_url_template="https://www.shop.example/search?q={query}",
+        allowed_hosts=["www.shop.example", "shop.example"],
+    )
+
+
+async def test_a_crawl_delay_on_one_host_of_a_store_slows_the_store_on_its_other_host_too(
+    robots: RobotsChecker, client: PoliteClient, router: respx.MockRouter, clock: FakeClock
+) -> None:
+    router.get("https://www.shop.example/robots.txt").mock(
+        return_value=text_response("User-agent: *\nCrawl-delay: 3\n")
+    )
+    router.get("https://shop.example/robots.txt").mock(return_value=text_response(""))
+    router.get(url__startswith="https://shop.example/page").mock(return_value=text_response("ok"))
+    store = two_host_store()
+    await robots.ensure_allowed("https://www.shop.example/search?q=a", store)
+    await robots.ensure_allowed("https://shop.example/page", store)
+    first = clock.monotonic()
+
+    await client.fetch("https://shop.example/page", store, client.page_policy(store))
+    await client.fetch("https://shop.example/page", store, client.page_policy(store))
+
+    assert clock.monotonic() - first >= 3.0 - 1e-9
+
+
+async def test_a_shorter_crawl_delay_on_the_other_host_does_not_undo_a_longer_one(
+    robots: RobotsChecker, client: PoliteClient, router: respx.MockRouter, clock: FakeClock
+) -> None:
+    router.get("https://www.shop.example/robots.txt").mock(
+        return_value=text_response("User-agent: *\nCrawl-delay: 5\n")
+    )
+    router.get("https://shop.example/robots.txt").mock(
+        return_value=text_response("User-agent: *\nCrawl-delay: 1\n")
+    )
+    router.get(url__startswith="https://www.shop.example/page").mock(
+        return_value=text_response("ok")
+    )
+    store = two_host_store()
+    await robots.ensure_allowed("https://www.shop.example/search?q=a", store)
+    await robots.ensure_allowed("https://shop.example/page", store)
+    await client.fetch("https://www.shop.example/page", store, client.page_policy(store))
+    first = clock.monotonic()
+
+    await client.fetch("https://www.shop.example/page", store, client.page_policy(store))
+
+    assert clock.monotonic() - first >= 5.0 - 1e-9

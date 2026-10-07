@@ -2,7 +2,13 @@
 
 import pytest
 
-from vga.fetch.allowlist import check_url, is_allowed, registered_domain
+from tests.factories import make_store_config
+from vga.fetch.allowlist import (
+    belongs_to_store_site,
+    check_url,
+    is_allowed,
+    registered_domain,
+)
 from vga.fetch.errors import UrlNotAllowedError
 
 ALLOWED = ["www.shop.example", "cdn.shop.example"]
@@ -127,3 +133,44 @@ def test_matching_is_exact_not_by_suffix() -> None:
 )
 def test_registered_domain(host: str, expected: str) -> None:
     assert registered_domain(host) == expected
+
+
+# --------------------------------------------------------------------------------------------
+# The store's own site, as opposed to a CDN it lists
+# --------------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("search_host", "host", "own_site"),
+    [
+        ("www.shop.example", "www.shop.example", True),
+        ("www.shop.example", "shop.example", True),
+        ("shop.example", "www.shop.example", True),
+        ("ae.shop.example", "sa.shop.example", True),
+        ("www.shop.example", "WWW.Shop.Example.", True),
+        ("www.shop.example", "cdn.shopify.com", False),
+        ("www.shop.example", "shop.example.evil.example", False),
+        ("www.shop.example", "evilshop.example", False),
+        ("www.shop.co.uk", "uk.shop.co.uk", True),
+        ("www.shop.co.uk", "www.other.co.uk", False),
+    ],
+)
+def test_a_host_belongs_to_the_stores_site_when_it_shares_the_search_hosts_registered_domain(
+    search_host: str, host: str, own_site: bool
+) -> None:
+    store = make_store_config(
+        search_url_template=f"https://{search_host}/search?q={{query}}",
+        allowed_hosts=[search_host, "cdn.shopify.com"],
+    )
+
+    assert belongs_to_store_site(store, host) is own_site
+
+
+def test_belonging_to_the_stores_site_is_not_permission_to_contact_the_host() -> None:
+    store = make_store_config(
+        search_url_template="https://www.shop.example/search?q={query}",
+        allowed_hosts=["www.shop.example"],
+    )
+
+    assert belongs_to_store_site(store, "other.shop.example")
+    assert not is_allowed("https://other.shop.example/search", store.allowed_hosts)
