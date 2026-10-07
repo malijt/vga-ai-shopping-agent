@@ -1,0 +1,10 @@
+# gitleaks configuration, used by the pre-commit hook and by CI.
+# Start from the default rule set and add only what is documented here.
+title = "VGA gitleaks config"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "The documented placeholder in .env.example (a real key is not this string)"
+regexes = ['''sk-your-key-here''']

@@ -1,0 +1,47 @@
+# VGA AI Shopping Agent: settings. Validated by src/vga/settings.py; a bad value stops start-up
+# with a message naming the field. Environment variables override these values (see .env.example).
+# Only decided numbers live here; the weights and thresholds are tuned in Phase 16 against the
+# recorded acceptance run, not per query.
+
+# --- Search -------------------------------------------------------------------------------
+country: AE                     # ISO country code of the market (UAE first). Only enabled stores in it are used.
+stores: []                      # Store ids to use. Empty = every enabled store in `country`.
+results: 30                     # Results for a normal request (PRD R13).
+max_per_store: 6                # No store may supply more than this many results (PRD R9).
+outfit_results_per_garment: 12  # Results per garment for an outfit photo (assumption A2).
+request_deadline_s: 30          # Ceiling for one whole request; at the deadline we return what we have.
+
+# --- Fetching (be polite: BRD Rule 2) -----------------------------------------------------
+timeout_s: 6                    # Per store request (PRD R5).
+rps_per_store: 1                # Requests per second per store (BRD Rule 2).
+rps_images_per_host: 5          # Thumbnail downloads per second per image host (assumption A5).
+store_cache_ttl_s: 600          # Identical store searches within this time are served from memory.
+store_cooldown_s: 900           # A store that blocked or failed is not contacted again for this long.
+
+# --- Price ranges and ranking -------------------------------------------------------------
+tier_mix:                       # Percent of results per price range; must sum to 100 (PRD R14).
+  budget: 25
+  mid_range: 25
+  premium: 25
+  luxury: 25
+ranking_weights:                # Parts of the score (PRD R8). Normalised by the combiner.
+  text: 0.5
+  image: 0.3
+  price: 0.2
+min_match_score: 0.2            # Products scoring below this are never shown (PRD "Rules").
+neutral_price_score: 0.5        # Price-fit score when the shopper gave no budget.
+
+# --- Models -------------------------------------------------------------------------------
+# Quoted on purpose: an unquoted `off` is read by YAML as a boolean.
+image_ranker: "off"             # "siglip" (needs `uv sync --group ml` and siglip_revision) or "off".
+siglip_revision: null           # 40-character Hugging Face commit hash; set after the Phase 3 spike.
+openai_model: null              # DATED snapshot id (ends in -YYYY-MM-DD), chosen from OpenAI's docs. Never an alias.
+daily_llm_call_cap: 200         # Fail closed when reached (also VGA_DAILY_LLM_CALL_CAP).
+
+# --- Logging and debugging ----------------------------------------------------------------
+user_agent: "vga-shopping-agent-demo/0.1 (store search demo)"   # Honest and identifying; never a browser string.
+log_dir: logs
+log_level: INFO
+log_prompts: false              # true also logs the text prompt and parsed result, never the photo.
+debug_dump: false               # true writes each request's ranked candidates to a JSONL file.
+ui_fixture: false               # true runs the UI from the bundled sample response.

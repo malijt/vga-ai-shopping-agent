@@ -1,0 +1,770 @@
+{
+  "request_id": "0123456789abcdef0123456789abcdef",
+  "understood": {
+    "input_type": "outfit_photo",
+    "items": [
+      {
+        "category": "outerwear",
+        "colour": "black",
+        "style": "oversized blazer",
+        "material": "wool blend",
+        "gender": "men",
+        "gender_source": "inferred",
+        "search_keywords": [
+          "black oversized blazer",
+          "oversized wool blazer"
+        ]
+      },
+      {
+        "category": "shoes",
+        "colour": "white",
+        "style": "low-top leather sneakers",
+        "material": "leather",
+        "gender": "men",
+        "gender_source": "inferred",
+        "search_keywords": [
+          "white leather sneakers",
+          "white low top sneakers"
+        ]
+      }
+    ],
+    "budget": {
+      "max_price": 400.0,
+      "currency": "AED"
+    },
+    "edits": [],
+    "language": "en",
+    "prompt_version": "sample-1",
+    "model": "sample-model-2026-01-01",
+    "usage": {
+      "input_tokens": 1850,
+      "output_tokens": 210,
+      "llm_calls": 1
+    },
+    "warnings": []
+  },
+  "groups": [
+    {
+      "item_index": 0,
+      "category": "outerwear",
+      "tiers": [
+        {
+          "name": "budget",
+          "price_min": 129.0,
+          "price_max": 169.0,
+          "currency": "AED",
+          "target_count": 3,
+          "count": 3,
+          "flags": [],
+          "results": [
+            {
+              "product": {
+                "title": "Oversized Blazer",
+                "price": 129.0,
+                "currency": "AED",
+                "image_url": "https://cdn.souq-atelier.example/img/oversized-blazer.jpg",
+                "product_url": "https://www.souq-atelier.example/p/oversized-blazer",
+                "store": "Souq Atelier",
+                "colour": "black",
+                "in_stock": true,
+                "category": "outerwear"
+              },
+              "scores": {
+                "text": 0.93,
+                "image": null,
+                "price": 1.0,
+                "total": 0.95
+              },
+              "tier": "budget",
+              "reason": "Black, close to the colour you asked for. Within your 400 AED budget. Sold by Souq Atelier.",
+              "flags": []
+            },
+            {
+              "product": {
+                "title": "Relaxed Fit Blazer",
+                "price": 149.0,
+                "currency": "AED",
+                "image_url": "https://cdn.gulf-threads.example/img/relaxed-fit-blazer.jpg",
+                "product_url": "https://www.gulf-threads.example/p/relaxed-fit-blazer",
+                "store": "Gulf Threads",
+                "colour": "black",
+                "in_stock": true,
+                "category": "outerwear"
+              },
+              "scores": {
+                "text": 0.895,
+                "image": null,
+                "price": 1.0,
+                "total": 0.925
+              },
+              "tier": "budget",
+              "reason": "Black, close to the colour you asked for. Within your 400 AED budget. Sold by Gulf Threads.",
+              "flags": []
+            },
+            {
+              "product": {
+                "title": "Boxy Single-Breasted Blazer",
+                "price": 169.0,
+                "currency": "AED",
+                "image_url": "https://cdn.marina-mode.example/img/boxy-blazer.jpg",
+                "product_url": "https://www.marina-mode.example/p/boxy-blazer",
+                "store": "Marina Mode",
+                "colour": null,
+                "in_stock": true,
+                "category": "outerwear"
+              },
+              "scores": {
+                "text": 0.86,
+                "image": null,
+                "price": 1.0,
+                "total": 0.9
+              },
+              "tier": "budget",
+              "reason": "Matches your search words. Within your 400 AED budget. Sold by Marina Mode.",
+              "flags": []
+            }
+          ]
+        },
+        {
+          "name": "mid_range",
+          "price_min": 219.0,
+          "price_max": 289.0,
+          "currency": "AED",
+          "target_count": 3,
+          "count": 3,
+          "flags": [],
+          "results": [
+            {
+              "product": {
+                "title": "Wool Blend Oversized Blazer",
+                "price": 219.0,
+                "currency": "AED",
+                "image_url": "https://cdn.souq-atelier.example/img/wool-blend-blazer.jpg",
+                "product_url": "https://www.souq-atelier.example/p/wool-blend-blazer",
+                "store": "Souq Atelier",
+                "colour": "black",
+                "in_stock": true,
+                "category": "outerwear"
+              },
+              "scores": {
+                "text": 0.825,
+                "image": null,
+                "price": 1.0,
+                "total": 0.875
+              },
+              "tier": "mid_range",
+              "reason": "Black, close to the colour you asked for. Within your 400 AED budget. Sold by Souq Atelier.",
+              "flags": []
+            },
+            {
+              "product": {
+                "title": "Oversized Double-Breasted Relaxed-Fit Tailored Wool Blend Blazer Jacket With Notch Lapel, Structured Padded Shoulders, Two Flap Pockets, Functional Cuff Buttons, Full Satin Lining And Interior Chest Pocket, Machine Washable, Available In Regular And Extended Sizes, Black Charcoal Pinstripe",
+                "price": 259.0,
+                "currency": "AED",
+                "image_url": "https://cdn.gulf-threads.example/img/pinstripe-blazer.jpg",
+                "product_url": "https://www.gulf-threads.example/p/pinstripe-blazer",
+                "store": "Gulf Threads",
+                "colour": "charcoal",
+                "in_stock": true,
+                "category": "outerwear"
+              },
+              "scores": {
+                "text": 0.79,
+                "image": null,
+                "price": 1.0,
+                "total": 0.85
+              },
+              "tier": "mid_range",
+              "reason": "Charcoal, close to the colour you asked for. Within your 400 AED budget. Sold by Gulf Threads.",
+              "flags": []
+            },
+            {
+              "product": {
+                "title": "Textured Oversized Blazer",
+                "price": 289.0,
+                "currency": "AED",
+                "image_url": "https://cdn.marina-mode.example/img/textured-blazer.jpg",
+                "product_url": "https://www.marina-mode.example/p/textured-blazer",
+                "store": "Marina Mode",
+                "colour": "dark grey",
+                "in_stock": true,
+                "category": "outerwear"
+              },
+              "scores": {
+                "text": 0.755,
+                "image": null,
+                "price": 1.0,
+                "total": 0.825
+              },
+              "tier": "mid_range",
+              "reason": "Dark grey, close to the colour you asked for. Within your 400 AED budget. Sold by Marina Mode.",
+              "flags": []
+            }
+          ]
+        },
+        {
+          "name": "premium",
+          "price_min": 349.0,
+          "price_max": 640.0,
+          "currency": "AED",
+          "target_count": 3,
+          "count": 3,
+          "flags": [],
+          "results": [
+            {
+              "product": {
+                "title": "Tailored Wool Oversized Blazer",
+                "price": 349.0,
+                "currency": "AED",
+                "image_url": "https://cdn.gulf-threads.example/img/tailored-wool-blazer.jpg",
+                "product_url": "https://www.gulf-threads.example/p/tailored-wool-blazer",
+                "store": "Gulf Threads",
+                "colour": "black",
+                "in_stock": true,
+                "category": "outerwear"
+              },
+              "scores": {
+                "text": 0.72,
+                "image": null,
+                "price": 1.0,
+                "total": 0.8
+              },
+              "tier": "premium",
+              "reason": "Black, close to the colour you asked for. Within your 400 AED budget. Sold by Gulf Threads.",
+              "flags": []
+            },
+            {
+              "product": {
+                "title": "Italian Wool Double-Breasted Blazer",
+                "price": 520.0,
+                "currency": "AED",
+                "image_url": "https://cdn.marina-mode.example/img/italian-blazer.jpg",
+                "product_url": "https://www.marina-mode.example/p/italian-blazer",
+                "store": "Marina Mode",
+                "colour": "black",
+                "in_stock": true,
+                "category": "outerwear"
+              },
+              "scores": {
+                "text": 0.685,
+                "image": null,
+                "price": 0.769,
+                "total": 0.709
+              },
+              "tier": "premium",
+              "reason": "Black, close to the colour you asked for. Above your 400 AED budget. Sold by Marina Mode.",
+              "flags": [
+                "over_budget"
+              ]
+            },
+            {
+              "product": {
+                "title": "Structured Oversized Blazer",
+                "price": 640.0,
+                "currency": "AED",
+                "image_url": "https://cdn.oasis-luxe.example/img/structured-blazer.jpg",
+                "product_url": "https://www.oasis-luxe.example/p/structured-blazer",
+                "store": "Oasis Luxe",
+                "colour": "black",
+                "in_stock": true,
+                "category": "outerwear"
+              },
+              "scores": {
+                "text": 0.65,
+                "image": null,
+                "price": 0.625,
+                "total": 0.643
+              },
+              "tier": "premium",
+              "reason": "Black, close to the colour you asked for. Above your 400 AED budget. Sold by Oasis Luxe.",
+              "flags": [
+                "over_budget"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "luxury",
+          "price_min": 890.0,
+          "price_max": 2400.0,
+          "currency": "AED",
+          "target_count": 3,
+          "count": 3,
+          "flags": [],
+          "results": [
+            {
+              "product": {
+                "title": "Cashmere Blend Oversized Blazer",
+                "price": 890.0,
+                "currency": "AED",
+                "image_url": "https://cdn.oasis-luxe.example/img/cashmere-blazer.jpg",
+                "product_url": "https://www.oasis-luxe.example/p/cashmere-blazer",
+                "store": "Oasis Luxe",
+                "colour": "black",
+                "in_stock": true,
+                "category": "outerwear"
+              },
+              "scores": {
+                "text": 0.615,
+                "image": null,
+                "price": 0.449,
+                "total": 0.568
+              },
+              "tier": "luxury",
+              "reason": "Black, close to the colour you asked for. Above your 400 AED budget. Sold by Oasis Luxe.",
+              "flags": [
+                "over_budget"
+              ]
+            },
+            {
+              "product": {
+                "title": "Silk-Lined Tuxedo Blazer",
+                "price": 1250.0,
+                "currency": "AED",
+                "image_url": "https://cdn.oasis-luxe.example/img/silk-tuxedo-blazer.jpg",
+                "product_url": "https://www.oasis-luxe.example/p/silk-tuxedo-blazer",
+                "store": "Oasis Luxe",
+                "colour": "black",
+                "in_stock": true,
+                "category": "outerwear"
+              },
+              "scores": {
+                "text": 0.58,
+                "image": null,
+                "price": 0.32,
+                "total": 0.506
+              },
+              "tier": "luxury",
+              "reason": "Black, close to the colour you asked for. Above your 400 AED budget. Sold by Oasis Luxe.",
+              "flags": [
+                "over_budget"
+              ]
+            },
+            {
+              "product": {
+                "title": "Runway Oversized Blazer",
+                "price": 2400.0,
+                "currency": "AED",
+                "image_url": "https://cdn.oasis-luxe.example/img/runway-blazer.jpg",
+                "product_url": "https://www.oasis-luxe.example/p/runway-blazer",
+                "store": "Oasis Luxe",
+                "colour": "black",
+                "in_stock": true,
+                "category": "outerwear"
+              },
+              "scores": {
+                "text": 0.545,
+                "image": null,
+                "price": 0.167,
+                "total": 0.437
+              },
+              "tier": "luxury",
+              "reason": "Black, close to the colour you asked for. Above your 400 AED budget. Sold by Oasis Luxe.",
+              "flags": [
+                "over_budget"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "item_index": 1,
+      "category": "shoes",
+      "tiers": [
+        {
+          "name": "budget",
+          "price_min": 89.0,
+          "price_max": 129.0,
+          "currency": "AED",
+          "target_count": 3,
+          "count": 3,
+          "flags": [],
+          "results": [
+            {
+              "product": {
+                "title": "Low-Top Canvas Sneakers",
+                "price": 89.0,
+                "currency": "AED",
+                "image_url": "https://cdn.souq-atelier.example/img/canvas-sneakers.jpg",
+                "product_url": "https://www.souq-atelier.example/p/canvas-sneakers",
+                "store": "Souq Atelier",
+                "colour": "white",
+                "in_stock": true,
+                "category": "shoes"
+              },
+              "scores": {
+                "text": 0.93,
+                "image": null,
+                "price": 1.0,
+                "total": 0.95
+              },
+              "tier": "budget",
+              "reason": "White, close to the colour you asked for. Within your 400 AED budget. Sold by Souq Atelier.",
+              "flags": []
+            },
+            {
+              "product": {
+                "title": "Everyday White Trainers",
+                "price": 109.0,
+                "currency": "AED",
+                "image_url": "https://cdn.gulf-threads.example/img/everyday-trainers.jpg",
+                "product_url": "https://www.gulf-threads.example/p/everyday-trainers",
+                "store": "Gulf Threads",
+                "colour": "white",
+                "in_stock": true,
+                "category": "shoes"
+              },
+              "scores": {
+                "text": 0.895,
+                "image": null,
+                "price": 1.0,
+                "total": 0.925
+              },
+              "tier": "budget",
+              "reason": "White, close to the colour you asked for. Within your 400 AED budget. Sold by Gulf Threads.",
+              "flags": []
+            },
+            {
+              "product": {
+                "title": "Retro Court Sneakers",
+                "price": 129.0,
+                "currency": "AED",
+                "image_url": "https://cdn.marina-mode.example/img/retro-court.jpg",
+                "product_url": "https://www.marina-mode.example/p/retro-court",
+                "store": "Marina Mode",
+                "colour": "white",
+                "in_stock": true,
+                "category": "shoes"
+              },
+              "scores": {
+                "text": 0.86,
+                "image": null,
+                "price": 1.0,
+                "total": 0.9
+              },
+              "tier": "budget",
+              "reason": "White, close to the colour you asked for. Within your 400 AED budget. Sold by Marina Mode.",
+              "flags": []
+            }
+          ]
+        },
+        {
+          "name": "mid_range",
+          "price_min": 179.0,
+          "price_max": 249.0,
+          "currency": "AED",
+          "target_count": 3,
+          "count": 3,
+          "flags": [],
+          "results": [
+            {
+              "product": {
+                "title": "Leather Low-Top Sneakers",
+                "price": 179.0,
+                "currency": "AED",
+                "image_url": "https://cdn.souq-atelier.example/img/leather-low-top.jpg",
+                "product_url": "https://www.souq-atelier.example/p/leather-low-top",
+                "store": "Souq Atelier",
+                "colour": "white",
+                "in_stock": true,
+                "category": "shoes"
+              },
+              "scores": {
+                "text": 0.825,
+                "image": null,
+                "price": 1.0,
+                "total": 0.875
+              },
+              "tier": "mid_range",
+              "reason": "White, close to the colour you asked for. Within your 400 AED budget. Sold by Souq Atelier.",
+              "flags": []
+            },
+            {
+              "product": {
+                "title": "Minimal Leather Trainers",
+                "price": 199.0,
+                "currency": "AED",
+                "image_url": "https://cdn.gulf-threads.example/img/minimal-trainers.jpg",
+                "product_url": "https://www.gulf-threads.example/p/minimal-trainers",
+                "store": "Gulf Threads",
+                "colour": "off-white",
+                "in_stock": true,
+                "category": "shoes"
+              },
+              "scores": {
+                "text": 0.79,
+                "image": null,
+                "price": 1.0,
+                "total": 0.85
+              },
+              "tier": "mid_range",
+              "reason": "Off-white, close to the colour you asked for. Within your 400 AED budget. Sold by Gulf Threads.",
+              "flags": []
+            },
+            {
+              "product": {
+                "title": "Platform Leather Sneakers",
+                "price": 249.0,
+                "currency": "AED",
+                "image_url": "https://cdn.marina-mode.example/img/platform-sneakers.jpg",
+                "product_url": "https://www.marina-mode.example/p/platform-sneakers",
+                "store": "Marina Mode",
+                "colour": null,
+                "in_stock": true,
+                "category": "shoes"
+              },
+              "scores": {
+                "text": 0.755,
+                "image": null,
+                "price": 1.0,
+                "total": 0.825
+              },
+              "tier": "mid_range",
+              "reason": "Matches your search words. Within your 400 AED budget. Sold by Marina Mode.",
+              "flags": []
+            }
+          ]
+        },
+        {
+          "name": "premium",
+          "price_min": 399.0,
+          "price_max": 475.0,
+          "currency": "AED",
+          "target_count": 3,
+          "count": 2,
+          "flags": [
+            "few_options"
+          ],
+          "results": [
+            {
+              "product": {
+                "title": "Premium Leather Court Sneakers",
+                "price": 399.0,
+                "currency": "AED",
+                "image_url": "https://cdn.gulf-threads.example/img/premium-court.jpg",
+                "product_url": "https://www.gulf-threads.example/p/premium-court",
+                "store": "Gulf Threads",
+                "colour": "white",
+                "in_stock": true,
+                "category": "shoes"
+              },
+              "scores": {
+                "text": 0.72,
+                "image": null,
+                "price": 1.0,
+                "total": 0.8
+              },
+              "tier": "premium",
+              "reason": "White, close to the colour you asked for. Within your 400 AED budget. Sold by Gulf Threads.",
+              "flags": []
+            },
+            {
+              "product": {
+                "title": "Handmade Leather Sneakers",
+                "price": 475.0,
+                "currency": "AED",
+                "image_url": "https://cdn.oasis-luxe.example/img/handmade-sneakers.jpg",
+                "product_url": "https://www.oasis-luxe.example/p/handmade-sneakers",
+                "store": "Oasis Luxe",
+                "colour": "white",
+                "in_stock": true,
+                "category": "shoes"
+              },
+              "scores": {
+                "text": 0.685,
+                "image": null,
+                "price": 0.842,
+                "total": 0.73
+              },
+              "tier": "premium",
+              "reason": "White, close to the colour you asked for. Above your 400 AED budget. Sold by Oasis Luxe.",
+              "flags": [
+                "over_budget"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "luxury",
+          "price_min": 1150.0,
+          "price_max": 1150.0,
+          "currency": "AED",
+          "target_count": 3,
+          "count": 1,
+          "flags": [
+            "few_options"
+          ],
+          "results": [
+            {
+              "product": {
+                "title": "Italian Calf Leather Sneakers",
+                "price": 1150.0,
+                "currency": "AED",
+                "image_url": "https://cdn.oasis-luxe.example/img/italian-sneakers.jpg",
+                "product_url": "https://www.oasis-luxe.example/p/italian-sneakers",
+                "store": "Oasis Luxe",
+                "colour": "white",
+                "in_stock": true,
+                "category": "shoes"
+              },
+              "scores": {
+                "text": 0.65,
+                "image": null,
+                "price": 0.348,
+                "total": 0.564
+              },
+              "tier": "luxury",
+              "reason": "White, close to the colour you asked for. Above your 400 AED budget. Sold by Oasis Luxe.",
+              "flags": [
+                "over_budget"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "stores_used": [
+    {
+      "store_id": "souq-atelier",
+      "status": "ok",
+      "product_count": 4,
+      "duration_ms": 1840.0,
+      "strategy": "store_json",
+      "from_cache": false,
+      "dropped": {
+        "missing_price": 2
+      },
+      "reason": null
+    },
+    {
+      "store_id": "gulf-threads",
+      "status": "ok",
+      "product_count": 6,
+      "duration_ms": 2310.0,
+      "strategy": "json_ld",
+      "from_cache": false,
+      "dropped": {},
+      "reason": null
+    },
+    {
+      "store_id": "marina-mode",
+      "status": "ok",
+      "product_count": 5,
+      "duration_ms": 2975.0,
+      "strategy": "store_json",
+      "from_cache": true,
+      "dropped": {
+        "off_domain_link": 1
+      },
+      "reason": null
+    },
+    {
+      "store_id": "oasis-luxe",
+      "status": "ok",
+      "product_count": 6,
+      "duration_ms": 3420.0,
+      "strategy": "json_ld",
+      "from_cache": false,
+      "dropped": {},
+      "reason": null
+    }
+  ],
+  "stores_skipped": [
+    {
+      "store_id": "desert-denim",
+      "status": "blocked",
+      "product_count": 0,
+      "duration_ms": 640.0,
+      "strategy": null,
+      "from_cache": false,
+      "dropped": {},
+      "reason": "This store did not allow the search, so we skipped it."
+    }
+  ],
+  "timings": [
+    {
+      "step": "validate",
+      "store": null,
+      "duration_ms": 2.1,
+      "status": "ok"
+    },
+    {
+      "step": "understand",
+      "store": null,
+      "duration_ms": 1840.5,
+      "status": "ok"
+    },
+    {
+      "step": "fetch",
+      "store": "souq-atelier",
+      "duration_ms": 1840.0,
+      "status": "ok"
+    },
+    {
+      "step": "fetch",
+      "store": "gulf-threads",
+      "duration_ms": 2310.0,
+      "status": "ok"
+    },
+    {
+      "step": "fetch",
+      "store": "marina-mode",
+      "duration_ms": 2975.0,
+      "status": "ok"
+    },
+    {
+      "step": "fetch",
+      "store": "oasis-luxe",
+      "duration_ms": 3420.0,
+      "status": "ok"
+    },
+    {
+      "step": "fetch",
+      "store": "desert-denim",
+      "duration_ms": 640.0,
+      "status": "blocked"
+    },
+    {
+      "step": "search",
+      "store": null,
+      "duration_ms": 3560.0,
+      "status": "ok"
+    },
+    {
+      "step": "filter",
+      "store": null,
+      "duration_ms": 11.7,
+      "status": "ok"
+    },
+    {
+      "step": "rank",
+      "store": null,
+      "duration_ms": 84.3,
+      "status": "ok"
+    },
+    {
+      "step": "shape",
+      "store": null,
+      "duration_ms": 5.9,
+      "status": "ok"
+    },
+    {
+      "step": "assemble",
+      "store": null,
+      "duration_ms": 3.2,
+      "status": "ok"
+    }
+  ],
+  "usage": {
+    "input_tokens": 1850,
+    "output_tokens": 210,
+    "llm_calls": 1
+  },
+  "warnings": [
+    "Desert Denim was skipped because it did not allow the search.",
+    "Gender (men) was guessed from your photo and is not applied until you confirm it."
+  ],
+  "duration_ms": 5512.0
+}
