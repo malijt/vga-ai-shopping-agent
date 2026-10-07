@@ -2,7 +2,8 @@
 
 The sentence may only use facts the code holds about this product and request:
 - the colour on the product (its colour field or title) matches the colour asked for,
-- the price is within or above the budget, in the budget's own currency, and
+- the price is within or above the budget (compared in the base currency, the budget named in its
+  own currency), and
 - the store that sells it.
 
 It never repeats text from the request or the model (the colour name comes from the colour
@@ -14,8 +15,9 @@ the sentence is a plain template.
 from collections.abc import Sequence
 
 from vga.models import Budget, Flag, Product
-from vga.rank.price import comparable
+from vga.rank.price import budget_fit
 from vga.rank.text import TextMatch
+from vga.settings import Settings
 
 EXACT_COLOUR_FIT = 0.85
 """Colour fit at or above this reads as "the colour you asked for"; below it, "close to"."""
@@ -25,8 +27,13 @@ def _amount(value: float) -> str:
     return f"{value:,.0f}" if value == round(value) else f"{value:,.2f}"
 
 
-def build_reason(product: Product, match: TextMatch, budget: Budget | None) -> str:
-    """The reason sentence for ``product``, from ``match`` and ``budget`` and nothing else."""
+def build_reason(
+    product: Product, match: TextMatch, budget: Budget | None, settings: Settings
+) -> str:
+    """The reason sentence for ``product``, from ``match``, ``budget`` and the fixed rates in
+    ``settings`` and nothing else. A product in another currency is compared with the budget in
+    the base currency (the same figure as the over-budget flag); the budget is still named in its
+    own currency."""
     facts: list[str] = []
 
     if match.colour is not None and match.colour_fit is not None:
@@ -35,8 +42,9 @@ def build_reason(product: Product, match: TextMatch, budget: Budget | None) -> s
         else:
             facts.append(f"{match.colour.label}, close to the colour you asked for.")
 
-    if budget is not None and comparable(product.currency, budget):
-        position = "Within" if product.price <= budget.max_price else "Above"
+    fit = budget_fit(product.price, product.currency, budget, settings)
+    if budget is not None and fit is not None:
+        position = "Above" if fit.over else "Within"
         facts.append(f"{position} your {_amount(budget.max_price)} {budget.currency} budget.")
 
     if not facts:

@@ -8,6 +8,7 @@ from tests.factories import make_budget, make_item_intent, make_product, make_se
 from vga.models import Budget, Flag, ItemIntent, Product
 from vga.rank import build_reason, match_text, plain_reason, prefilter_and_score
 from vga.rank.lexicon import COLOUR_NAMES
+from vga.settings import Settings
 
 SETTINGS = make_settings()
 BLACK_BLAZER = make_item_intent(colour="black", style=None, search_keywords=["black blazer"])
@@ -18,9 +19,12 @@ def product(title: str, **overrides: object) -> Product:
 
 
 def reason_for(
-    item: ItemIntent, prod: Product, budget: Budget | None = None
+    item: ItemIntent,
+    prod: Product,
+    budget: Budget | None = None,
+    settings: Settings = SETTINGS,
 ) -> str:
-    return build_reason(prod, match_text(item, prod), budget)
+    return build_reason(prod, match_text(item, prod), budget, settings)
 
 
 def mentions(reason: str, word: str) -> bool:
@@ -150,6 +154,82 @@ def test_it_never_compares_a_price_with_a_budget_in_another_currency() -> None:
     )
 
     assert "budget" not in reason.lower()
+
+
+FX = make_settings(fx_rates={"KWD": 10.0})  # 1 KWD is 10 AED
+
+
+def test_a_dinar_price_within_an_aed_budget_says_within_after_converting() -> None:
+    reason = reason_for(
+        BLACK_BLAZER,
+        product("Blazer", price=39.0, currency="KWD"),  # AED 390
+        make_budget(max_price=400),
+        FX,
+    )
+
+    assert "Within your 400 AED budget." in reason
+
+
+def test_a_dinar_price_above_an_aed_budget_says_above_after_converting() -> None:
+    # 45 is far below 400 as a bare number, but KWD 45 is AED 450.
+    reason = reason_for(
+        BLACK_BLAZER,
+        product("Blazer", price=45.0, currency="KWD"),
+        make_budget(max_price=400),
+        FX,
+    )
+
+    assert "Above your 400 AED budget." in reason
+    assert "Within" not in reason
+
+
+def test_a_dinar_price_at_the_budget_after_converting_is_within_it() -> None:
+    reason = reason_for(
+        BLACK_BLAZER,
+        product("Blazer", price=40.0, currency="KWD"),
+        make_budget(max_price=400),
+        FX,
+    )
+
+    assert "Within your 400 AED budget." in reason
+
+
+def test_the_budget_is_named_in_its_own_currency_even_when_the_price_is_converted() -> None:
+    reason = reason_for(
+        BLACK_BLAZER,
+        product("Blazer", price=250.0, currency="AED"),
+        make_budget(max_price=30, currency="KWD"),  # AED 300
+        FX,
+    )
+
+    assert "Within your 30 KWD budget." in reason
+
+
+def test_a_dinar_product_with_no_rate_makes_no_budget_claim() -> None:
+    reason = reason_for(
+        BLACK_BLAZER,
+        product("Blazer", price=25.0, currency="KWD"),
+        make_budget(max_price=400),
+        SETTINGS,
+    )
+
+    assert "budget" not in reason.lower()
+
+
+def test_the_reason_and_the_over_budget_flag_agree_for_dinar_products() -> None:
+    budget = make_budget(max_price=400)
+    products = [
+        product("Black Blazer A", price=39.0, currency="KWD"),
+        product("Black Blazer B", price=45.0, currency="KWD"),
+    ]
+
+    scored = prefilter_and_score(BLACK_BLAZER, products, budget, FX)
+
+    by_title = {entry.product.title: entry for entry in scored}
+    assert Flag.OVER_BUDGET not in by_title["Black Blazer A"].flags
+    assert "Within your 400 AED budget." in by_title["Black Blazer A"].reason
+    assert Flag.OVER_BUDGET in by_title["Black Blazer B"].flags
+    assert "Above your 400 AED budget." in by_title["Black Blazer B"].reason
 
 
 def test_it_does_not_repeat_request_text_from_the_model() -> None:

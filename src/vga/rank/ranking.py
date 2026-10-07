@@ -52,7 +52,7 @@ def prefilter_and_score(
             continue
         match = match_text(item, product)
         price = price_score(product.price, product.currency, budget, settings)
-        over_budget = is_over_budget(product.price, product.currency, budget)
+        over_budget = is_over_budget(product.price, product.currency, budget, settings)
         flags = [Flag.OVER_BUDGET] if over_budget else []
         kept = product
         if decision.category is not None and product.category is not decision.category:
@@ -66,7 +66,7 @@ def prefilter_and_score(
                     price=price,
                     total=combine_scores(match.score, None, price, settings.ranking_weights),
                 ),
-                reason=build_reason(kept, match, budget),
+                reason=build_reason(kept, match, budget, settings),
                 flags=flags,
             )
         )
