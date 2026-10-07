@@ -783,6 +783,133 @@ async def test_robots_txt_is_fetched_once_for_many_searches(
 
 
 # --------------------------------------------------------------------------------------------
+# robots.txt for a redirect target (BRD Rule 2): the page we are sent to is asked about too
+# --------------------------------------------------------------------------------------------
+
+WWW_ROBOTS_URL = "https://www.ohpolly.ae/robots.txt"
+WWW_SUGGEST = "https://www.ohpolly.ae/search/suggest.json"
+
+
+def mock_apex_redirecting_to_www(
+    router: respx.MockRouter, *, www_robots: httpx.Response
+) -> tuple[respx.Route, respx.Route, respx.Route]:
+    """Oh Polly's apex host sends every search to ``www.``. Returns the apex search route, the
+    ``www.`` robots.txt route and the ``www.`` search route."""
+    router.get(OHPOLLY_ROBOTS_URL).mock(return_value=text_response(ALLOW_ALL_ROBOTS))
+
+    def to_www(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            302, headers={"location": str(request.url).replace("//ohpolly.ae", "//www.ohpolly.ae")}
+        )
+
+    apex = router.get(url__startswith=SUGGEST).mock(side_effect=to_www)
+    www_robots_route = router.get(WWW_ROBOTS_URL).mock(return_value=www_robots)
+    www_search = router.get(url__startswith=WWW_SUGGEST).mock(
+        return_value=json_response(suggest_body(shopify_product(1)))
+    )
+    return apex, www_robots_route, www_search
+
+
+async def test_a_redirect_to_another_host_is_followed_only_after_that_hosts_robots_txt_allows_it(
+    engine: StoreSearchEngine, router: respx.MockRouter
+) -> None:
+    mock_apex_redirecting_to_www(router, www_robots=text_response(ALLOW_ALL_ROBOTS))
+
+    [result] = await engine.search(item("black blazer"), [shopify_store()])
+
+    assert result.status is StoreStatus.OK
+    assert [(call.request.url.host, call.request.url.path) for call in router.calls] == [
+        ("ohpolly.ae", "/robots.txt"),
+        ("ohpolly.ae", "/search/suggest.json"),
+        ("www.ohpolly.ae", "/robots.txt"),
+        ("www.ohpolly.ae", "/search/suggest.json"),
+    ]
+
+
+async def test_a_redirect_to_a_host_whose_robots_txt_disallows_the_search_is_not_followed(
+    engine: StoreSearchEngine, router: respx.MockRouter
+) -> None:
+    apex, www_robots, www_search = mock_apex_redirecting_to_www(
+        router, www_robots=text_response("User-agent: *\nDisallow: /search\n")
+    )
+
+    [result] = await engine.search(item("black blazer"), [shopify_store()])
+
+    assert result.status is StoreStatus.ROBOTS_DENIED
+    assert result.products == []
+    assert (apex.call_count, www_robots.call_count, www_search.call_count) == (1, 1, 0)
+
+
+@pytest.mark.parametrize("status", [500, 503])
+async def test_a_redirect_to_a_host_whose_robots_txt_cannot_be_read_is_not_followed(
+    engine: StoreSearchEngine, router: respx.MockRouter, status: int
+) -> None:
+    _, _, www_search = mock_apex_redirecting_to_www(router, www_robots=httpx.Response(status))
+
+    [result] = await engine.search(item("black blazer"), [shopify_store()])
+
+    assert result.status is StoreStatus.ROBOTS_DENIED
+    assert www_search.call_count == 0
+
+
+async def test_a_redirect_to_a_host_with_no_robots_txt_is_followed(
+    engine: StoreSearchEngine, router: respx.MockRouter
+) -> None:
+    _, _, www_search = mock_apex_redirecting_to_www(router, www_robots=httpx.Response(404))
+
+    [result] = await engine.search(item("black blazer"), [shopify_store()])
+
+    assert result.status is StoreStatus.OK
+    assert www_search.call_count == 1
+
+
+async def test_a_block_while_reading_the_redirect_hosts_robots_txt_puts_the_store_in_cooldown(
+    engine: StoreSearchEngine, router: respx.MockRouter
+) -> None:
+    apex, www_robots, www_search = mock_apex_redirecting_to_www(
+        router, www_robots=httpx.Response(403)
+    )
+
+    [first] = await engine.search(item("a one"), [shopify_store()])
+    [second] = await engine.search(item("b two"), [shopify_store()])
+
+    assert (first.status, second.status) == (StoreStatus.BLOCKED, StoreStatus.COOLDOWN)
+    assert (apex.call_count, www_robots.call_count, www_search.call_count) == (1, 1, 0)
+
+
+async def test_the_redirect_hosts_robots_txt_is_fetched_once_for_all_the_variants(
+    engine: StoreSearchEngine, router: respx.MockRouter
+) -> None:
+    apex, www_robots, www_search = mock_apex_redirecting_to_www(
+        router, www_robots=text_response(ALLOW_ALL_ROBOTS)
+    )
+
+    [result] = await engine.search(item("black blazer", "oversized blazer"), [shopify_store()])
+
+    assert result.status is StoreStatus.OK
+    assert (apex.call_count, www_robots.call_count, www_search.call_count) == (2, 1, 2)
+
+
+async def test_a_redirect_to_a_path_the_same_hosts_robots_txt_disallows_is_not_followed(
+    engine: StoreSearchEngine, router: respx.MockRouter
+) -> None:
+    router.get(OHPOLLY_ROBOTS_URL).mock(
+        return_value=text_response("User-agent: *\nDisallow: /collections\n")
+    )
+    router.get(url__startswith=SUGGEST).mock(
+        return_value=httpx.Response(302, headers={"location": "/collections/all"})
+    )
+    landing = router.get("https://ohpolly.ae/collections/all").mock(
+        return_value=json_response(suggest_body(shopify_product(1)))
+    )
+
+    [result] = await engine.search(item("black blazer"), [shopify_store()])
+
+    assert result.status is StoreStatus.ROBOTS_DENIED
+    assert landing.call_count == 0
+
+
+# --------------------------------------------------------------------------------------------
 # 6.5.3 Result cache
 # --------------------------------------------------------------------------------------------
 

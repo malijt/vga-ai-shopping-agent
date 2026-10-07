@@ -1,16 +1,18 @@
-"""Gaps the Phase 14.1 guards found in the product code, kept as ``xfail(strict=True)`` tests.
+"""Gaps the Phase 14.1 guards found in the product code, kept as the tests that caught them.
 
-Each test states a rule the code is meant to keep and fails today for the reason in its ``reason``.
-They are strict: when the product is fixed the test starts to pass, pytest reports that as an
-error, and the ``xfail`` marker is removed in the fixing change. They sit together so they can be
-routed as a list; none changes how the application behaves today.
+Each test states a rule the code is meant to keep. They began as ``xfail(strict=True)`` tests with
+the reason each failed; when the product was fixed the test started to pass, pytest reported that
+as an error, and the marker was removed in the fixing change. A test that still carries the marker
+is a gap that is still open. They sit together so they can be routed as a list.
 
-1. ``robots.txt`` is not read for a redirect target (BRD Rule 2: respect robots.txt).
-2. A store's second host (``www.`` after an apex redirect) is not held to the one-request-a-second
-   spacing of the first (BRD Rule 2: about one a second per *store*; the limiter is per host).
-3. A product link is accepted on the shared image CDN, which is on ``allowed_hosts`` but is not the
-   store's product page (BRD Rule 1: every result links to the original store's product page).
-4. Thumbnails on the store's own host are fetched while the store is in cooldown after a block
+1. ``robots.txt`` is read for a redirect target (BRD Rule 2: respect robots.txt). Fixed: the
+   client asks the store's robots check about every redirect target before it follows it.
+2. A store's second host (``www.`` after an apex redirect) is held to the one-request-a-second
+   spacing of the first (BRD Rule 2: about one a second per *store*; the limiter was per host).
+3. A product link is not accepted on the shared image CDN, which is on ``allowed_hosts`` but is
+   not the store's product page (BRD Rule 1: every result links to the original store's product
+   page).
+4. Thumbnails on the store's own host are not fetched while the store is in cooldown after a block
    (BRD Rule 2: a store that blocks is not contacted again during its cooldown).
 """
 
@@ -41,15 +43,6 @@ WWW_HOSTS = ["alpha.example", "www.alpha.example", CDN_HOST]
 TO_WWW = "https://www.alpha.example/search/suggest.json?q=black"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "FINDING 1: robots.txt is read only for the first URL "
-        "(StoreSearchEngine._fetch_and_extract calls RobotsChecker.ensure_allowed once); "
-        "PoliteClient.fetch follows a redirect to another host of the store after checking the "
-        "allow-list and the rate limit but never that host's robots.txt"
-    ),
-)
 async def test_a_redirect_to_another_host_of_the_store_does_not_get_round_its_robots_txt(
     world: GuardWorld, build: GuardPipelines, settings: Settings
 ) -> None:

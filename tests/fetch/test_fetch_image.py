@@ -523,6 +523,40 @@ async def test_a_block_on_the_stores_own_host_while_fetching_its_robots_blocks_t
     assert engine.client.cooldowns.remaining("oh-polly") > 0
 
 
+async def test_a_thumbnail_redirected_to_another_host_needs_that_hosts_robots_txt_to_allow_it(
+    engine: StoreSearchEngine, router: respx.MockRouter
+) -> None:
+    router.get("https://ohpolly.ae/robots.txt").mock(return_value=text_response(""))
+    router.get("https://ohpolly.ae/cdn/1.jpg").mock(
+        return_value=httpx.Response(301, headers={"location": "https://www.ohpolly.ae/cdn/1.jpg"})
+    )
+    www_robots = router.get("https://www.ohpolly.ae/robots.txt").mock(
+        return_value=text_response("User-agent: *\nDisallow: /cdn/\n")
+    )
+    landing = router.get("https://www.ohpolly.ae/cdn/1.jpg").mock(return_value=image_response())
+
+    data = await engine.fetch_image(oh_polly_product(image_url="https://ohpolly.ae/cdn/1.jpg"))
+
+    assert data is None
+    assert www_robots.call_count == 1
+    assert landing.call_count == 0
+
+
+async def test_a_thumbnail_redirected_to_a_host_whose_robots_txt_allows_it_is_fetched(
+    engine: StoreSearchEngine, router: respx.MockRouter
+) -> None:
+    router.get("https://ohpolly.ae/robots.txt").mock(return_value=text_response(""))
+    router.get("https://ohpolly.ae/cdn/1.jpg").mock(
+        return_value=httpx.Response(301, headers={"location": "https://www.ohpolly.ae/cdn/1.jpg"})
+    )
+    router.get("https://www.ohpolly.ae/robots.txt").mock(return_value=text_response(""))
+    router.get("https://www.ohpolly.ae/cdn/1.jpg").mock(return_value=image_response())
+
+    data = await engine.fetch_image(oh_polly_product(image_url="https://ohpolly.ae/cdn/1.jpg"))
+
+    assert data == PNG
+
+
 async def test_a_robots_refusal_for_an_image_is_logged_with_its_reason(
     engine: StoreSearchEngine,
     router: respx.MockRouter,

@@ -18,6 +18,7 @@ from vga.fetch.errors import (
     FetchFailedError,
     FetchTimeoutError,
     ResponseTooLargeError,
+    RobotsDeniedError,
     TooManyRedirectsError,
     UrlNotAllowedError,
 )
@@ -362,6 +363,106 @@ async def test_a_redirect_between_two_allowed_hosts_of_the_same_domain_is_follow
 
     assert response.text == "landed"
     assert response.url == "https://shop.example/search?q=x"
+
+
+TWO_HOSTS = {
+    "search_url_template": "https://www.shop.example/search?q={query}",
+    "allowed_hosts": ["www.shop.example", "shop.example"],
+}
+
+
+class Vetting:
+    """A ``vet_redirect`` that records what it was asked and refuses the hosts it is told to."""
+
+    def __init__(self, *, refuse: str | None = None) -> None:
+        self.asked: list[tuple[str, str]] = []
+        self._refuse = refuse
+
+    async def __call__(self, url: str, store: StoreConfig) -> None:
+        self.asked.append((url, store.id))
+        if self._refuse and self._refuse in url:
+            raise RobotsDeniedError(detail=f"robots.txt disallows {url}")
+
+
+async def test_every_redirect_target_is_vetted_before_it_is_requested(
+    client: PoliteClient, router: respx.MockRouter
+) -> None:
+    two_hosts = make_store_config(**TWO_HOSTS)
+    router.get("https://www.shop.example/a").mock(
+        return_value=httpx.Response(302, headers={"location": "https://shop.example/b"})
+    )
+    router.get("https://shop.example/b").mock(
+        return_value=httpx.Response(302, headers={"location": "/c"})
+    )
+    router.get("https://shop.example/c").mock(return_value=text_response("landed"))
+    vetting = Vetting()
+
+    response = await client.fetch(
+        "https://www.shop.example/a",
+        two_hosts,
+        client.page_policy(two_hosts),
+        vet_redirect=vetting,
+    )
+
+    assert response.text == "landed"
+    assert vetting.asked == [
+        ("https://shop.example/b", two_hosts.id),
+        ("https://shop.example/c", two_hosts.id),
+    ]  # the URL the caller asked for is the caller's to check, not the client's
+
+
+async def test_a_redirect_the_vetting_refuses_is_not_requested_and_the_refusal_reaches_the_caller(
+    client: PoliteClient, router: respx.MockRouter
+) -> None:
+    two_hosts = make_store_config(**TWO_HOSTS)
+    router.get("https://www.shop.example/a").mock(
+        return_value=httpx.Response(302, headers={"location": "https://shop.example/b"})
+    )
+    target = router.get("https://shop.example/b").mock(return_value=text_response("landed"))
+
+    with pytest.raises(RobotsDeniedError):
+        await client.fetch(
+            "https://www.shop.example/a",
+            two_hosts,
+            client.page_policy(two_hosts),
+            vet_redirect=Vetting(refuse="shop.example/b"),
+        )
+
+    assert not target.called
+    assert client.cooldowns.remaining(two_hosts.id) == 0  # a refusal is not a block
+
+
+async def test_a_redirect_to_a_host_off_the_allow_list_is_refused_before_it_is_vetted(
+    client: PoliteClient, router: respx.MockRouter
+) -> None:
+    two_hosts = make_store_config(**TWO_HOSTS)
+    router.get("https://www.shop.example/a").mock(
+        return_value=httpx.Response(302, headers={"location": "https://other.shop.example/b"})
+    )
+    other = router.get("https://other.shop.example/b").mock(return_value=text_response("x"))
+    vetting = Vetting()
+
+    with pytest.raises(UrlNotAllowedError):
+        await client.fetch(
+            "https://www.shop.example/a",
+            two_hosts,
+            client.page_policy(two_hosts),
+            vet_redirect=vetting,
+        )
+
+    assert vetting.asked == []  # robots.txt of a host we may not contact is never asked for
+    assert not other.called
+
+
+async def test_a_fetch_without_a_redirect_asks_the_vetting_nothing(
+    client: PoliteClient, store: StoreConfig, router: respx.MockRouter
+) -> None:
+    router.get(SEARCH_URL).mock(return_value=text_response("hello"))
+    vetting = Vetting()
+
+    await client.fetch(SEARCH_URL, store, client.page_policy(store), vet_redirect=vetting)
+
+    assert vetting.asked == []
 
 
 async def test_a_relative_redirect_is_resolved_and_followed(

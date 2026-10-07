@@ -6,7 +6,8 @@ One honest ``httpx`` client, and these rules for every request, whatever it is f
   browser); no proxy, no cookies, no extra headers, no impersonation;
 - https only, every URL and every redirect hop checked against the store's ``allowed_hosts``
   (``vga.fetch.allowlist``); at most 3 redirects; a redirect to another registered domain stops
-  the request instead of following the store to its new home;
+  the request instead of following the store to its new home; and a redirect is followed only
+  after the caller's ``vet_redirect`` (robots.txt of the page it leads to) agrees;
 - one slot per request from the per-host rate limiter, before the request is sent;
 - a total time limit and a response size limit; a response that grows past the cap is aborted;
 - a 401, 403 or 429, a login redirect or a bot-challenge page means the store is *blocked*: the
@@ -19,6 +20,7 @@ The client holds no store knowledge beyond what a ``StoreConfig`` says about hos
 import asyncio
 import http.cookiejar
 import urllib.request
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
 from urllib.parse import urljoin, urlsplit
 
@@ -49,6 +51,11 @@ from vga.models import StoreConfig
 from vga.settings import Settings
 
 log = get_logger(__name__)
+
+RedirectCheck = Callable[[str, StoreConfig], Awaitable[None]]
+"""Asked about the target of a redirect before it is followed: it returns to allow it and raises a
+``FetchError`` to refuse it. The store search passes ``RobotsChecker.ensure_allowed`` so that a
+redirect never gets round the robots.txt of the page it leads to."""
 
 MAX_REDIRECTS = 3
 ACCEPT_PAGE = "application/json, text/html;q=0.9, text/plain;q=0.8, */*;q=0.5"
@@ -207,18 +214,32 @@ class PoliteClient:
     # Fetching
     # ------------------------------------------------------------------------------------
 
-    async def fetch(self, url: str, store: StoreConfig, policy: FetchPolicy) -> FetchResponse:
+    async def fetch(
+        self,
+        url: str,
+        store: StoreConfig,
+        policy: FetchPolicy,
+        *,
+        vet_redirect: RedirectCheck | None = None,
+    ) -> FetchResponse:
         """GET ``url`` for ``store`` and return the final response (any status except a block).
+
+        The caller has already checked ``url`` itself against robots.txt. ``vet_redirect`` is how
+        the client keeps that promise for the pages a redirect leads to: it is called with each
+        redirect target, after the allow-list check and before the request, and a ``FetchError``
+        it raises ends the fetch. Every request except a robots.txt fetch should pass one; a
+        robots.txt is the file that rules are read from, so there is nothing to check it against.
 
         Raises a ``FetchError`` subclass for everything that is not a response: a refused URL,
         a block, a cooldown, a timeout, a too-large body, a transport failure.
         """
-        host = check_url(url, store.allowed_hosts)
-        first_domain = registered_domain(host)
+        first_domain = registered_domain(check_url(url, store.allowed_hosts))
         current = url
-        for _ in range(MAX_REDIRECTS + 1):
+        for hop in range(MAX_REDIRECTS + 1):
             host = check_url(current, store.allowed_hosts)
             self._raise_if_cooling(policy.cooldown_key)
+            if hop > 0 and vet_redirect is not None:
+                await vet_redirect(current, store)
             await self.limiter.acquire(host, policy.rps)
             # Another task may have been turned away while this one waited for its slot.
             self._raise_if_cooling(policy.cooldown_key)
