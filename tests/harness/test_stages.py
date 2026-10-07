@@ -10,7 +10,6 @@ from eval.harness.stages import (
     step_summaries,
     store_summaries,
 )
-
 from tests.factories import make_store_report
 from tests.harness.helpers import labels_for, make_group, make_query, make_response
 from vga.models import Category, SearchResponse, StepTiming, StoreStatus

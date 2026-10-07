@@ -87,6 +87,11 @@ ignore = [
 "tests/**" = ["S101", "S105", "S106", "S311"]   # asserts, fake credentials, non-crypto random
 "scripts/**" = ["S603", "S607"]                  # we run fixed local tools (uv, pip-licenses)
 
+[tool.ruff.lint.isort]
+# `src` above lists these folders as import roots, so ruff finds the modules inside them but not
+# the packages `app` and `eval` themselves; without this they sort as third-party in some files.
+known-first-party = ["app", "eval"]
+
 [tool.ruff.lint.flake8-pytest-style]
 fixture-parentheses = false
 mark-parentheses = false

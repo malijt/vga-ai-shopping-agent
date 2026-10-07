@@ -5,6 +5,8 @@ and the one error boundary that never shows a stack trace.
 import logging
 
 import pytest
+from streamlit.testing.v1 import AppTest
+
 from app.components.run_details import timing_line
 from app.components.status import progress_lines
 from app.copy import (
@@ -16,8 +18,6 @@ from app.copy import (
     STEP_LABELS,
 )
 from app.state import PendingSearch
-from streamlit.testing.v1 import AppTest
-
 from tests.factories import (
     load_sample_response,
     make_search_response,
@@ -162,8 +162,8 @@ class TestProgress:
     def test_the_callback_draws_each_step_as_it_arrives(self) -> None:
         def script() -> None:
             import streamlit as st
-            from app.components.status import StepProgress
 
+            from app.components.status import StepProgress
             from vga.models import Step
 
             progress = StepProgress(st.empty())

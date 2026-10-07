@@ -4,8 +4,8 @@ the pipeline behind ``get_pipeline`` and keeps ``run_search``, so its shape is p
 import inspect
 
 import pytest
-from app import runner
 
+from app import runner
 from tests.factories import load_sample_response, make_search_request
 from tests.fakes import FakePipeline
 from vga.errors import VgaError

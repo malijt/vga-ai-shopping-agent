@@ -1,9 +1,9 @@
 """Chips (plan 10.2.1): editable category, colour, gender and budget; apply; reset."""
 
 import pytest
-from app.components.chips import ItemValues, build_chip_edits
 from streamlit.testing.v1 import AppTest
 
+from app.components.chips import ItemValues, build_chip_edits
 from tests.factories import (
     load_sample_response,
     make_budget,

@@ -5,6 +5,7 @@ from typing import Any
 
 import pytest
 import yaml
+
 from eval.harness.errors import MissingImageError, QueryFileError
 from eval.harness.queries import (
     EXPECTED_MIX,
@@ -15,7 +16,6 @@ from eval.harness.queries import (
     parse_queries,
     read_query_image,
 )
-
 from vga.models import InputType
 
 JACKET = "eval/data/assets/private/product_jacket.jpg"

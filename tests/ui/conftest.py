@@ -8,9 +8,9 @@ from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
-from app import runner
 from streamlit.testing.v1 import AppTest
 
+from app import runner
 from tests.fakes import FakePipeline, PipelineCall
 from tests.ui.helpers import search
 from vga.errors import VgaError

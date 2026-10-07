@@ -2,9 +2,9 @@
 in one place, the "Detected by AI" chip."""
 
 import pytest
-from app.components.sidebar import preset_caption
 from streamlit.testing.v1 import AppTest
 
+from app.components.sidebar import preset_caption
 from tests.fakes import FakePipeline
 from tests.ui.helpers import search
 from vga.models import MixPreset, SettingsOverride
