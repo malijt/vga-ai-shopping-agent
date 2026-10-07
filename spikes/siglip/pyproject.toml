@@ -1,0 +1,17 @@
+[project]
+name = "vga-siglip-spike"
+version = "0.0.0"
+description = "Phase 3 spike: is Marqo-FashionSigLIP fast and sensible enough on a laptop? Standalone, not part of the app."
+requires-python = "==3.12.*"
+dependencies = [
+    "torch",
+    "open_clip_torch",
+    "pillow",
+    "huggingface_hub",
+    "numpy",
+    "httpx",
+    "transformers>=5",
+]
+
+[tool.uv]
+package = false
