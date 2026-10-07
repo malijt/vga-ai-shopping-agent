@@ -1,23 +1,28 @@
-"""Gaps the Phase 14.1 guards found in the product code, kept as ``xfail(strict=True)`` tests.
+"""Gaps the Phase 14.1 guards found in the product code, kept as the tests that caught them.
 
-Each test states a rule the code is meant to keep and fails today for the reason in its ``reason``.
-They are strict: when the product is fixed the test starts to pass, pytest reports that as an
-error, and the ``xfail`` marker is removed in the fixing change. They sit together so they can be
-routed as a list; none changes how the application behaves today.
+Each test states a rule the code is meant to keep. They began as ``xfail(strict=True)`` tests with
+the reason each failed; when the product was fixed the test started to pass, pytest reported that
+as an error, and the marker was removed in the fixing change. All four are fixed; a new finding
+goes here as a strict ``xfail`` test again until its fix lands. They sit together so they can be
+routed as a list.
 
-1. ``robots.txt`` is not read for a redirect target (BRD Rule 2: respect robots.txt).
-2. A store's second host (``www.`` after an apex redirect) is not held to the one-request-a-second
-   spacing of the first (BRD Rule 2: about one a second per *store*; the limiter is per host).
-3. A product link is accepted on the shared image CDN, which is on ``allowed_hosts`` but is not the
-   store's product page (BRD Rule 1: every result links to the original store's product page).
-4. Thumbnails on the store's own host are fetched while the store is in cooldown after a block
-   (BRD Rule 2: a store that blocks is not contacted again during its cooldown).
+1. ``robots.txt`` is read for a redirect target (BRD Rule 2: respect robots.txt). Fixed: the
+   client asks the store's robots check about every redirect target before it follows it.
+2. A store's second host (``www.`` after an apex redirect) is held to the one-request-a-second
+   spacing of the first (BRD Rule 2: about one a second per *store*; the limiter was per host).
+   Fixed: the store's own hosts share one rate-limit queue, an image CDN keeps its own.
+3. A product link is not accepted on the shared image CDN, which is on ``allowed_hosts`` but is
+   not the store's product page (BRD Rule 1: every result links to the original store's product
+   page). Fixed: a product link must be on the store's own site; image links still use the whole
+   allow-list.
+4. Thumbnails on the store's own host are not fetched while the store is in cooldown after a block
+   (BRD Rule 2: a store that blocks is not contacted again during its cooldown). Fixed: a thumbnail
+   on any host of the store's own site shares the store's cooldown; an image CDN keeps its own.
 """
 
 from urllib.parse import urlsplit
 
 import httpx
-import pytest
 
 from tests.factories import make_search_request
 from tests.guards.scraping.support import (
@@ -41,15 +46,6 @@ WWW_HOSTS = ["alpha.example", "www.alpha.example", CDN_HOST]
 TO_WWW = "https://www.alpha.example/search/suggest.json?q=black"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "FINDING 1: robots.txt is read only for the first URL "
-        "(StoreSearchEngine._fetch_and_extract calls RobotsChecker.ensure_allowed once); "
-        "PoliteClient.fetch follows a redirect to another host of the store after checking the "
-        "allow-list and the rate limit but never that host's robots.txt"
-    ),
-)
 async def test_a_redirect_to_another_host_of_the_store_does_not_get_round_its_robots_txt(
     world: GuardWorld, build: GuardPipelines, settings: Settings
 ) -> None:
@@ -67,14 +63,6 @@ async def test_a_redirect_to_another_host_of_the_store_does_not_get_round_its_ro
     assert reached_www == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "FINDING 2: RateLimiter keeps one bucket per host (plan 6.1.3) but BRD Rule 2 says per "
-        "store; a search that redirects from alpha.example to www.alpha.example reaches both "
-        "hosts in the same second"
-    ),
-)
 async def test_a_store_that_redirects_to_its_other_host_is_still_asked_once_a_second_in_all(
     world: GuardWorld, build: GuardPipelines, settings: Settings
 ) -> None:
@@ -91,14 +79,6 @@ async def test_a_store_that_redirects_to_its_other_host_is_still_asked_once_a_se
     assert all(gap >= MIN_GAP_S for gap in gaps(times))
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "FINDING 3: Product.product_url is checked against all of the store's allowed_hosts "
-        "(vga.stores.normalise._checked_url), and the image CDN is one of them, so a store "
-        "response can name a file on cdn.shopify.com as the product page the shopper is sent to"
-    ),
-)
 async def test_a_product_link_on_the_image_host_is_not_shown_as_a_product_page(
     world: GuardWorld, build: GuardPipelines, settings: Settings
 ) -> None:
@@ -113,15 +93,6 @@ async def test_a_product_link_on_the_image_host_is_not_shown_as_a_product_page(
     assert [page for page in pages if urlsplit(page).hostname == CDN_HOST] == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "FINDING 4: a block puts the store id in cooldown but a thumbnail on the store's own "
-        "host is fetched under cooldown_key='host:<name>' (PoliteClient.image_policy), so images "
-        "are still requested from a host that has just refused the search. Not reachable with "
-        "today's six stores: all serve images from cdn.shopify.com"
-    ),
-)
 async def test_a_store_host_that_just_refused_a_search_is_not_asked_for_thumbnails(
     world: GuardWorld, build: GuardPipelines, settings: Settings, photo: bytes
 ) -> None:

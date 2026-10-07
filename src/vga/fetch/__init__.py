@@ -6,10 +6,12 @@ This package knows nothing about products or extraction; the store-aware layer o
     client = PoliteClient(settings)
     robots = RobotsChecker(client)
     await robots.ensure_allowed(url, store)
-    response = await client.fetch(url, store, client.page_policy(store))
+    response = await client.fetch(
+        url, store, client.page_policy(store), vet_redirect=robots.ensure_allowed
+    )
 """
 
-from vga.fetch.allowlist import check_url, is_allowed, registered_domain
+from vga.fetch.allowlist import belongs_to_store_site, check_url, is_allowed, registered_domain
 from vga.fetch.client import FetchPolicy, FetchResponse, PoliteClient
 from vga.fetch.errors import (
     BlockedError,
@@ -43,6 +45,7 @@ __all__ = [
     "RobotsDeniedError",
     "TooManyRedirectsError",
     "UrlNotAllowedError",
+    "belongs_to_store_site",
     "check_url",
     "is_allowed",
     "registered_domain",

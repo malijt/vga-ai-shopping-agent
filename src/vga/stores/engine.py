@@ -7,8 +7,9 @@
 2. skips it, with no request, while it is in cooldown after a block;
 3. for each of the item's keyword variants (at most ``max_variants``), in order: answers from the
    cache if it can, else checks robots.txt, fetches the search page and reads it through the
-   store's extraction chain; it stops at the first variant that is blocked, refused, slow or
-   broken, because asking again the same way would only repeat the failure;
+   store's extraction chain; a redirect is followed only after the robots.txt of the page it leads
+   to (another host of the store, say) allows it; it stops at the first variant that is blocked,
+   refused, slow or broken, because asking again the same way would only repeat the failure;
 4. merges the variants into one ``StoreResult``.
 
 Every outcome is a ``StoreResult``; nothing a store does, and no bug in one store's code path, can
@@ -199,7 +200,9 @@ class StoreSearchEngine:
             )
         try:
             await self.robots.ensure_allowed(url, store)
-            response = await self.client.fetch(url, store, self.client.page_policy(store))
+            response = await self.client.fetch(
+                url, store, self.client.page_policy(store), vet_redirect=self.robots.ensure_allowed
+            )
         except FetchError as exc:
             return StoreResult(
                 store_id=store.id,
@@ -336,10 +339,13 @@ class StoreSearchEngine:
         Meant to be handed to the image ranker as a ``Callable[[Product], Awaitable[bytes |
         None]]``. It finds the product's store, checks the image URL is https and on that store's
         ``allowed_hosts``, checks the image host's robots.txt (fetched once per host and cached,
-        like the store's own), takes a slot from the image-host rate limiter, allows 4 seconds,
-        keeps the response size cap, never retries and keeps the bytes in memory only. The response
-        must be an image (a challenge page or an error body is not). A robots refusal (or an
-        unreadable robots.txt) gives ``None`` and is logged with its reason.
+        like the store's own; a redirect target is checked the same way), takes a slot from the
+        image-host rate limiter, allows 4 seconds, keeps the response size cap, never retries and
+        keeps the bytes in memory only. A thumbnail on a host of the store's own site is held to
+        the store's cooldown (no request while the store is cooling, and a refusal there puts the
+        store in cooldown); a separate image CDN has its own. The response must be an image (a
+        challenge page or an error body is not). A robots refusal (or an unreadable robots.txt)
+        gives ``None`` and is logged with its reason.
         """
         try:
             store = self.registry.by_display_name(product.store)
@@ -349,7 +355,9 @@ class StoreSearchEngine:
             host = check_url(product.image_url, store.allowed_hosts)
             await self.robots.ensure_allowed(product.image_url, store)
             policy = self.client.image_policy(store, host, timeout_s=IMAGE_TIMEOUT_S)
-            response = await self.client.fetch(product.image_url, store, policy)
+            response = await self.client.fetch(
+                product.image_url, store, policy, vet_redirect=self.robots.ensure_allowed
+            )
         except asyncio.CancelledError:
             raise
         except FetchError as exc:

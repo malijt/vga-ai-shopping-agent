@@ -4,9 +4,12 @@ import pytest
 
 from vga.models import Category, Gender
 from vga.understand.lexicon import (
+    asks_for_a_higher_price,
+    asks_for_a_lower_price,
     garment_category,
     meaningful_tokens,
     mentioned_genders,
+    names_a_number_in_words,
     strip_price_words,
 )
 from vga.understand.text import (
@@ -39,6 +42,96 @@ from vga.understand.text import (
 )
 def test_price_words_and_phrases_are_removed_from_keywords(raw: str, expected: str) -> None:
     assert clean_keyword(raw, allow_gender=True) == expected
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        # plurals and inflections of words the lexicon already knew
+        ("black leather jacket discounts", "black leather jacket"),
+        ("black leather jacket discounted", "black leather jacket"),
+        ("black leather jacket sales", "black leather jacket"),
+        ("sale black leather jacket", "black leather jacket"),
+        ("black leather jacket budgets", "black leather jacket"),
+        ("black leather jacket cheaply", "black leather jacket"),
+        ("black leather jacket pricing", "black leather jacket"),
+        ("black leather jacket deals and offers", "black leather jacket"),
+        # markdowns, clearance, price cuts
+        ("black leather jacket markdown", "black leather jacket"),
+        ("black leather jacket markdowns", "black leather jacket"),
+        ("black leather jacket mark down", "black leather jacket"),
+        ("black leather jacket mark-down", "black leather jacket"),
+        ("black leather jacket marked down", "black leather jacket"),
+        ("black leather jacket clearance", "black leather jacket"),
+        ("black leather jacket half price", "black leather jacket"),
+        ("black leather jacket half-price", "black leather jacket"),
+        ("black leather jacket price cut", "black leather jacket"),
+        ("black leather jacket price drops", "black leather jacket"),
+        # "NN percent off" and its relatives are phrases, so no number or "off" is left behind
+        ("black leather jacket 70 percent off", "black leather jacket"),
+        ("black leather jacket 70% off", "black leather jacket"),
+        ("black leather jacket 70%off", "black leather jacket"),
+        ("black leather jacket 70 per cent off", "black leather jacket"),
+        ("black leather jacket 70 pct off", "black leather jacket"),
+        ("black leather jacket up to 70% off", "black leather jacket"),
+        ("black leather jacket 25.5% off", "black leather jacket"),
+        ("black leather jacket 50 percent discount", "black leather jacket"),
+        ("black leather jacket off 50%", "black leather jacket"),
+        ("black leather jacket 100 AED off", "black leather jacket"),
+        ("black leather jacket AED 100 off", "black leather jacket"),
+        # Arabic
+        ("جاكيت جلد أسود تنزيلات", "جاكيت جلد أسود"),
+        ("جاكيت جلد أسود تصفية", "جاكيت جلد أسود"),
+        ("جاكيت جلد أسود أوكازيون", "جاكيت جلد أسود"),
+        ("جاكيت جلد أسود حسومات", "جاكيت جلد أسود"),
+        ("جاكيت جلد أسود خصومات", "جاكيت جلد أسود"),
+        ("جاكيت جلد أسود تخفيضات", "جاكيت جلد أسود"),
+        ("جاكيت جلد أسود خصم 70%", "جاكيت جلد أسود"),
+        ("جاكيت جلد أسود خصم \u0667\u0660\u066a", "جاكيت جلد أسود"),  # Arabic-Indic 70 and percent
+        ("جاكيت جلد أسود 70٪ خصم", "جاكيت جلد أسود"),
+        ("جاكيت جلد أسود خصم بنسبة 70%", "جاكيت جلد أسود"),
+        ("جاكيت جلد أسود بأسعار أوفر", "جاكيت جلد أسود"),
+        ("جاكيت جلد أسود بسعر أقل", "جاكيت جلد أسود"),
+        ("جاكيت جلد أسود الأرخص", "جاكيت جلد أسود"),
+        # diacritics and tatweel do not hide a price word
+        ("رَخِيص جاكيت أسود", "جاكيت أسود"),
+        ("رخـــيص جاكيت أسود", "جاكيت أسود"),
+        # whole directions of price
+        ("black leather jacket less expensive", "black leather jacket"),
+        ("black leather jacket not too pricey", "black leather jacket"),
+        ("black leather jacket pricier costly", "black leather jacket"),
+        ("black leather jacket lower price", "black leather jacket"),
+    ],
+)
+def test_more_price_words_and_phrases_are_removed_from_keywords(raw: str, expected: str) -> None:
+    assert clean_keyword(raw, allow_gender=True) == expected
+
+
+@pytest.mark.parametrize(
+    "kept",
+    [
+        "off-white sneakers",
+        "off white sneakers",
+        "Off-White hoodie",
+        "off-shoulder dress",
+        "off the shoulder top",
+        "Salewa jacket",  # "sale" inside a brand name
+        "wholesale denim jacket",  # ... and inside another word
+        "salesman shirt",
+        "resale vintage jacket",
+        "100% cotton shirt",
+        "70% cotton 30% polyester jumper",
+        "half sleeve shirt",
+        "half zip sweater",
+        "cut out dress",
+        "mark twain t-shirt",  # "mark" alone is not a markdown
+        "marked stripe shirt",
+        "70% off-white cotton shirt",  # "off" joined to "white" is a colour, not "70% off"
+        "قميص قطن 100%",
+    ],
+)
+def test_garment_words_that_look_like_price_words_are_kept(kept: str) -> None:
+    assert strip_price_words(kept).split() == kept.split()
 
 
 @pytest.mark.parametrize(
@@ -310,3 +403,105 @@ def test_numbers_in_a_text_are_read_the_way_a_shopper_writes_them(
     text: str, expected: list[float]
 ) -> None:
     assert numbers_in(text) == pytest.approx(expected)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "black blazer under four hundred dirhams",
+        "black blazer under Four Hundred AED",
+        "black blazer under four-hundred",
+        "black blazer under a hundred and fifty dirhams",
+        "black blazer, two fifty max",
+        "black blazer for one thousand dirhams",
+        "قميص أبيض بأقل من مئتين درهم",
+        "قميص أبيض أقل من مئتين درهم",
+        "قميص أبيض بأقل من مائتين درهم",
+        "قميص أبيض بأقل من ميتين درهم",
+        "قميص أبيض ميزانيتي ثلاثمئة درهم",
+        "قميص أبيض ميزانيتي أربع مئة درهم",
+        "قميص أبيض بخمسمية درهم",
+        "قميص أبيض بحد أقصى ألف درهم",
+        "قميص أبيض بحد أقصى ألفين درهم",
+        "قميص أبيض أقل من خمسين درهم",
+        "قميص أبيض أقل من عشرين درهم",
+    ],
+)
+def test_a_number_written_in_words_is_found(text: str) -> None:
+    assert names_a_number_in_words(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "black bomber jacket for men",
+        "three quarter sleeve blazer",  # "three" alone is a count, not a price
+        "one shoulder dress",
+        "two piece set",
+        "five pocket jeans",
+        "ten",
+        "hundredth edition",  # a word that only contains one
+        "grandfather collar shirt",
+        "",
+        "رخيص وبسعر مناسب",  # a wish for a good price, no number
+        "قميص أبيض للرجال",
+        "ثلاثة قمصان",  # "three shirts"
+        "ستة",  # "six"
+        "الستات",  # the women (colloquial), not sixty
+    ],
+)
+def test_words_that_are_not_a_price_are_not_taken_for_one(text: str) -> None:
+    assert not names_a_number_in_words(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "cheaper",
+        "similar but cheap",
+        "a bit more affordable",
+        "less expensive",
+        "not too pricey",
+        "lower price please",
+        "something on a budget",
+        "budget friendly",
+        "رخيص",
+        "أرخص",
+        "نفس القطعة بس ارخص",
+        "أوفر",
+        "بسعر أقل",
+        "سعر اقل",
+        "اقل سعرا",
+        "اقل تكلفه",
+        "رَخِيص",  # with diacritics
+    ],
+)
+def test_a_wish_for_a_lower_price_is_read_in_english_and_arabic(text: str) -> None:
+    assert asks_for_a_lower_price(text)
+    assert not asks_for_a_higher_price(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "more expensive",
+        "pricier",
+        "something luxury",
+        "premium quality",
+        "high end",
+        "غالي",
+        "فاخر",
+    ],
+)
+def test_a_wish_for_a_higher_price_is_read_in_english_and_arabic(text: str) -> None:
+    assert asks_for_a_higher_price(text)
+    assert not asks_for_a_lower_price(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["dark green", "black bomber jacket for men", "price", "prices", "سعر", "under 300 AED", ""],
+)
+def test_words_with_no_direction_ask_for_neither(text: str) -> None:
+    assert not asks_for_a_lower_price(text)
+    assert not asks_for_a_higher_price(text)

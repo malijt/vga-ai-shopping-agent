@@ -34,7 +34,15 @@ from vga.models import (
     Language,
 )
 from vga.understand.keywords import dedupe_keywords, with_stated_gender
-from vga.understand.lexicon import mentioned_genders
+from vga.understand.lexicon import (
+    asks_for_a_higher_price,
+    asks_for_a_lower_price,
+    edit_words,
+    is_typed,
+    mentioned_genders,
+    names_a_number_in_words,
+    typed_word_forms,
+)
 from vga.understand.prompt import echoes_instructions
 from vga.understand.schema import UnderstandReading, Verdict
 from vga.understand.text import KEYWORD_MAX_CHARS, clean_keyword, clean_phrase, numbers_in
@@ -204,8 +212,19 @@ def _keywords(value: Any, where: str, problems: list[str]) -> list[str]:
 def _validate_budget(
     raw: Any, text: str | None, problems: list[str], warnings: list[str]
 ) -> Budget | None:
+    """The budget, only when the shopper's own typed words state one.
+
+    A price printed in the photo is data, not a limit, so a budget needs a number in the typed text:
+    a digit (Western or Arabic-Indic) or a number word such as "four hundred" or "مئتين". With no
+    typed text, or none of those in it, whatever the model reported is dropped unseen: nothing the
+    shopper wrote is being ignored, so there is nothing to explain and nothing to ask the model to
+    redo. When the text does hold digits, one of them must be the model's amount.
+    """
     if raw is None or text is None:
         return None  # a photo cannot state a budget; a price printed in it is data, not a limit
+    written = numbers_in(text)
+    if not written and not names_a_number_in_words(text):
+        return None  # the shopper typed no number, so a price from elsewhere is not their limit
     currency = raw.currency.strip().upper() if isinstance(raw.currency, str) else None
     max_price = raw.max_price
     if (
@@ -223,7 +242,6 @@ def _validate_budget(
     except ValidationError:
         problems.append("budget: max_price must be above 0 and currency a 3-letter code or null")
         return None
-    written = numbers_in(text)
     if written and not any(abs(number - budget.max_price) < 0.005 for number in written):
         # The model reported a price the shopper never wrote (for example one read from a sign in
         # the photo). A wrong limit hides good results; no limit hides nothing.
@@ -233,6 +251,12 @@ def _validate_budget(
 
 
 def _validate_edits(raw: Any, text: str | None, problems: list[str]) -> list[str]:
+    """The edits the shopper's own typed words ask for.
+
+    An edit changes the search ("cheaper" switches the price mix), so like a budget it needs the
+    shopper behind it: a sign in the photo that says "cheaper" must not be able to ask. With no
+    typed text there are no edits; otherwise each edit is kept only when ``_is_asked_for``.
+    """
     if not isinstance(raw, list) or not all(isinstance(entry, str) for entry in raw):
         problems.append("edits: must be a list of strings")
         return []
@@ -244,7 +268,36 @@ def _validate_edits(raw: Any, text: str | None, problems: list[str]) -> list[str
     if any(echoes_instructions(edit) for edit in cleaned):
         problems.append("edits: must name the changes asked for, not repeat the instructions")
         return []
-    return cleaned
+    typed = typed_word_forms(text)
+    return [edit for edit in cleaned if _is_asked_for(edit, text, typed)]
+
+
+def _is_asked_for(edit: str, text: str, typed: frozenset[str]) -> bool:
+    """Whether the typed ``text`` asks for ``edit``. Conservative: every part of the edit must be
+    backed by the text, and an edit that cannot be checked is not kept.
+
+    - a number in the edit ("under 250 AED") must be a number the shopper typed;
+    - "cheaper" and its kin need a word asking for a lower price, and "pricier" and its kin a
+      word asking for a higher one (a price limit is a budget, not this wish);
+    - a gender needs that gender named in the text, in either language;
+    - every other word (a colour, a fabric, a cut) must be a word the shopper typed, or, for an
+      English colour or fabric, its Arabic spelling.
+    """
+    numbers = numbers_in(edit)
+    if not set(numbers) <= set(numbers_in(text)):
+        return False
+    lower, higher = asks_for_a_lower_price(edit), asks_for_a_higher_price(edit)
+    if (lower and not asks_for_a_lower_price(text)) or (
+        higher and not asks_for_a_higher_price(text)
+    ):
+        return False
+    genders = mentioned_genders(edit)
+    if not genders <= mentioned_genders(text):
+        return False
+    words = edit_words(edit)
+    if not all(is_typed(word, typed) for word in words):
+        return False
+    return bool(numbers or lower or higher or genders or words)  # an empty change is no change
 
 
 def _validate_language(raw: Any, text: str | None, problems: list[str]) -> Language:

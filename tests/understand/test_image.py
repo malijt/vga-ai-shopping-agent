@@ -5,6 +5,7 @@ import io
 
 import pytest
 from PIL import Image
+from PIL.PngImagePlugin import PngInfo
 
 from tests.factories import make_image_bytes
 from vga.errors import InvalidInputError
@@ -58,6 +59,62 @@ def test_exif_and_gps_are_removed() -> None:
     assert b"Exif" not in out
     assert "icc_profile" not in image.info
     assert "comment" not in image.info
+
+
+COMMENT = b"someone typed this into a photo editor"
+PICTURE_ONLY_INFO = {"jfif", "jfif_version", "jfif_unit", "jfif_density"}
+"""What Pillow reports for any JPEG it wrote: the file header, nothing from the photo."""
+
+
+def _jpeg_with_comment() -> bytes:
+    buffer = io.BytesIO()
+    Image.new("RGB", (64, 48), (120, 80, 40)).save(buffer, format="JPEG", comment=COMMENT)
+    return buffer.getvalue()
+
+
+def _png_with_text(*names: str) -> bytes:
+    info = PngInfo()
+    for name in names:
+        info.add_text(name, COMMENT.decode())
+    buffer = io.BytesIO()
+    Image.new("RGB", (64, 48), (120, 80, 40)).save(buffer, format="PNG", pnginfo=info)
+    return buffer.getvalue()
+
+
+def test_the_test_photos_really_carry_a_comment() -> None:
+    # The sample in the other tests has none, which is how a comment once got through.
+    assert Image.open(io.BytesIO(_jpeg_with_comment())).info["comment"] == COMMENT
+    assert Image.open(io.BytesIO(_png_with_text("comment"))).info["comment"] == COMMENT.decode()
+
+
+def test_a_jpeg_comment_is_removed() -> None:
+    out = prepare_image(_jpeg_with_comment())
+
+    assert COMMENT not in out
+    assert "comment" not in _open(out).info
+
+
+def test_a_png_text_chunk_named_comment_is_removed() -> None:
+    out = prepare_image(_png_with_text("comment"))
+
+    assert COMMENT not in out
+    assert "comment" not in _open(out).info
+
+
+def test_no_text_the_photo_carried_survives_whatever_it_is_named() -> None:
+    # Only the picture is drawn again: nothing is carried over from the source image's info, so a
+    # metadata field that Pillow's JPEG writer reuses today or starts to reuse later cannot leak.
+    sources = [
+        _jpeg_with_comment(),
+        _png_with_text("comment", "Description", "Author", "Software"),
+        _jpeg_with_exif((64, 48)),
+    ]
+
+    for source in sources:
+        out = prepare_image(source)
+
+        assert COMMENT not in out
+        assert set(_open(out).info) <= PICTURE_ONLY_INFO
 
 
 def test_exif_rotation_is_applied_before_the_metadata_is_dropped() -> None:
