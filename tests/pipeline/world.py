@@ -129,6 +129,8 @@ class Site:
     status: int = 200
     queries: list[str] = field(default_factory=list)
     """Every search query this store received, in order."""
+    times: list[float] = field(default_factory=list)
+    """The fake-clock time each search request arrived at."""
 
     @property
     def host(self) -> str:
@@ -185,6 +187,7 @@ class StoreWorld:
         async def answer(request: httpx.Request) -> httpx.Response:
             query = request.url.params["q"]
             site.queries.append(query)
+            site.times.append(self.clock.monotonic())
             seconds = site.delay(query)
             if seconds > 0:
                 await self.clock.sleep(seconds)
@@ -221,3 +224,6 @@ class StoreWorld:
 
     def queries(self, store_id: str) -> list[str]:
         return list(self.sites[store_id].queries)
+
+    def arrival_times(self, store_id: str) -> list[float]:
+        return list(self.sites[store_id].times)
