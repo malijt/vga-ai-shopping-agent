@@ -10,12 +10,22 @@
 # three text queries (q06, q07, q08) are exactly as they were. The other 11 photos are in
 # extra_queries.yaml, which is NOT part of the 10-query pass rule.
 #
-# Contract (plan section 4, "Acceptance queries.yaml"). Each entry has exactly:
-#   id     unique, stable
-#   type   product_photo | outfit_photo | text | photo_text
-#   text   the shopper's words, or null for a photo-only query
-#   image  path relative to the REPO ROOT, under eval/data/assets/, or null for text-only
-#   notes  what a labeller should expect (the labelling rules are in rubric.md)
+# AMENDED once more on 2026-10-08, also before any acceptance run: the optional field
+# shopper_gender was added to the seven photo-based queries. The app asks "Who is this for?"
+# when the request does not state a garment's gender (BRD Rule 8: a gender the model only
+# guessed is not applied until the shopper confirms it), and a headless run has nobody to answer.
+# Every one of those seven photos shows women's clothing, so the recorded answer is women. No
+# input, text or note was changed, and the three text queries state their gender in their words.
+#
+# Contract (plan section 4, "Acceptance queries.yaml"). Each entry has:
+#   id              unique, stable
+#   type            product_photo | outfit_photo | text | photo_text
+#   text            the shopper's words, or null for a photo-only query
+#   image           path relative to the REPO ROOT, under eval/data/assets/, or null for text-only
+#   shopper_gender  optional, women | men: what the shopper answers if the app asks "Who is this
+#                   for?". Left out, the shopper gives no answer ("show both"). It is used only
+#                   when some garment's gender was not stated; a gender the request states stands.
+#   notes           what a labeller should expect (the labelling rules are in rubric.md)
 #
 # Mix required by the PRD "Acceptance test (10 queries)": 3 product photo, 2 outfit photo,
 # 3 text, 2 photo + text. Every query is about tops, outerwear, bottoms, shoes or dresses
@@ -31,6 +41,7 @@ queries:
     type: product_photo
     text: null
     image: eval/data/assets/private/dress_burgundy_gown.png
+    shopper_gender: women
     notes: >-
       A burgundy evening gown (dresses). The gown is NOT dark green, so q09 can ask for a
       colour change. Expected: one dresses item. Good match = a gown or long evening dress
@@ -40,6 +51,7 @@ queries:
     type: product_photo
     text: null
     image: eval/data/assets/private/dress_pink_embellished_abaya.png
+    shopper_gender: women
     notes: >-
       A pink embellished abaya (dresses). Expected: one dresses item whose search keywords hold
       the garment's own word "abaya", not "long dress". Good match = an abaya with a close
@@ -50,6 +62,7 @@ queries:
     type: product_photo
     text: null
     image: eval/data/assets/private/bottoms_light_blue_skinny_jeans.png
+    shopper_gender: women
     notes: >-
       One pair of light blue skinny jeans (bottoms). Expected: one bottoms item. Good match =
       jeans of the same cut (skinny) with a close wash; wide-leg or straight jeans are not good
@@ -60,6 +73,7 @@ queries:
     type: outfit_photo
     text: null
     image: eval/data/assets/private/outfit_navy_print_palazzo_white_top.png
+    shopper_gender: women
     notes: >-
       A person in navy printed palazzo trousers and a white top. Expected: one group for the
       top and one for the bottoms (palazzo trousers), plus shoes only if they are visible. Label
@@ -69,6 +83,7 @@ queries:
     type: outfit_photo
     text: null
     image: eval/data/assets/private/outfit_black_dress_heels.png
+    shopper_gender: women
     notes: >-
       A person in a black dress and heels. A dress worn with shoes is two garments (PRD).
       Expected: two groups, dresses and shoes, each with its own result list. Label the top 10
@@ -105,6 +120,7 @@ queries:
     type: photo_text
     text: similar but dark green and cheaper
     image: eval/data/assets/private/dress_burgundy_gown.png
+    shopper_gender: women
     notes: >-
       Reuses the q01 gown photo. The photo gives the look; the text changes the colour to
       dark green and asks for cheaper. No budget is given, so "cheaper" switches the request
@@ -115,6 +131,7 @@ queries:
     type: photo_text
     text: same cut but in black, under 250 AED
     image: eval/data/assets/private/bottoms_light_blue_skinny_jeans.png
+    shopper_gender: women
     notes: >-
       Reuses the q03 photo. The photo gives the cut; the text changes the colour to black and
       sets a budget of 250 AED. Good match = same garment type and cut in black.

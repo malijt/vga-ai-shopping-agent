@@ -1,9 +1,9 @@
 """Load and validate the frozen acceptance queries (plan 11.1.1).
 
-``eval/data/queries.yaml`` holds the 10 inputs. Each entry has exactly ``id``, ``type``, ``text``,
-``image`` and ``notes`` (the header of that file is the contract). This module rejects anything
-else with a message that names the query and the field, so a typo in a frozen file is found
-before a paid live run, not after.
+``eval/data/queries.yaml`` holds the 10 inputs. Each entry has ``id``, ``type``, ``text``,
+``image`` and ``notes``, and may have ``shopper_gender`` (the header of that file is the contract).
+This module rejects anything else with a message that names the query and the field, so a typo in
+a frozen file is found before a paid live run, not after.
 
 Two sets are read by this module. ``queries.yaml`` is the frozen acceptance set: it must have the
 PRD mix and its result decides the demo. Any other file, such as ``extra_queries.yaml`` (the 11
@@ -24,7 +24,7 @@ import yaml
 from pydantic import Field, ValidationError, field_validator, model_validator
 
 from eval.harness.errors import MissingImageError, QueryFileError
-from vga.models import InputType, VgaModel
+from vga.models import Gender, InputType, VgaModel
 from vga.settings import PROJECT_ROOT
 
 QUERIES_PATH = PROJECT_ROOT / "eval" / "data" / "queries.yaml"
@@ -54,7 +54,20 @@ class AcceptanceQuery(VgaModel):
     type: InputType
     text: str | None
     image: str | None
+    shopper_gender: Gender | None = None
+    """What the shopper answers if the app asks "Who is this for?": ``women`` or ``men``. The app
+    asks when a garment's gender was not stated in the request (BRD Rule 8: a gender the model only
+    guessed is shown, not applied, until the shopper confirms it). Absent means the shopper gives no
+    answer, which is what "Show both" comes to; the harness then never applies a guessed gender."""
     notes: str = Field(min_length=1)
+
+    @field_validator("shopper_gender")
+    @classmethod
+    def _answer_is_women_or_men(cls, value: Gender | None) -> Gender | None:
+        if value is Gender.UNISEX:
+            msg = "shopper_gender must be 'women' or 'men'; leave it out for 'show both'"
+            raise ValueError(msg)
+        return value
 
     @field_validator("text")
     @classmethod
