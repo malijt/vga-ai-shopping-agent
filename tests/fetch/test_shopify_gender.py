@@ -209,6 +209,11 @@ def test_with_gender_fields_empty_no_product_gets_a_gender() -> None:
         pytest.param("Tops", [f"MEN{CURLY}S"], MEN, id="capitals and curly"),
         pytest.param("Dresses", ["Woman"], WOMEN, id="tag woman"),
         pytest.param("Tops", ["Man"], MEN, id="tag man"),
+        # one word for the whole department (Signature Studio tags its men's kurta sets Menswear)
+        pytest.param("Clothing", ["Buy Dresses", "Menswear"], MEN, id="tag Menswear"),
+        pytest.param("Clothing", ["MENSWEAR"], MEN, id="tag MENSWEAR in capitals"),
+        pytest.param("Clothing", ["Womenswear", "Sale"], WOMEN, id="tag Womenswear"),
+        pytest.param("Menswear", [], MEN, id="type Menswear"),
         # unisex
         pytest.param("Hoodies", ["Unisex"], UNISEX, id="tag unisex"),
         pytest.param("Unisex Hoodies", [], UNISEX, id="type unisex"),
@@ -238,7 +243,9 @@ def test_the_type_and_tags_name_the_gender(type_: str, tags: list[str], expected
         pytest.param("Jackets", ["Colour: Amen Green", "Mint", "Menthol"], id="amen, menthol"),
         pytest.param("Jackets", ["Mango", "Roman", "Human Made", "Manchester"], id="man inside"),
         pytest.param("Jackets", ["Madmen", "Mentor", "Mental Health Week"], id="men inside"),
-        pytest.param("Jackets", ["Womenswear", "Menswear"], id="wear words are not cues"),
+        pytest.param(
+            "Jackets", ["Formalwear", "Swimwear", "Sportswear"], id="other wear words are not cues"
+        ),
         pytest.param(
             "Dresses", ["city-girl-871", "Collection: COOL GIRL", "Birthday Girl"], id="girl"
         ),
@@ -267,6 +274,7 @@ def test_a_cue_inside_a_man_made_phrase_does_not_count_but_a_real_one_beside_it_
     [
         pytest.param("Tops", ["Mens", "Women"], id="two tags disagree"),
         pytest.param("Tops", ["Men & Women"], id="one tag names both"),
+        pytest.param("Tops", ["Womenswear", "Menswear"], id="two wear tags disagree"),
         pytest.param("Men / Women", [], id="type names both"),
         # the deciding field contradicts itself, so the other field is not used to break the tie
         pytest.param("Men / Women", ["Men"], id="type names both, tags say men"),
