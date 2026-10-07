@@ -7,9 +7,13 @@ defaults below. See ``.env.example`` for the variables.
 Two fields are unset in the code defaults because the build decides them (plan assumption A10 and
 Phase 3): ``openai_model`` and ``siglip_revision``. They may be ``None`` at load time (the shipped
 ``config/settings.yaml`` pins ``siglip_revision`` since the Phase 3 spike; ``openai_model`` is still
-unset). When set they must be pinned: a dated OpenAI snapshot id, and a 40-character Hugging Face
-commit hash. Aliases such as ``gpt-5-mini`` or ``main`` are rejected, because a pinned version must
-not change under us.
+unset). When set they must be pinned: a dated OpenAI snapshot id (or an
+undated id from ``UNDATED_SNAPSHOT_IDS``, for a model OpenAI publishes only as a snapshot), and a
+40-character Hugging Face commit hash. Aliases such as ``gpt-5-mini`` or ``main`` are rejected,
+because a pinned version must not change under us.
+
+An empty value in the environment (``OPENAI_MODEL=`` in ``.env``, for example) means "not set": the
+YAML value is used. It is never an error and never an empty string.
 """
 
 import os
@@ -48,6 +52,18 @@ ENV_OVERRIDES: dict[str, str] = {
 """Environment variable to settings field. ``VGA_SETTINGS_PATH`` picks the YAML file instead, and
 ``OPENAI_API_KEY`` is read by the OpenAI client directly: it is never a setting, so it can never be
 dumped or logged with the settings."""
+
+UNDATED_SNAPSHOT_IDS: frozenset[str] = frozenset(
+    {
+        # OpenAI's model page lists exactly one snapshot for this model, and it is the versioned
+        # name itself: there is no dated variant, so the name is the pin.
+        # Source: https://developers.openai.com/api/docs/models/gpt-6-luna (verified 2026-10-08).
+        "gpt-6-luna",
+    }
+)
+"""Model ids that have no ``-YYYY-MM-DD`` form but are still a fixed version. An id is added here
+only after reading OpenAI's model page for it (record the URL and the date next to the id). An
+alias is never added: ``gpt-6-luna-latest`` or a bare ``luna`` must keep failing."""
 
 _SNAPSHOT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]*-(\d{4})-(\d{2})-(\d{2})$")
 _REVISION_RE = re.compile(r"^[0-9a-f]{40}$")
@@ -147,9 +163,11 @@ class Settings(VgaModel):
 
     @field_validator("openai_model")
     @classmethod
-    def _dated_snapshot(cls, value: str | None) -> str | None:
+    def _pinned_model(cls, value: str | None) -> str | None:
         if not value:
             return None
+        if value in UNDATED_SNAPSHOT_IDS:
+            return value
         match = _SNAPSHOT_RE.match(value)
         if match:
             year, month, day = (int(part) for part in match.groups())
@@ -158,9 +176,12 @@ class Settings(VgaModel):
             except ValueError:
                 match = None
         if not match:
+            allowed_undated = ", ".join(sorted(UNDATED_SNAPSHOT_IDS))
             msg = (
-                f"openai_model must be a dated snapshot id ending in -YYYY-MM-DD, got {value!r}. "
-                "Aliases without a date are not allowed because they can change under us; "
+                "openai_model must be a dated snapshot id ending in -YYYY-MM-DD, or one of the "
+                f"undated snapshot ids verified against OpenAI's model pages ({allowed_undated}), "
+                f"got {value!r}. Aliases such as 'gpt-5-mini', '...-latest' or a bare family name "
+                "are not allowed because they can change under us; "
                 "pick the dated id from OpenAI's model docs"
             )
             raise ValueError(msg)
@@ -216,8 +237,10 @@ def load_dotenv(
     """Copy ``KEY=value`` lines of a ``.env`` file into the environment.
 
     Variables that are already set are left alone, so a real environment variable always beats
-    the file. Returns the names it set. A missing file is fine. This is a small reader on purpose
-    (no extra dependency): it handles comments, ``export``, and single or double quotes.
+    the file. A variable that is set but empty counts as not set, the same as everywhere else in
+    the settings loader, so the file can fill it. Returns the names it set. A missing file is
+    fine. This is a small reader on purpose (no extra dependency): it handles comments,
+    ``export``, and single or double quotes.
     """
     target = os.environ if environ is None else environ
     file = Path(path)
@@ -235,9 +258,10 @@ def load_dotenv(
             value = value[1:-1]
         else:
             value = re.split(r"(?:^|\s+)#", value, maxsplit=1)[0].strip()
-        if name not in target:
-            target[name] = value
-            applied.append(name)
+        if name in target and (target[name].strip() or not value):
+            continue  # a real value wins, and an empty line has nothing to add to an empty one
+        target[name] = value
+        applied.append(name)
     return applied
 
 
