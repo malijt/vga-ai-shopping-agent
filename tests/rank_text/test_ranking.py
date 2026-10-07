@@ -308,19 +308,143 @@ def test_image_scores_are_added_the_totals_recomputed_and_the_order_follows() ->
     )
 
 
-def test_a_missing_or_none_image_score_renormalises_that_product() -> None:
+def test_a_missing_or_none_image_score_stays_unrecorded_but_is_totalled_neutrally() -> None:
     scored = _scored(("Scored", 0.8, 0.5), ("Missing", 0.8, 0.5), ("None", 0.8, 0.5))
     keys = [entry.product.key for entry in scored]
 
-    result = apply_image_scores(scored, {keys[0]: 0.8, keys[2]: None}, SETTINGS)
+    result = apply_image_scores(scored, {keys[0]: 0.4, keys[2]: None}, SETTINGS)
 
     by_title = {entry.product.title: entry.scores for entry in result}
-    text_and_price = combine_scores(0.8, None, 0.5, SETTINGS.ranking_weights)
-    assert by_title["Scored"].image == 0.8
+    # The record still says "not compared" ...
+    assert by_title["Scored"].image == 0.4
     assert by_title["Missing"].image is None
     assert by_title["None"].image is None
-    assert by_title["Missing"].total == pytest.approx(text_and_price)
-    assert by_title["None"].total == pytest.approx(text_and_price)
+    # ... but the total uses the mean of the image scores there are (here just 0.4), so an
+    # equal product that was compared and one that was not end up with equal totals.
+    neutral = combine_scores(0.8, 0.4, 0.5, SETTINGS.ranking_weights)
+    assert by_title["Scored"].total == pytest.approx(neutral)
+    assert by_title["Missing"].total == pytest.approx(neutral)
+    assert by_title["None"].total == pytest.approx(neutral)
+
+
+# A product the photo was not compared with (only the best 40 candidates are) must not outrank
+# one that was: its total uses a neutral image value, the mean of the image scores in the call.
+
+
+def test_a_compared_product_is_not_ranked_below_an_uncompared_one_for_being_compared() -> None:
+    # Real figures from a run on a product photo of a burgundy gown: real image scores for good
+    # matches sit around 0.35 to 0.5. Before the neutral value, "Deema" (no image score) was
+    # totalled on text and price only, 0.84, and ranked above "Heliora" (0.75).
+    scored = _scored(
+        ("Heliora | Black V-Neck Maxi Dress With Sash", 1.00, 0.5),
+        ("Deema | Black Jersey High Neck Long Sleeve Maxi Dress", 0.97, 0.5),
+    )
+    heliora = scored[0].product.key
+
+    result = apply_image_scores(scored, {heliora: 0.49}, SETTINGS)
+
+    assert titles(result) == [
+        "Heliora | Black V-Neck Maxi Dress With Sash",
+        "Deema | Black Jersey High Neck Long Sleeve Maxi Dress",
+    ]
+    heliora_scores, deema_scores = (entry.scores for entry in result)
+    assert heliora_scores.image == 0.49
+    assert deema_scores.image is None  # still recorded as not compared
+    assert heliora_scores.total == pytest.approx(
+        combine_scores(1.00, 0.49, 0.5, SETTINGS.ranking_weights)
+    )
+    assert deema_scores.total == pytest.approx(
+        combine_scores(0.97, 0.49, 0.5, SETTINGS.ranking_weights)
+    )
+    assert heliora_scores.total > deema_scores.total
+
+
+def test_the_neutral_image_value_is_the_mean_of_the_usable_scores_in_the_call() -> None:
+    scored = _scored(("A", 0.9, 0.5), ("B", 0.9, 0.5), ("C", 0.9, 0.5), ("D", 0.9, 0.5))
+    a, b, c, _ = (entry.product.key for entry in scored)
+    # 1.7 is clamped to 1.0, NaN is "not scored" and does not count towards the mean.
+    images = {a: 0.2, b: 1.7, c: float("nan")}
+
+    result = {e.product.title: e.scores for e in apply_image_scores(scored, images, SETTINGS)}
+
+    mean = (0.2 + 1.0) / 2
+    assert result["C"].image is None
+    assert result["D"].image is None
+    for title in ("C", "D"):
+        assert result[title].total == pytest.approx(
+            combine_scores(0.9, mean, 0.5, SETTINGS.ranking_weights)
+        )
+
+
+def test_among_compared_products_a_higher_image_score_still_ranks_higher() -> None:
+    scored = _scored(("Low", 0.8, 0.5), ("High", 0.8, 0.5), ("Uncompared", 0.8, 0.5))
+    keys = {entry.product.title: entry.product.key for entry in scored}
+
+    result = apply_image_scores(scored, {keys["Low"]: 0.3, keys["High"]: 0.5}, SETTINGS)
+
+    # "Uncompared" gets the mean, 0.4, so it lands between the two it was not compared with.
+    assert titles(result) == ["High", "Uncompared", "Low"]
+
+
+def test_a_better_text_match_is_not_lost_to_a_worse_one_that_was_compared() -> None:
+    scored = _scored(("Best text, uncompared", 0.95, 0.5), ("Worse text, compared", 0.5, 0.5))
+    compared = scored[1].product.key
+
+    result = apply_image_scores(scored, {compared: 0.4}, SETTINGS)
+
+    assert titles(result) == ["Best text, uncompared", "Worse text, compared"]
+
+
+@pytest.mark.parametrize("nothing", [{}, "all None", "all NaN", "keys of other products"])
+def test_when_no_product_has_a_usable_image_score_the_totals_are_text_and_price_only(
+    nothing: object,
+) -> None:
+    scored = _scored(("A", 0.8, 0.5), ("B", 0.6, 1.0))
+    if nothing == "all None":
+        images: dict[str, float | None] = {entry.product.key: None for entry in scored}
+    elif nothing == "all NaN":
+        images = {entry.product.key: float("nan") for entry in scored}
+    elif nothing == "keys of other products":
+        images = {"https://elsewhere.example/p/1": 0.9}  # scores for products not in this call
+    else:
+        images = {}
+
+    result = apply_image_scores(scored, images, SETTINGS)
+
+    assert all(entry.scores.image is None for entry in result)
+    assert {entry.product.title: entry.scores.total for entry in result} == pytest.approx(
+        {
+            "A": combine_scores(0.8, None, 0.5, SETTINGS.ranking_weights),
+            "B": combine_scores(0.6, None, 1.0, SETTINGS.ranking_weights),
+        }
+    )
+
+
+def test_the_minimum_score_is_applied_to_the_neutral_totals() -> None:
+    settings = make_settings(min_match_score=0.5)
+    scored = _scored(("Compared", 0.9, 0.9), ("Uncompared, fine on text and price", 0.55, 0.55))
+    compared = scored[0].product.key
+
+    # On text and price alone the second product (0.55) clears the 0.5 minimum. With the neutral
+    # image value (the mean, 0.0 here) its total is 0.385, so it is removed like any other
+    # product whose total falls below the minimum.
+    assert len(apply_image_scores(scored, {}, settings)) == 2
+    result = apply_image_scores(scored, {compared: 0.0}, settings)
+
+    assert titles(result) == ["Compared"]
+
+
+def test_an_uncompared_product_can_be_lifted_over_the_minimum_by_the_neutral_value() -> None:
+    settings = make_settings(min_match_score=0.5)
+    scored = _scored(("Compared", 0.9, 0.9), ("Uncompared, weak text", 0.3, 0.3))
+    compared = scored[0].product.key
+
+    assert titles(apply_image_scores(scored, {}, settings)) == ["Compared"]
+    result = apply_image_scores(scored, {compared: 1.0}, settings)
+
+    # 0.5 * 0.3 + 0.3 * 1.0 + 0.2 * 0.3 = 0.51: the same rule, applied to the same kind of total.
+    assert titles(result) == ["Compared", "Uncompared, weak text"]
+    assert result[1].scores.image is None
 
 
 def test_products_below_the_minimum_match_score_are_removed() -> None:

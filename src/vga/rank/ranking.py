@@ -3,7 +3,9 @@
 1. ``prefilter_and_score``: hard filters, then the text and price scores. Run it on everything the
    stores returned. The pipeline then picks the best candidates for image scoring.
 2. ``apply_image_scores``: add the image scores (or none), recompute the totals, drop products
-   below ``min_match_score`` and return the rest best first.
+   below ``min_match_score`` and return the rest best first. A product the photo was not compared
+   with is totalled with the neutral image value (see that function), so being compared is never
+   a penalty.
 
 Both are pure: no network, no model, no clock, no I/O. Inputs are never modified.
 """
@@ -88,17 +90,30 @@ def apply_image_scores(
 ) -> list[ScoredProduct]:
     """Add image scores, recompute each total, drop weak matches and sort best first.
 
-    ``image_scores`` is keyed by ``Product.key``. A missing key or a ``None`` value means that
-    product has no image score, and its total renormalises over the text and price weights. An
-    empty mapping gives text and price only. Products whose new total is below
-    ``settings.min_match_score`` are removed. The reason set by ``prefilter_and_score`` is kept; a
-    product without one gets a plain reason from its own facts.
+    ``image_scores`` is keyed by ``Product.key``. A missing key or a ``None`` value (or NaN) means
+    that product was not compared with the photo: its recorded ``Scores.image`` stays ``None``.
+
+    Only the best candidates are compared (``select_candidates``), and real image scores for good
+    matches are modest (about 0.35 to 0.5). If the products that were not compared were totalled on
+    text and price alone they would beat the compared ones, and the image signal, meant as a small
+    nudge, would work as a penalty for being compared. So, when at least one product here has a
+    usable image score, a product without one is totalled with a neutral image value: the mean of
+    the usable scores of the products in ``scored``. When none has one (no photo, the ranker off or
+    failed) the totals are text and price only, as the combiner does without an image score.
+
+    Products whose new total is below ``settings.min_match_score`` are removed, whichever way the
+    total was reached. The reason set by ``prefilter_and_score`` is kept; a product without one
+    gets a plain reason from its own facts.
     """
+    images = [_usable(image_scores.get(entry.product.key)) for entry in scored]
+    usable = [image for image in images if image is not None]
+    neutral = math.fsum(usable) / len(usable) if usable else None
+
     result: list[ScoredProduct] = []
-    for entry in scored:
-        image = _usable(image_scores.get(entry.product.key))
+    for entry, image in zip(scored, images, strict=True):
         scores = entry.scores
-        total = combine_scores(scores.text, image, scores.price, settings.ranking_weights)
+        total_image = image if image is not None else neutral
+        total = combine_scores(scores.text, total_image, scores.price, settings.ranking_weights)
         if total < settings.min_match_score:
             continue
         new_scores = Scores(text=scores.text, image=image, price=scores.price, total=total)
