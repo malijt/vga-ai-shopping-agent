@@ -1,0 +1,18 @@
+# Oh Polly UAE: a UK women's occasion and going-out wear brand with a localised Shopify store.
+# Data path: Shopify's public predictive search, /search/suggest.json, which robots.txt leaves open.
+# See docs/store-qualification/oh-polly.md (qualification) and docs/store-notes/oh-polly.md (notes).
+id: oh-polly
+name: Oh Polly UAE
+country: AE
+currency: AED          # the suggest response has no currency field; this is the one used
+search_url_template: "https://ohpolly.ae/search/suggest.json?q={query}&resources[type]=product&resources[limit]=10"
+allowed_hosts:
+  - ohpolly.ae          # product links; www.ohpolly.ae redirects here
+  - cdn.shopify.com     # product images
+extraction:
+  strategies:
+    - name: shopify
+genders:
+  - women               # a women-only brand: every product seen was a women's item
+tier_hint: mid_range    # AED 170-970 seen; jackets and blazers mostly 230-300
+enabled: false          # true only after the live smoke test passes (plan 12.x.3)
