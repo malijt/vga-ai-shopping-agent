@@ -18,7 +18,7 @@ sees anything; the second search's time is kept beside it.
 """
 
 import re
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from typing import Literal, Protocol
 
@@ -31,6 +31,11 @@ from vga.settings import Settings
 
 ImageLoader = Callable[[AcceptanceQuery], bytes | None]
 """Gives the photo's bytes for a query, or ``None`` for a text-only query."""
+
+AfterQuery = Callable[[Sequence["QueryRun"]], Awaitable[None]]
+"""Called after each query with every run so far (the one just finished is the last). The live
+run saves it here and checks that query's links, so the next query starts only when this one is
+on disk and its links are checked."""
 
 DurationSource = Literal["measured", "recorded", "unavailable"]
 
@@ -224,6 +229,7 @@ async def run_queries(
     load_image: ImageLoader,
     scope: QueryScope | None = None,
     progress: Callable[[QueryRun], None] | None = None,
+    after_query: AfterQuery | None = None,
 ) -> list[QueryRun]:
     """Run ``queries`` in order, one at a time, and return one ``QueryRun`` each."""
     runs: list[QueryRun] = []
@@ -243,4 +249,6 @@ async def run_queries(
         runs.append(run)
         if progress is not None:
             progress(run)
+        if after_query is not None:
+            await after_query(runs)
     return runs

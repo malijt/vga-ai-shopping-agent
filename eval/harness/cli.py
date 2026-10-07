@@ -23,6 +23,9 @@ Every run is saved to a folder under ``eval/results/`` (``run-N`` for a live run
 A live run first warms the pipeline up (loads the image model) and reports how long that took,
 apart from the queries: the 30 s limit is for a search on an app that is already running.
 
+The queries run one at a time. Each is searched, saved, and has its links checked before the next
+one starts (so a run that is stopped or interrupted keeps everything finished so far).
+
 A query may record the shopper's answer to the page's "Who is this for?" question
 (``shopper_gender`` in the query file). When the app would ask (some garment's gender was not
 stated), the harness gives that answer as the page does, with one re-search (see ``confirm.py``),
@@ -86,7 +89,7 @@ from eval.harness.scoring import ScoredRun, score_run
 from eval.harness.wiring import Wiring, WiringFactory, load_wiring_factory
 from vga.errors import VgaError
 from vga.interfaces import Clock, Pipeline, SystemClock
-from vga.models import StoreConfig
+from vga.models import SearchResponse, StoreConfig
 from vga.settings import PROJECT_ROOT, Settings, load_settings
 
 RESULTS_DIR = Path("eval") / "results"
@@ -298,32 +301,32 @@ def _setup_record(
     )
 
 
-async def _check_links(
-    runs: Sequence[QueryRun],
-    mode: LinksMode,
-    fetch: LinkFetch,
-    allowed: Mapping[str, Collection[str]],
-) -> dict[str, list[LinkCheck]]:
-    checker = LinkChecker(fetch, allowed)
-    checks: dict[str, list[LinkCheck]] = {}
-    for run in runs:
-        if run.response is not None:
-            checks[run.query.id] = await checker.check_all(products_to_check(run.response, mode))
-    return checks
+class _LinkPhase:
+    """Checks the links of one query at a time.
 
+    A live run shares one checker across the whole run, so a product that turns up in two queries
+    is opened once. A mock run has no network and no state to share: each query gets a checker
+    over its own products."""
 
-def _link_tools(
-    setup: _Setup, runs: Sequence[QueryRun]
-) -> tuple[LinkFetch, Mapping[str, Collection[str]]]:
-    """The fetch function and allowed hosts to check links with."""
-    if setup.mode == "mock":
-        products = [s.product for r in runs if r.response for s in r.response.products]
-        responses = [r.response for r in runs if r.response]
-        return MockLinkFetch(products), allowed_hosts_from_responses(responses)
-    if setup.link_fetch is None:
-        msg = "The wiring has no link_fetch, so links cannot be checked."
-        raise WiringError(msg)
-    return setup.link_fetch, setup.allowed_hosts or {}
+    def __init__(self, setup: _Setup, mode: LinksMode) -> None:
+        self._setup = setup
+        self._mode = mode
+        self._checker: LinkChecker | None = None
+
+    async def check(self, response: SearchResponse) -> list[LinkCheck]:
+        products = products_to_check(response, self._mode)
+        if self._setup.mode == "mock":
+            mock = LinkChecker(
+                MockLinkFetch([s.product for s in response.products]),
+                allowed_hosts_from_responses([response]),
+            )
+            return await mock.check_all(products)
+        if self._checker is None:
+            if self._setup.link_fetch is None:
+                msg = "The wiring has no link_fetch, so links cannot be checked."
+                raise WiringError(msg)
+            self._checker = LinkChecker(self._setup.link_fetch, self._setup.allowed_hosts or {})
+        return await self._checker.check_all(products)
 
 
 async def _warm_up(setup: _Setup) -> WarmUp | None:
@@ -349,21 +352,41 @@ async def _warm_up(setup: _Setup) -> WarmUp | None:
     return WarmUp(duration_ms=elapsed_ms, ready=ready, detail=detail)
 
 
+Snapshot = Callable[[Sequence[QueryRun], Mapping[str, list[LinkCheck]]], None]
+"""Saves the run as it stands: the finished queries and the link checks made so far."""
+
+
 async def _run_and_check(
     setup: _Setup,
     queries: list[AcceptanceQuery],
     settings: Settings,
     links: LinksMode,
     progress: Callable[[QueryRun], None],
-    checkpoint: Callable[[list[QueryRun]], None],
+    snapshot: Snapshot,
     on_warm_up: Callable[[WarmUp | None], None],
 ) -> tuple[list[QueryRun], dict[str, list[LinkCheck]]]:
-    """Warm up, run the queries, save them, then check links. One event loop for all of it,
-    because a fetch function or pipeline may keep an HTTP client that belongs to the loop it
-    first ran in.
+    """Warm up, then run the queries one by one: search, save, check that query's links, save
+    again. One event loop for all of it, because a fetch function or pipeline may keep an HTTP
+    client that belongs to the loop it first ran in.
 
-    ``checkpoint`` is called with the finished runs before the first link is fetched, so the
-    expensive part of a live run is on disk even if the link phase is interrupted."""
+    A live run is saved after every query's search, before its first link is fetched, so the
+    expensive part is on disk even if the link phase or a later query is interrupted. Checking a
+    query's links right away (not after all ten queries) spreads the traffic out over the run
+    and lets the next query's pause cover the links too."""
+    link_checks: dict[str, list[LinkCheck]] = {}
+    phase = _LinkPhase(setup, links)
+
+    async def after_query(runs: Sequence[QueryRun]) -> None:
+        live = setup.mode == "record"
+        if live:
+            snapshot(runs, link_checks)
+        run = runs[-1]
+        if links is LinksMode.NONE or run.response is None:
+            return
+        link_checks[run.query.id] = await phase.check(run.response)
+        if live:
+            snapshot(runs, link_checks)
+
     try:
         on_warm_up(await _warm_up(setup))
         runs = await run_queries(
@@ -374,14 +397,11 @@ async def _run_and_check(
             load_image=setup.load_image,
             scope=setup.scope,
             progress=progress,
+            after_query=after_query,
         )
         if setup.replay is not None:
             runs = [_with_recorded_duration(run, setup.replay) for run in runs]
-        checkpoint(runs)
-        if links is LinksMode.NONE:
-            return runs, {}
-        fetch, allowed = _link_tools(setup, runs)
-        return runs, await _check_links(runs, links, fetch, allowed)
+        return runs, link_checks
     finally:
         if setup.close is not None:
             await setup.close()
@@ -632,8 +652,8 @@ def _execute(
         _write_report(scored, out)
         return scored, sheet, rows
 
-    def checkpoint(runs: list[QueryRun]) -> None:
-        persist(runs, {}, use_labels=False)
+    def snapshot(runs: Sequence[QueryRun], checks: Mapping[str, list[LinkCheck]]) -> None:
+        persist(list(runs), dict(checks), use_labels=False)
 
     def warmed_up(warm_up: WarmUp | None) -> None:
         setup.warm_up = warm_up
@@ -641,7 +661,7 @@ def _execute(
             print(_warm_up_line(warm_up), file=out_stream)
 
     runs, link_checks = asyncio.run(
-        _run_and_check(setup, queries, settings, links, progress, checkpoint, warmed_up)
+        _run_and_check(setup, queries, settings, links, progress, snapshot, warmed_up)
     )
     scored, sheet, rows = persist(runs, link_checks, use_labels=True)
 
