@@ -49,7 +49,7 @@ Copy `.env.example` to `.env` (it is gitignored). Values from the real environme
 | `OPENAI_API_KEY` | OpenAI key for the Understand step. Needed for real searches only. Read by the OpenAI client, never stored in settings or logs | none |
 | `OPENAI_MODEL` | Dated model snapshot id (ends in `-YYYY-MM-DD`). Aliases are rejected | unset |
 | `VGA_USER_AGENT` | Honest, identifying User-Agent sent to stores; browser strings are rejected | `vga-shopping-agent-demo/0.1 (store search demo)` |
-| `VGA_IMAGE_RANKER` | `siglip` (local model, needs the `ml` group) or `off` | `off` |
+| `VGA_IMAGE_RANKER` | `siglip` (local model, needs the `ml` group) or `off` | `siglip` in `config/settings.yaml` (`off` if the setting is absent) |
 | `VGA_LOG_DIR` | Directory for JSON-lines logs | `logs` |
 | `VGA_LOG_LEVEL` | `DEBUG`, `INFO`, `WARNING` or `ERROR` | `INFO` |
 | `VGA_LOG_PROMPTS` | `1` also logs the text prompt and parsed result, never the photo | `0` |
@@ -60,11 +60,13 @@ Copy `.env.example` to `.env` (it is gitignored). Values from the real environme
 
 ## Settings
 
-`config/settings.yaml` holds the tunable values: `country`, `stores`, `results` (30), `max_per_store` (6), `timeout_s` (6), `rps_per_store` (1), `tier_mix` (25/25/25/25), `ranking_weights`, `min_match_score`, and the model settings. It is validated on load, and a bad value stops start-up with a message naming the field. For example, `tier_mix` must sum to 100.
+`config/settings.yaml` holds the tunable values: `country`, `stores`, `results` (30), `max_per_store` (6), `timeout_s` (6), `rps_per_store` (1), `max_response_bytes` (2,000,000, the HTTP response size cap), `tier_mix` (25/25/25/25), `ranking_weights`, `min_match_score`, and the model settings. It is validated on load, and a bad value stops start-up with a message naming the field. For example, `tier_mix` must sum to 100.
 
-Two settings are deliberately unset until the build decides them: `openai_model` (a dated OpenAI snapshot) and `siglip_revision` (a 40-character Hugging Face commit hash). The pinned versions must not change under us, so aliases such as `gpt-5-mini` or `main` are rejected. Changing either one needs a re-run of the evaluation set.
+The image model settings come from the FashionSigLIP spike (`spikes/siglip/REPORT.md`): `image_ranker` is `siglip` and `siglip_revision` is the measured Hugging Face commit. `siglip_cos_lo` (0.45) and `siglip_cos_hi` (0.90) turn an image cosine into a 0-1 score, `clip((cos - lo) / (hi - lo), 0, 1)`, so `lo` must be below `hi`. The code default for `image_ranker` stays `off`, and `siglip_revision` is unset there; only the shipped YAML turns the model on.
 
-Stores are one YAML file each in `config/stores/` and are **off unless `enabled: true`**.
+`openai_model` (a dated OpenAI snapshot) is deliberately unset until the build decides it. Pinned versions must not change under us, so aliases such as `gpt-5-mini` or `main` are rejected. Changing `openai_model`, or `siglip_revision` (which also means re-running the spike's quality check), needs a re-run of the evaluation set.
+
+Stores are one YAML file each in `config/stores/` and are **off unless `enabled: true`**. A store file may override `rps`, `timeout_s` and `max_response_bytes` for that store, and may set `max_variants` (1 to 3) to send fewer of the keyword variants to it; leaving a field out uses the global setting (or all variants).
 
 ## How the code is organised
 

@@ -17,6 +17,7 @@ rps_per_store: 1                # Requests per second per store (BRD Rule 2).
 rps_images_per_host: 5          # Thumbnail downloads per second per image host (assumption A5).
 store_cache_ttl_s: 600          # Identical store searches within this time are served from memory.
 store_cooldown_s: 900           # A store that blocked or failed is not contacted again for this long.
+max_response_bytes: 2000000     # Size cap for one HTTP response; a store can override it (max_response_bytes in its file).
 
 # --- Price ranges and ranking -------------------------------------------------------------
 tier_mix:                       # Percent of results per price range; must sum to 100 (PRD R14).
@@ -33,8 +34,13 @@ neutral_price_score: 0.5        # Price-fit score when the shopper gave no budge
 
 # --- Models -------------------------------------------------------------------------------
 # Quoted on purpose: an unquoted `off` is read by YAML as a boolean.
-image_ranker: "off"             # "siglip" (needs `uv sync --group ml` and siglip_revision) or "off".
-siglip_revision: null           # 40-character Hugging Face commit hash; set after the Phase 3 spike.
+# The siglip revision below is the one measured in spikes/siglip/REPORT.md (verdict GO as a
+# low-weight signal). Changing it requires re-running the spike's quality check
+# (spikes/siglip/03_quality.py) and re-deriving siglip_cos_lo / siglip_cos_hi.
+image_ranker: siglip            # "siglip" (needs `uv sync --group ml` and siglip_revision) or "off".
+siglip_revision: c56244cc94f92419e8369fa71efdaf403b124ce8   # 40-character Hugging Face commit hash.
+siglip_cos_lo: 0.45             # Image cosine at or below this scores 0 (spike: median cosine between different categories, rounded down).
+siglip_cos_hi: 0.90             # Image cosine at or above this scores 1 (spike: 10th percentile of edited same-photo pairs, rounded down).
 openai_model: null              # DATED snapshot id (ends in -YYYY-MM-DD), chosen from OpenAI's docs. Never an alias.
 daily_llm_call_cap: 200         # Fail closed when reached (also VGA_DAILY_LLM_CALL_CAP).
 

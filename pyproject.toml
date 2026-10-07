@@ -62,6 +62,7 @@ filterwarnings = ["error::pytest.PytestUnraisableExceptionWarning"]
 target-version = "py312"
 line-length = 100
 src = ["src", "tests", "app", "eval"]
+extend-exclude = ["spikes"]   # throwaway spikes have their own pyproject.toml and are not held to repo lint rules
 
 [tool.ruff.lint]
 select = [

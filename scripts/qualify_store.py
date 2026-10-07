@@ -3,11 +3,12 @@
 # requires-python = ">=3.12"
 # dependencies = ["httpx>=0.27", "protego>=0.7"]
 # ///
-"""Store qualification: can an honest client read this store's search results?
+r"""Store qualification: can an honest client read this store's search results?
 
     uv run scripts/qualify_store.py https://en-ae.aivi.com "black blazer" jacket shoes
     uv run scripts/qualify_store.py https://en-ae.aivi.com --product-url <https url>
-    uv run scripts/qualify_store.py https://www.namshi.com "black blazer" --search-path "/uae-en/search?q={query}"
+    uv run scripts/qualify_store.py https://www.namshi.com "black blazer" \
+        --search-path "/uae-en/search?q={query}"
 
 Rules enforced here (BRD Rule 2): one fixed identifying User-Agent, robots.txt first and
 honoured, https only, at most 1 request/s (slower if robots.txt asks), at most 12 requests,
@@ -87,7 +88,10 @@ class Moved(Stop):
 
     def __init__(self, target: str) -> None:
         super().__init__(f"redirected to another domain: {target}")
-        self.verdict = f"UNDETERMINED (store moved to {urlsplit(target).hostname}; re-run against that base URL)"
+        self.verdict = (
+            f"UNDETERMINED (store moved to {urlsplit(target).hostname}; "
+            "re-run against that base URL)"
+        )
 
 
 class BudgetExhausted(Stop):
@@ -121,7 +125,10 @@ class Fetcher:
 
     def __init__(self, save_dir: Path | None) -> None:
         self.client = httpx.Client(
-            headers={"User-Agent": USER_AGENT, "Accept": "text/html,application/json;q=0.9,*/*;q=0.8"},
+            headers={
+                "User-Agent": USER_AGENT,
+                "Accept": "text/html,application/json;q=0.9,*/*;q=0.8",
+            },
             timeout=TIMEOUT_S,
             follow_redirects=False,  # followed by hand so that every hop is counted and checked
         )
@@ -146,7 +153,12 @@ class Fetcher:
 
     def _save(self, page: Page, stem: str | None) -> None:
         if stem and self.save_dir:
-            ext = "json" if "json" in page.content_type else "txt" if "plain" in page.content_type else "html"
+            if "json" in page.content_type:
+                ext = "json"
+            elif "plain" in page.content_type:
+                ext = "txt"
+            else:
+                ext = "html"
             self.save_dir.mkdir(parents=True, exist_ok=True)
             (self.save_dir / f"{stem}.{ext}").write_text(page.body, encoding="utf-8")
 
@@ -186,34 +198,47 @@ class Fetcher:
 
 
 # A rule value that starts with neither / nor * (the site's `Disallow: ?q=`) matches nothing under
-# RFC 9309, so a strict parser allows those URLs. The site plainly meant to block them: read as `*?q=`.
+# RFC 9309, so a strict parser allows those URLs. The site plainly meant to block them: read as
+# `*?q=`.
 MALFORMED_RULE = re.compile(r"(?im)^(\s*(?:dis)?allow\s*:\s*)(?![/*\s]|$)")
 
 
 class Robots:
     """robots.txt decisions with Protego. `allows` reads malformed rules conservatively;
-    `strict_allows` is Protego on the file exactly as served (the two differ only for such rules)."""
+    `strict_allows` is Protego on the file exactly as served (the two differ only for such
+    rules)."""
 
     def __init__(self, fetcher: Fetcher, origin: str) -> None:
         page = fetcher.get(f"{origin}/robots.txt", save_as="robots")
         if page.status >= 500:
-            raise Stop(f"robots.txt returned HTTP {page.status}; RFC 9309 says treat as disallow-all")
+            raise Stop(
+                f"robots.txt returned HTTP {page.status}; RFC 9309 says treat as disallow-all"
+            )
         if page.status >= 400:  # no robots.txt at all: everything allowed (RFC 9309)
             print(f"robots.txt: HTTP {page.status}, no rules, everything allowed")
             self.strict = self.conservative = Protego.parse("")
             return
         if "html" in page.content_type.lower():
-            raise Stop(f"{page.url} is an HTML page, not a robots file (redirect?); re-run against the canonical host")
+            raise Stop(
+                f"{page.url} is an HTML page, not a robots file (redirect?); "
+                "re-run against the canonical host"
+            )
         self.strict = Protego.parse(page.body)
         self.conservative = Protego.parse(MALFORMED_RULE.sub(r"\1*", page.body))
         lines = [ln.strip() for ln in page.body.splitlines()]
         rules = [ln for ln in lines if re.match(r"(?i)(dis)?allow\s*:", ln)]
-        print(f"robots.txt: HTTP {page.status}, {page.nbytes} bytes, {len(rules)} Allow/Disallow lines (Protego)")
+        print(
+            f"robots.txt: HTTP {page.status}, {page.nbytes} bytes, "
+            f"{len(rules)} Allow/Disallow lines (Protego)"
+        )
         for ln in rules:
             if re.search(r"search|\bq=", ln, re.I):
                 print(f"  search-related rule: {ln}")
             if MALFORMED_RULE.match(ln):
-                print(f"  note: malformed rule {ln!r} is read conservatively as '*{ln.partition(':')[2].strip()}'")
+                print(
+                    f"  note: malformed rule {ln!r} is read conservatively as "
+                    f"'*{ln.partition(':')[2].strip()}'"
+                )
         delay = self.conservative.crawl_delay(USER_AGENT)
         if delay and float(delay) > fetcher.interval:
             fetcher.interval = float(delay)
@@ -235,7 +260,8 @@ class Robots:
 
 
 def find_products(node: object, path: str = "$", out: list | None = None) -> list[tuple[str, dict]]:
-    """Dicts that look like product records (a name/title plus a price/offers key) and their path."""
+    """Dicts that look like product records (a name/title plus a price/offers key), with their
+    path."""
     out = [] if out is None else out
     if isinstance(node, dict):
         keys = [k.lower() for k in node]
@@ -285,14 +311,16 @@ def json_ld_products(html: str) -> list[dict]:
 
 
 def embedded_json_products(html: str) -> tuple[str, list[tuple[str, dict]]]:
-    """Best product-like records inside <script type=application/json>, __NEXT_DATA__ or window.X = {...}."""
+    """Best product-like records inside <script type=application/json>, __NEXT_DATA__ or
+    window.X = {...}."""
     candidates: list[tuple[str, str]] = []
     for attrs, body in script_blocks(html):
         label = re.search(r'id="([^"]+)"', attrs)
         if "json" in attrs.lower() or "__NEXT_DATA__" in attrs:
             candidates.append((label[1] if label else "script[application/json]", body))
         candidates += [
-            (f"window.{m[1]}", body[m.end() :]) for m in re.finditer(r"window\.(__\w+__|\w+State)\s*=\s*", body)
+            (f"window.{m[1]}", body[m.end() :])
+            for m in re.finditer(r"window\.(__\w+__|\w+State)\s*=\s*", body)
         ]
     best: tuple[str, list[tuple[str, dict]]] = ("", [])
     for label, text in candidates:
@@ -323,7 +351,9 @@ def analyse(page: Page) -> Analysis:
             )
     ld = json_ld_products(page.body)
     if ld:
-        return Analysis("json_ld", len(ld), [f"{len(ld)} JSON-LD Product node(s)"], field_hints(ld[0]))
+        return Analysis(
+            "json_ld", len(ld), [f"{len(ld)} JSON-LD Product node(s)"], field_hints(ld[0])
+        )
     label, records = embedded_json_products(page.body)
     if records:
         return Analysis(
@@ -334,9 +364,17 @@ def analyse(page: Page) -> Analysis:
         )
     cards = CARD_CLASS.findall(page.body)
     if cards:
-        return Analysis("css", len(cards), [f"{len(cards)} product-card class matches, e.g. {cards[0][:100]}"])
+        return Analysis(
+            "css",
+            len(cards),
+            [f"{len(cards)} product-card class matches, e.g. {cards[0][:100]}"],
+        )
     shell = re.findall(r'id="(root|app|__next|__nuxt)"', page.body)
-    return Analysis("none", 0, [f"no product data; HTML shell markers: {shell or 'none'}; {len(page.body)} chars"])
+    return Analysis(
+        "none",
+        0,
+        [f"no product data; HTML shell markers: {shell or 'none'}; {len(page.body)} chars"],
+    )
 
 
 def verdict_for(a: Analysis) -> str:
@@ -362,7 +400,10 @@ def run(args: argparse.Namespace, fetcher: Fetcher) -> tuple[str, str]:
         allowed = robots.allows(url)
         print(f"search {query!r}: robots {'allows' if allowed else 'DISALLOWS'} {url}")
         if allowed != robots.strict_allows(url):
-            print("  note: Protego on the file as served would ALLOW this URL (see malformed rule above)")
+            print(
+                "  note: Protego on the file as served would ALLOW this URL "
+                "(see malformed rule above)"
+            )
         if not allowed:
             return "DROP (robots)", f"robots.txt disallows the search path for us: {url}"
         a = analyse(fetcher.get(url, save_as=f"search-{i}"))
@@ -376,7 +417,10 @@ def run(args: argparse.Namespace, fetcher: Fetcher) -> tuple[str, str]:
         if not robots.allows(args.product_url):
             return "DROP (robots)", f"robots.txt disallows the product page: {args.product_url}"
         ld = json_ld_products(fetcher.get(args.product_url, save_as="product").body)
-        print(f"  product page: {len(ld)} JSON-LD Product node(s)" + (f"; fields {field_hints(ld[0])}" if ld else ""))
+        print(
+            f"  product page: {len(ld)} JSON-LD Product node(s)"
+            + (f"; fields {field_hints(ld[0])}" if ld else "")
+        )
     if not verdicts:
         return "UNDETERMINED (no query given)", "robots.txt checked only"
     return min(
@@ -385,12 +429,16 @@ def run(args: argparse.Namespace, fetcher: Fetcher) -> tuple[str, str]:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("base_url", help="store origin, e.g. https://en-ae.aivi.com")
     ap.add_argument("queries", nargs="*", help=f"search queries (at most {MAX_QUERIES} are used)")
     ap.add_argument("--search-path", default="/search?q={query}", help="path template with {query}")
     ap.add_argument("--product-url", help="one public product page to check for JSON-LD")
-    ap.add_argument("--save-dir", type=Path, help="write the fetched bodies here (to build samples)")
+    ap.add_argument(
+        "--save-dir", type=Path, help="write the fetched bodies here (to build samples)"
+    )
     args = ap.parse_args()
     fetcher = Fetcher(args.save_dir)
     try:
