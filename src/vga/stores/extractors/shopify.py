@@ -32,13 +32,14 @@ the URL as the store gave it.
 ``gender_fields`` (default **[type, tags]**) lists the record fields that may say who the product is
 for; ``[]`` turns the reading off. Several stores sell for men and women and say which in these
 fields: Sacoor Brothers writes ``type`` as "Winter 2025 / Man / Blazer", Nautica tags "Mens" or
-"Women", Maison D'Vie tags "Men" or "Women". Titles often say nothing ("Nelson Pant - Black"). The
-rule, applied to ``Product.gender``:
+"Women", Maison D'Vie tags "Men" or "Women", Signature Studio tags its men's kurta sets "Menswear".
+Titles often say nothing ("Nelson Pant - Black"). The rule, applied to ``Product.gender``:
 
 - A field "names" a gender when it holds one of these words, whole and in any case (apostrophes,
   hyphens, slashes and commas end a word, so "Men's", "womens-clothing-sale-all" and "Jackets for
-  men" all work, and "women" is never read as "men"): ``man``, ``men``, ``mens`` for men;
-  ``woman``, ``women``, ``womens``, ``ladies`` for women; ``unisex``. "Man-made" is not a cue.
+  men" all work, and "women" is never read as "men"): ``man``, ``men``, ``mens``, ``menswear`` for
+  men; ``woman``, ``women``, ``womens``, ``womenswear``, ``ladies`` for women; ``unisex``.
+  "Man-made" is not a cue. Other "-wear" words ("Formalwear", "Swimwear") are not cues.
 - The fields are read **in the order listed** and the first one that names a gender decides, so
   ``type`` outranks ``tags``. This matters: Sacoor tags women's suits "Formalwear Men" while their
   ``type`` says "Woman", and pooling the two would leave them unlabelled.
@@ -73,9 +74,11 @@ _CUES: dict[str, Gender] = {
     "man": Gender.MEN,
     "men": Gender.MEN,
     "mens": Gender.MEN,
+    "menswear": Gender.MEN,
     "woman": Gender.WOMEN,
     "women": Gender.WOMEN,
     "womens": Gender.WOMEN,
+    "womenswear": Gender.WOMEN,
     "ladies": Gender.WOMEN,
     "unisex": Gender.UNISEX,
 }
