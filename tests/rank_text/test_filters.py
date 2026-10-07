@@ -42,23 +42,161 @@ def test_a_product_of_another_category_is_dropped(title: str) -> None:
 @pytest.mark.parametrize(
     "title",
     [
-        "Satin Midi Dress",
-        "Evening Gown",
         "Linen Jumpsuit",
         "Cotton Playsuit",
+        "Cotton Nightdress",
+        "Swim Dress",
         "Leather Tote Bag",
         "Chain Belt",
         "Wool Beanie Hat",
         "Silk Scarf",
         "Gold Hoop Earrings",
+        "Black Chiffon Sheila",
+        "Satin Hijab",
+        "Aviator Sunglasses",
     ],
 )
-def test_a_garment_outside_the_four_categories_is_dropped_for_every_request(title: str) -> None:
+def test_a_garment_outside_the_five_categories_is_dropped_for_every_request(title: str) -> None:
     for category in Category:
         result = apply_hard_filters(make_item_intent(category=category), product(title))
 
         assert not result.keep
         assert result.reason is DropReason.OUT_OF_SCOPE
+
+
+# --------------------------------------------------------------------------------------------
+# Dresses and ethnic wear, the fifth category
+# --------------------------------------------------------------------------------------------
+
+DRESS_REQUEST = make_item_intent(category=Category.DRESSES)
+OTHER_FOUR = [category for category in Category if category is not Category.DRESSES]
+
+DRESS_LIKE_TITLES = [
+    "Neda Plain Abaya Front Open with Buttons",
+    "GIGI BURGUNDY ABAYA",
+    "Printed Dress - AS26-92",
+    "2 Piece - Embroidered Gown - FE26-128",
+    "ZAHRA GOLD DRESS WITH CAPE",
+    "Off-White Under Abaya Dress In Satin",
+    "JALILA GREEN FLORAL KAFTAN",
+    "Embroidered Kurta - NQ26-008",
+]
+
+
+@pytest.mark.parametrize("title", DRESS_LIKE_TITLES)
+def test_a_request_for_dresses_keeps_dress_like_products_and_labels_them_dresses(
+    title: str,
+) -> None:
+    result = apply_hard_filters(DRESS_REQUEST, product(title))
+
+    assert result.keep
+    assert result.category is Category.DRESSES
+
+
+@pytest.mark.parametrize("title", DRESS_LIKE_TITLES)
+@pytest.mark.parametrize("category", OTHER_FOUR)
+def test_a_request_for_any_other_category_drops_dress_like_products(
+    category: Category, title: str
+) -> None:
+    result = apply_hard_filters(make_item_intent(category=category), product(title))
+
+    assert not result.keep
+    assert result.reason is DropReason.WRONG_CATEGORY
+
+
+@pytest.mark.parametrize(
+    ("category", "title"),
+    [
+        pytest.param(Category.TOPS, "Linen Shirt Dress", id="a shirt dress is not a shirt"),
+        pytest.param(Category.OUTERWEAR, "Blazer Mini Dress in Black", id="nor a blazer"),
+        pytest.param(Category.TOPS, "Sweater Dress", id="a sweater dress is not a sweater"),
+        pytest.param(Category.BOTTOMS, "Skirt Dress", id="a skirt dress is not a skirt"),
+    ],
+)
+def test_a_dress_named_after_another_garment_is_not_offered_for_that_garment(
+    category: Category, title: str
+) -> None:
+    result = apply_hard_filters(make_item_intent(category=category), product(title))
+
+    assert not result.keep
+    assert result.reason is DropReason.WRONG_CATEGORY
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Black Cotton Shirt",
+        "Wide-Leg Jeans",
+        "Leather Chelsea Boots",
+        "Oversized Blazer",
+        "Dress Shirt",
+        "Dress Pants",
+        "Dress Shoes",
+    ],
+)
+def test_a_request_for_dresses_drops_the_other_four_categories(title: str) -> None:
+    result = apply_hard_filters(DRESS_REQUEST, product(title))
+
+    assert not result.keep
+    assert result.reason is DropReason.WRONG_CATEGORY
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Black Chiffon Sheila - Custom Size",
+        "Satin Hijab",
+        "Silk Scarf",
+        "Leather Tote Bag",
+        "Gold Hoop Earrings",
+    ],
+)
+def test_a_request_for_dresses_still_drops_accessories(title: str) -> None:
+    result = apply_hard_filters(DRESS_REQUEST, product(title))
+
+    assert not result.keep
+    assert result.reason is DropReason.OUT_OF_SCOPE
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "2 Piece - Embroidered Suit - FE26-130",  # Nishat Linen UAE: a South Asian suit
+        "Single Breasted Black Suit In Wool Blend",  # Sacoor Brothers UAE: a men's suit
+        "Grey Plain Inner",
+    ],
+)
+def test_a_title_with_no_garment_noun_is_kept_for_dresses_without_a_category(title: str) -> None:
+    # "suit" means different things at different stores, so it is not a dress word. Both kinds are
+    # kept for a dresses request, with no category bonus; the gender filter can still remove a
+    # men's suit when the shopper said "women".
+    result = apply_hard_filters(DRESS_REQUEST, product(title))
+
+    assert result.keep
+    assert result.category is None
+
+
+def test_the_gender_filter_removes_a_mens_suit_from_a_womens_dress_search() -> None:
+    request = make_item_intent(
+        category=Category.DRESSES, gender=Gender.WOMEN, gender_source=GenderSource.EXPLICIT
+    )
+
+    result = apply_hard_filters(
+        request, product("Single Breasted Black Suit In Wool Blend", gender=Gender.MEN)
+    )
+
+    assert not result.keep
+    assert result.reason is DropReason.GENDER_MISMATCH
+
+
+def test_a_dress_the_store_files_under_jackets_is_kept_for_a_dress_request() -> None:
+    # Oh Polly files "Blazer Mini Dress" under "Coats & Jackets"; the title decides.
+    mislabelled = product("Single-Breasted Blazer Mini Dress in Black", category=Category.OUTERWEAR)
+
+    result = apply_hard_filters(DRESS_REQUEST, mislabelled)
+
+    assert result.keep
+    assert result.category is Category.DRESSES
 
 
 def test_a_skirt_is_bottoms_and_is_kept_for_a_bottoms_request() -> None:
@@ -72,14 +210,12 @@ def test_a_skirt_is_bottoms_and_is_kept_for_a_bottoms_request() -> None:
 
 def test_the_stores_label_does_not_save_a_dress_from_being_dropped() -> None:
     # Oh Polly files this under "Coats & Jackets".
-    mislabelled = product(
-        "Single-Breasted Blazer Mini Dress in Black", category=Category.OUTERWEAR
-    )
+    mislabelled = product("Single-Breasted Blazer Mini Dress in Black", category=Category.OUTERWEAR)
 
     result = apply_hard_filters(BLAZER_REQUEST, mislabelled)
 
     assert not result.keep
-    assert result.reason is DropReason.OUT_OF_SCOPE
+    assert result.reason is DropReason.WRONG_CATEGORY
 
 
 def test_a_product_whose_category_cannot_be_inferred_is_kept_without_a_category() -> None:

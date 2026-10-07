@@ -6,8 +6,9 @@ ranking stays deterministic and needs no model.
 What lives here
 - ``tokenize`` / ``canon``: one way to cut a title into lowercase words, shared by every ranker.
 - The colour lexicon: ``normalise_colour``, ``find_colours`` and ``colour_affinity``.
-- The category lexicon: which title words mean tops, outerwear, bottoms or shoes, and which words
-  name a garment or accessory outside those four (dress, bag, belt, ...).
+- The category lexicon: which title words mean tops, outerwear, bottoms, shoes or dresses (dresses
+  and ethnic wear), and which words name a garment or accessory outside those five (jumpsuit, bag,
+  belt, sheila, ...).
 - Gender cues in a title ("men's", "for women").
 
 Store titles are untrusted data. Nothing here evaluates or executes them; they are only compared
@@ -32,6 +33,9 @@ _COMPOUNDS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\bt[\s-]?shirts?\b"), "tshirt"),
     (re.compile(r"\bco[\s-]?ords?\b"), "coord"),
     (re.compile(r"\b(?:two|2|three|3)[\s-]?pieces?\b"), "twopiece"),
+    # "Night Dress" and "Sleep Gown" are nightwear. Dresses and gowns are a category, so the
+    # two-word spellings are folded into the one-word nightwear marker (see OUT_OF_SCOPE_OVERRIDES).
+    (re.compile(r"\b(?:night|sleep)[\s-]+(?=(?:dress|gown|shirt)(?:es|s)?\b)"), "nightwear "),
 )
 
 
@@ -308,15 +312,28 @@ CATEGORY_WORDS: dict[Category, frozenset[str]] = {
         "moccasin", "clog", "wedge", "stiletto", "slingback", "plimsoll", "ballerina",
     )
     | frozenset({"footwear", "flats"}),
+    Category.DRESSES: _with_plurals(
+        # dresses and gowns
+        "dress", "gown",
+        # Gulf and North African one-piece garments
+        "kaftan", "kaftaan", "caftan", "abaya", "jalabiya", "jalabiyah", "jellabiya",
+        "djellaba", "jilbab", "kandura", "thobe",
+        # South Asian garments and sets
+        "kurta", "kurti", "kameez", "lehenga", "anarkali", "sharara", "gharara",
+    ),
 }  # fmt: skip
-"""Title words that name a garment in one of the four categories. Words that are ambiguous in
-retail use are left out on purpose (cardigan, gilet, vest, kimono, overshirt, corset, suit):
-a product with only those words has no inferred category, so it is kept rather than dropped."""
+"""Title words that name a garment in one of the five categories. Dresses and ethnic wear is the
+fifth (BRD, 2026-10-08): dresses, gowns, kaftans, abayas, jalabiyas, kurtas and similar one-piece
+or ethnic garments. Words that are ambiguous in retail use are left out on purpose (cardigan,
+gilet, vest, kimono, overshirt, corset, suit, maxi, saree): a product with only those words has no
+inferred category, so it is kept rather than dropped. "Suit" is the clearest case: a South Asian
+suit at Nishat Linen UAE and a men's suit at Sacoor Brothers UAE, with nothing in the title to
+tell them apart."""
 
 OUT_OF_SCOPE_WORDS: frozenset[str] = _with_plurals(
-    # one-piece and traditional garments
-    "dress", "gown", "jumpsuit", "playsuit", "romper", "kaftan", "caftan", "abaya",
-    "jalabiya", "kandura", "thobe", "robe",
+    # one-piece garments the BRD does not cover: "similar" to a dress means a dress-like garment,
+    # and a jumpsuit, playsuit or romper has legs. A robe is a bathrobe or dressing gown.
+    "jumpsuit", "playsuit", "romper", "robe",
     # accessories
     "bag", "handbag", "tote", "clutch", "backpack", "rucksack", "wallet", "purse", "pouch",
     "satchel", "crossbody", "holdall", "suitcase", "belt", "hat", "cap", "beanie", "bonnet",
@@ -324,6 +341,8 @@ OUT_OF_SCOPE_WORDS: frozenset[str] = _with_plurals(
     "glove", "mitten", "sunglass", "eyewear", "jewellery", "jewelry", "necklace", "pendant",
     "earring", "bracelet", "bangle", "ring", "brooch", "anklet", "charm", "watch", "tie",
     "necktie", "bowtie", "cufflink", "lanyard", "keyring", "keychain", "umbrella",
+    # head coverings sold next to abayas, kurtas and kandouras
+    "sheila", "shayla", "hijab", "niqab", "dupatta", "turban", "ghutra", "shemagh",
     # hosiery and underwear
     "sock", "stocking", "bra", "bralette", "knicker", "thong",
     # care products that search pads in ("black boots" finds boot polish)
@@ -334,19 +353,40 @@ OUT_OF_SCOPE_WORDS: frozenset[str] = _with_plurals(
 ) | frozenset({
     "glasses", "sunglasses", "tights", "briefs", "underwear", "lingerie", "swimwear",
     "pyjamas", "pajamas", "nightwear", "sleepwear", "loungewear", "hosiery", "luggage",
+    "scarves", "headscarf", "headscarves",
 })  # fmt: skip
-"""Title words that name something outside the four categories: dresses and one-pieces,
-accessories, underwear, swimwear, sleepwear, beauty. A title whose last garment noun is one of
-these is dropped by the category filter."""
+"""Title words that name something outside the five categories: jumpsuits and other one-pieces
+with legs, accessories (including the sheilas and hijabs sold next to abayas), underwear,
+swimwear, sleepwear, beauty. A title whose last garment noun is one of these is dropped by the
+category filter, for every request."""
 
 OUT_OF_SCOPE_OVERRIDES: frozenset[str] = _with_plurals(
-    "bikini", "swimsuit", "tankini", "pyjama", "pajama", "nightdress", "nightgown", "nightshirt",
-    "nightie", "lingerie", "boxer",
-) | frozenset({"swim", "swimwear", "swimming", "nightwear", "sleepwear", "underwear"})
-"""Words that put a title out of scope wherever they sit ("Bikini Top" is not a top)."""
+    "bikini",
+    "swimsuit",
+    "tankini",
+    "pyjama",
+    "pajama",
+    "nightdress",
+    "nightgown",
+    "nightshirt",
+    "nightie",
+    "lingerie",
+    "boxer",
+    "bathrobe",
+) | frozenset({"swim", "swimwear", "swimming", "nightwear", "sleepwear", "underwear", "dressing"})
+"""Words that put a title out of scope wherever they sit ("Bikini Top" is not a top). Dresses and
+gowns are a category now, so nightwear and robes that are named after them must be caught here:
+"Nightdress", "Night Dress" (folded into ``nightwear`` by ``tokenize``) and "Dressing Gown"."""
+
+ETHNIC_SET_STARTERS: frozenset[str] = _with_plurals("kurta", "kurti", "kameez")
+"""A kurta or kameez sold with trousers or a shirt is a set ("Kurta Trouser", "Kameez Trousers"),
+not a pair of trousers. When one of these comes before the last garment noun of another category,
+the title has no single category."""
 
 SET_WORDS_ANYWHERE: frozenset[str] = _with_plurals("coord", "twopiece", "twinset", "tracksuit")
-"""A garment set: the title does not say which single category it is."""
+"""A garment set: the title does not say which single category it is. The exception is a set
+named after a dress-category garment ("2 Piece - Embroidered Gown", "Kurta Set"): that is one
+outfit in the dresses category, so ``classify_title`` skips these set words for it."""
 
 SET_WORDS_TRAILING: frozenset[str] = _with_plurals("set", "suit")
 """Same, but only when they come after the garment noun ("Linen Blazer Set"; "Suit Trousers"
@@ -378,8 +418,13 @@ _MEN_WORDS = frozenset({"men", "mens", "male", "menswear", "gents"})
 _WOMEN_WORDS = frozenset({"women", "womens", "ladies", "lady", "ladys", "female", "womenswear"})
 _UNISEX_WORDS = frozenset({"unisex"})
 
-GENDER_WORDS: frozenset[str] = _MEN_WORDS | _WOMEN_WORDS | _UNISEX_WORDS | frozenset(
-    {"boys", "girls", "kids", "man", "woman", "boy", "girl", "his", "her", "him", "hers"}
+GENDER_WORDS: frozenset[str] = (
+    _MEN_WORDS
+    | _WOMEN_WORDS
+    | _UNISEX_WORDS
+    | frozenset(
+        {"boys", "girls", "kids", "man", "woman", "boy", "girl", "his", "her", "him", "hers"}
+    )
 )
 """Words that describe who a product is for. They are not product words, so overlap ignores them."""
 

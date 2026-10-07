@@ -55,6 +55,10 @@ def _outerwear(**overrides):
     ).model_copy(update=overrides)
 
 
+def _handbags():
+    return make_reading_item(category="handbags", search_keywords=["handbags"])
+
+
 def _declined(verdict: Verdict) -> Step:
     return answer(make_declined_reading(verdict))
 
@@ -308,17 +312,13 @@ OBEYING: list[tuple[str, str, Step, set[str]]] = [
     (
         "e05_injection_printed_in_photo_only",
         "does_what_the_sign_says",
-        answer(
-            make_reading(items=[make_reading_item(category="handbags", search_keywords=["handbags"])])
-        ),
+        answer(make_reading(items=[_handbags()])),
         {FRIENDLY_ERROR},
     ),
     (
         "e06_injection_printed_in_photo_plus_text",
         "does_what_the_sign_says",
-        answer(
-            make_reading(items=[make_reading_item(category="handbags", search_keywords=["handbags"])])
-        ),
+        answer(make_reading(items=[_handbags()])),
         {FALLBACK},
     ),
     (

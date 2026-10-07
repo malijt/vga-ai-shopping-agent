@@ -1,4 +1,4 @@
-"""Which of the four categories a product belongs to, read from its title (plan 7.1.2).
+"""Which of the five categories a product belongs to, read from its title (plan 7.1.2).
 
 Real store search pads its results with off-category items: a search for "black blazer" returned
 9 dresses and 1 blazer at one store (docs/store-qualification/SUMMARY.md). So the ranker decides the
@@ -8,10 +8,16 @@ The rule is "the last garment noun wins", which is how English titles work: in "
 the dress is the garment and "blazer" describes it, while in "Dress Shirt" the shirt is. Details
 that follow "with", "in", "for" and similar words are ignored ("Heeled Boots With Feather Trims").
 
+The fifth category, dresses, holds dresses, gowns, kaftans, abayas, jalabiyas, kurtas and similar
+one-piece or ethnic garments. A shirt dress is a dress (never a shirt), so a request for shirts
+drops it. Jumpsuits, swimwear, nightwear and accessories (bags, scarves, sheilas, hijabs) belong to
+no category and are dropped for every request.
+
 A title gets no category (``None``) when it names no garment noun we know, when it is a set or a
-combined listing ("Shirt and Trousers Set"), or when it only uses words that are ambiguous in retail
-("cardigan", "vest"). ``None`` means "keep it, but give no category bonus": better to show an odd
-product than to hide a good one.
+combined listing ("Shirt and Trousers Set"), or when it only uses words that are ambiguous in
+retail ("cardigan", "vest", "suit"). ``None`` means "keep it, but give no category bonus": better
+to show an odd product than to hide a good one. A set named after a dress-category garment is the
+exception: "2 Piece - Embroidered Gown" and "Kurta Set" are dresses.
 """
 
 import re
@@ -22,6 +28,7 @@ from vga.rank.lexicon import (
     CATEGORY_BY_WORD,
     COORDINATORS,
     CUT_WORDS,
+    ETHNIC_SET_STARTERS,
     OUT_OF_SCOPE_OVERRIDES,
     OUT_OF_SCOPE_WORDS,
     SET_WORDS_ANYWHERE,
@@ -63,11 +70,16 @@ def classify_title(title: str) -> TitleKind:
         return None
 
     last_index, last_kind = matches[-1]
-    if last_kind is not OUT_OF_SCOPE:
-        # A set names several garments, so it has no single category.
+    if last_kind is not OUT_OF_SCOPE and last_kind is not Category.DRESSES:
+        # A set names several garments, so it has no single category. A set named after a dress,
+        # gown or kurta ("2 Piece - Embroidered Gown", "Kurta Set") is one outfit in the dresses
+        # category, so that case is exempt.
         if SET_WORDS_ANYWHERE.intersection(tokens):
             return None
         if SET_WORDS_TRAILING.intersection(tokens[last_index + 1 :]):
+            return None
+        # "Kurta Trouser": a kurta sold with trousers is a set, not a pair of trousers.
+        if ETHNIC_SET_STARTERS.intersection(tokens[:last_index]):
             return None
     # "Shirt and Trousers": two different garments joined by "and" is a combined listing.
     for index, kind in reversed(matches[:-1]):
