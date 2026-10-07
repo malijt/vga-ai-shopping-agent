@@ -7,16 +7,18 @@
     uv run python -m vga.search --text "white sneakers" --budget 300
 
 It runs the real pipeline (real stores, real OpenAI, the local image model when configured) and
-prints the ``SearchResponse`` as JSON on standard output. Logs go to standard error and to
-``<log_dir>/vga.jsonl``. The photo is read into memory for the request and never written anywhere.
+prints the ``SearchResponse`` as JSON on standard output. The structured log goes to
+``<log_dir>/vga.jsonl``; ``--verbose`` also prints it to standard error. The photo is read into
+memory for the request and never written anywhere.
 
 When the search cannot be done, the plain message a shopper would see is printed to standard error
-and the exit status is 1 (2 for a mistake in the command line). Nothing else is printed there, so
-no stack trace and no internals.
+and the exit status is 1 (2 for a mistake in the command line). Without ``--verbose`` nothing else
+is printed there, so no stack trace and no internals.
 """
 
 import argparse
 import asyncio
+import io
 import sys
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -79,7 +81,21 @@ def build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_CURRENCY,
         help="currency of --budget, a three-letter code (default: %(default)s)",
     )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="also print the log lines to standard error (they always go to the log file)",
+    )
     return parser
+
+
+class _Discard(io.StringIO):
+    """A text stream that throws everything away: the log handler for standard error when the
+    command line is not verbose, so that only the error message shows there."""
+
+    def write(self, text: str) -> int:
+        return len(text)
 
 
 def _positive_number(raw: str) -> float:
@@ -107,7 +123,11 @@ def main(
 
     try:
         loaded = settings if settings is not None else load_settings()
-        configure_logging(level=loaded.log_level, log_dir=loaded.log_dir)
+        configure_logging(
+            level=loaded.log_level,
+            log_dir=loaded.log_dir,
+            stream=sys.stderr if args.verbose else _Discard(),
+        )
         request = _build_request(args.text, args.image)
         overrides = _build_overrides(args.budget, args.currency)
         response = asyncio.run(_search(build, loaded, request, overrides))
