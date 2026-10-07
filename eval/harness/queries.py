@@ -5,6 +5,11 @@
 else with a message that names the query and the field, so a typo in a frozen file is found
 before a paid live run, not after.
 
+Two sets are read by this module. ``queries.yaml`` is the frozen acceptance set: it must have the
+PRD mix and its result decides the demo. Any other file, such as ``extra_queries.yaml`` (the 11
+extra photos), is an *extra set*: it has no required mix, its results are reported beside the
+acceptance table, and it never counts towards the pass rule (``query_set_of`` tells them apart).
+
 A photo is only needed for a live run. ``require_images=False`` (used by ``--mock`` and
 ``--replay``) skips the existence check, because the five private photos are supplied by the user
 and are not in the repository (see ``eval/data/ASSETS.md``).
@@ -13,7 +18,7 @@ and are not in the repository (see ``eval/data/ASSETS.md``).
 from collections import Counter
 from collections.abc import Sequence
 from pathlib import Path, PurePosixPath
-from typing import Any, Self
+from typing import Any, Literal, Self
 
 import yaml
 from pydantic import Field, ValidationError, field_validator, model_validator
@@ -23,6 +28,7 @@ from vga.models import InputType, VgaModel
 from vga.settings import PROJECT_ROOT
 
 QUERIES_PATH = PROJECT_ROOT / "eval" / "data" / "queries.yaml"
+EXTRA_QUERIES_PATH = PROJECT_ROOT / "eval" / "data" / "extra_queries.yaml"
 ASSETS_PREFIX = "eval/data/assets/"
 """Every image path starts here (relative to the repository root)."""
 ASSETS_GUIDE = "eval/data/ASSETS.md"
@@ -34,6 +40,8 @@ EXPECTED_MIX: dict[InputType, int] = {
     InputType.PHOTO_TEXT: 2,
 }
 """The mix the PRD "Acceptance test (10 queries)" requires."""
+
+QuerySet = Literal["acceptance", "extra"]
 
 _IMAGE_SUFFIXES = (".jpg", ".jpeg", ".png", ".webp")
 _ID_RE = r"^[a-z0-9][a-z0-9_-]{0,63}$"
@@ -143,6 +151,13 @@ def parse_queries(
     if problems:
         raise QueryFileError(f"{source} is not valid:\n- " + "\n- ".join(problems))
     return queries
+
+
+def query_set_of(path: Path | str) -> QuerySet:
+    """``acceptance`` for the frozen ``queries.yaml`` and nothing else, ``extra`` for any other
+    file. Deciding by the file, not by what it holds, means a copy of the acceptance queries with
+    a typo cannot pass itself off as the acceptance run."""
+    return "acceptance" if Path(path).resolve() == QUERIES_PATH.resolve() else "extra"
 
 
 def image_path(query: AcceptanceQuery, repo_root: Path = PROJECT_ROOT) -> Path | None:

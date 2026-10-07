@@ -83,12 +83,13 @@ def _mix_label(mix: list[int]) -> str:
 def _run_label(loaded: LoadedRun) -> str:
     meta = loaded.meta
     number = f"{meta.number} " if meta.number is not None else ""
+    extra = ", extra set" if meta.query_set == "extra" else ""
     if meta.mode == "mock":
-        return f"{number}mock (FakePipeline's canned response; not a real run)"
+        return f"{number}mock (FakePipeline's canned response; not a real run){extra}"
     if meta.mode == "replay":
-        what = f"replay of {escape(meta.source or 'a recording')}"
+        what = f"replay of {escape(meta.source or 'a recording')}{extra}"
         return f"{number}({what})" if number else what
-    return f"{number}(live, recorded)" if number else "live, recorded"
+    return f"{number}(live, recorded{extra})" if number else f"live, recorded{extra}"
 
 
 def _fields(loaded: LoadedRun) -> list[list[str]]:
@@ -121,9 +122,22 @@ def _results_rows(scored: ScoredRun) -> list[list[str]]:
     ]
 
 
+def _extra_set_result_lines(scored: ScoredRun) -> list[str]:
+    return [
+        "A query passes only if every column meets the pass rule. "
+        f"**Result of this extra set:** {scored.verdict.headline}. "
+        "This is an extra set, not the acceptance result: it has no demo verdict and these "
+        "queries never count towards the 7 of 10 rule.",
+        "",
+        "Verdict: none (extra set, not the acceptance result)",
+    ]
+
+
 def _verdict_lines(scored: ScoredRun) -> list[str]:
     verdict = scored.verdict
     total = verdict.total
+    if verdict.required is None:
+        return _extra_set_result_lines(scored)
     lines = [
         "A query passes only if every column meets the pass rule. "
         f"**Overall verdict:** {verdict.headline}. "
@@ -266,6 +280,11 @@ def _notes(scored: ScoredRun) -> list[str]:
     outfit_ids = [r.query.id for r in loaded.runs if r.query.type is InputType.OUTFIT_PHOTO]
     config: CriteriaConfig = scored.config
     notes: list[str] = []
+    if meta.query_set == "extra":
+        notes.append(
+            "Extra set: these queries are not the 10 acceptance queries. Their results are "
+            "reported beside the acceptance table and never count towards the 7 of 10 pass rule."
+        )
     if meta.mode == "mock":
         notes.append(
             "Mock run: every query received the same canned response from `FakePipeline`, and "
@@ -326,7 +345,15 @@ def render_report(scored: ScoredRun) -> str:
     loaded = scored.loaded
     config = scored.config
     number = loaded.meta.number if loaded.meta.number is not None else loaded.meta.mode
-    lines: list[str] = [f"# Acceptance results: run {number}", ""]
+    extra = loaded.meta.query_set == "extra"
+    title = "Extra set results" if extra else "Acceptance results"
+    lines: list[str] = [f"# {title}: run {number}", ""]
+    if extra:
+        lines += [
+            "> Extra set: not the acceptance result. These queries are outside the 10 acceptance "
+            "queries and never count towards the 7 of 10 pass rule.",
+            "",
+        ]
     if loaded.meta.mode == "mock":
         lines += ["> Mock run: a canned response, not a real result.", ""]
     elif loaded.meta.mode == "replay":

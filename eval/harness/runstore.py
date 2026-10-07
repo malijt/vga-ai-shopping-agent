@@ -24,7 +24,7 @@ from pydantic import Field, ValidationError
 
 from eval.harness.errors import RunFileError
 from eval.harness.links import LinkCheck, LinksMode
-from eval.harness.queries import AcceptanceQuery
+from eval.harness.queries import AcceptanceQuery, QuerySet
 from eval.harness.runner import DurationSource, PipelineFailure, QueryRun
 from vga.models import SearchResponse, VgaModel
 
@@ -56,6 +56,9 @@ class RunMeta(VgaModel):
 
     number: int | None = None
     """The run number (``run-1``), or ``None`` for a mock or replay run."""
+    query_set: QuerySet = "acceptance"
+    """``acceptance`` for the 10 frozen queries; ``extra`` for any other set (for example the 11
+    extra photos). An extra set is never scored against the pass rule."""
     mode: Mode
     date: date
     links: LinksMode

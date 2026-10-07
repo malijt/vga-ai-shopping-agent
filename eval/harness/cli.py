@@ -19,6 +19,15 @@ One of four modes is required:
 Every run is saved to a folder under ``eval/results/`` (``run-N`` for a live run, ``mock`` and
 ``replay`` for the others): the raw responses, ``run.json``, ``results.md`` and a blank
 ``labels.csv``. A live run's folder is never overwritten.
+
+A live run first warms the pipeline up (loads the image model) and reports how long that took,
+apart from the queries: the 30 s limit is for a search on an app that is already running.
+
+``--queries`` names the queries file. The frozen ``eval/data/queries.yaml`` (the default) is the
+acceptance set: it must have the PRD mix of 10 and it decides the demo. Any other file, such as
+``eval/data/extra_queries.yaml`` (the 11 extra photos), is an *extra set*: no mix is required, the
+report says plainly that it is not the acceptance result, no demo verdict is given, and its
+results go to ``extras-N`` (``replay-extras`` for a replay) instead of ``run-N``.
 """
 
 import argparse
@@ -45,7 +54,14 @@ from eval.harness.links import (
     products_to_check,
 )
 from eval.harness.offline import MockLinkFetch, allowed_hosts_from_responses, placeholder_image
-from eval.harness.queries import QUERIES_PATH, AcceptanceQuery, load_queries, read_query_image
+from eval.harness.queries import (
+    QUERIES_PATH,
+    AcceptanceQuery,
+    QuerySet,
+    load_queries,
+    query_set_of,
+    read_query_image,
+)
 from eval.harness.recording import RecordingSession, ReplaySession
 from eval.harness.report import render_report
 from eval.harness.runner import ImageLoader, QueryRun, QueryScope, run_queries
@@ -66,7 +82,8 @@ from vga.interfaces import Clock, Pipeline, SystemClock
 from vga.settings import PROJECT_ROOT, Settings, load_settings
 
 RESULTS_DIR = Path("eval") / "results"
-_RUN_DIR = re.compile(r"^run-(\d+)$")
+_RUN_DIR = re.compile(r"^(?:run|extras)-(\d+)$")
+_FOLDER_PREFIX: dict[QuerySet, str] = {"acceptance": "run", "extra": "extras"}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -74,7 +91,8 @@ def build_parser() -> argparse.ArgumentParser:
         prog="python -m eval.harness",
         description=(
             "Run the 10 acceptance queries headless, score them against the BRD pass rule, "
-            "and leave only the good-match labels to a person."
+            "and leave only the good-match labels to a person. Another --queries file is run "
+            "as an extra set, which is reported but never scored against the pass rule."
         ),
     )
     mode = parser.add_mutually_exclusive_group(required=True)
@@ -104,7 +122,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--out",
         metavar="DIR",
         help="output folder (default: eval/results/run-N for --record, eval/results/mock, "
-        "eval/results/replay; for --rescore, the run's own folder)",
+        "eval/results/replay; extra sets use extras-N and replay-extras; for --rescore, "
+        "the run's own folder)",
     )
     parser.add_argument(
         "--overwrite", action="store_true", help="allow --out to be a folder that already has files"
@@ -117,7 +136,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="function that builds the real application parts: (Settings) -> Wiring",
     )
     parser.add_argument(
-        "--queries", metavar="PATH", default=str(QUERIES_PATH), help="the queries file"
+        "--queries",
+        metavar="PATH",
+        default=str(QUERIES_PATH),
+        help="the queries file (default: the frozen acceptance set; any other file is run as an "
+        "extra set that does not count towards the pass rule, for example "
+        "eval/data/extra_queries.yaml)",
     )
     return parser
 
@@ -143,20 +167,21 @@ class _Setup:
     """Set by the run, before the first query."""
 
 
-def _next_run_number(results_dir: Path) -> int:
+def _next_run_number(results_dir: Path, prefix: str = "run") -> int:
     numbers = [
         int(match.group(1))
-        for child in results_dir.glob("run-*")
+        for child in results_dir.glob(f"{prefix}-*")
         if (match := _RUN_DIR.match(child.name))
     ]
     return max(numbers, default=0) + 1
 
 
 def _resolve_output(
-    args: argparse.Namespace, mode: Mode, root: Path
+    args: argparse.Namespace, mode: Mode, root: Path, query_set: QuerySet = "acceptance"
 ) -> tuple[Path, int | None, bool]:
     """The output folder, the run number and whether the folder may already hold files."""
     results_dir = root / RESULTS_DIR
+    prefix = _FOLDER_PREFIX[query_set]
     if args.out:
         out = Path(args.out)
         match = _RUN_DIR.match(out.name)
@@ -170,9 +195,11 @@ def _resolve_output(
         if match:
             number = args.run if args.run is not None else int(match.group(1))
             return beside, number, bool(args.overwrite)
-        number = args.run if args.run is not None else _next_run_number(results_dir)
-        return results_dir / f"run-{number}", number, bool(args.overwrite)
-    return results_dir / mode, args.run, True
+        number = args.run if args.run is not None else _next_run_number(results_dir, prefix)
+        return results_dir / f"{prefix}-{number}", number, bool(args.overwrite)
+    # A mock or replay folder is replaced each time, so an extra set gets its own: replaying the
+    # extras must not wipe the replay of the acceptance run.
+    return results_dir / (mode if query_set == "acceptance" else f"{mode}-extras"), args.run, True
 
 
 def _ensure_output_is_free(out: Path, overwrite: bool) -> None:
@@ -447,7 +474,11 @@ def _print_verdict(scored: ScoredRun, out: TextIO) -> None:
     verdict = scored.verdict
     if scored.loaded.meta.mode == "mock":
         print("Mock run: the verdict below says nothing about the real app.", file=out)
-    print(f"Verdict: {verdict.label}. {verdict.headline}.", file=out)
+    if verdict.required is None:
+        print(f"Extra set, not the acceptance result: {verdict.headline}.", file=out)
+        print("  It has no demo verdict and does not count towards the 7 of 10 rule.", file=out)
+    else:
+        print(f"Verdict: {verdict.label}. {verdict.headline}.", file=out)
     if verdict.pending:
         print(
             f"  {len(verdict.pending)} query(ies) still undecided (labels or links missing).",
@@ -490,11 +521,16 @@ def _execute(
         if args.links
         else (LinksMode.NONE if mode == "replay" else LinksMode.ALL)
     )
-    out, number, overwrite = _resolve_output(args, mode, root)
+    query_set = query_set_of(args.queries)
+    out, number, overwrite = _resolve_output(args, mode, root, query_set)
     _ensure_output_is_free(out, overwrite)
 
+    # Only the frozen acceptance set must have the PRD mix; an extra set has none to check.
     queries: list[AcceptanceQuery] = load_queries(
-        args.queries, repo_root=root, require_images=mode == "record"
+        args.queries,
+        repo_root=root,
+        require_images=mode == "record",
+        check_mix=query_set == "acceptance",
     )
     if mode == "mock":
         setup = _setup_mock()
@@ -521,6 +557,7 @@ def _execute(
     ) -> tuple[ScoredRun, Path, int]:
         meta = RunMeta(
             number=number,
+            query_set=query_set,
             mode=mode,
             date=today,
             links=links,
