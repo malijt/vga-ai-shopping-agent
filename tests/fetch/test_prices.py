@@ -2,6 +2,7 @@
 
 import json
 import re
+from pathlib import Path
 
 import pytest
 
@@ -134,3 +135,117 @@ def test_an_unknown_format_is_refused_not_guessed(text: str) -> None:
 def test_a_value_that_is_not_text_is_refused(value: object) -> None:
     with pytest.raises(PriceFormatError):
         parse_price(value)
+
+
+# --------------------------------------------------------------------------------------------
+# Three-decimal currencies (Kuwaiti dinar, 2026-10-08 decision): a bare number such as "260.000"
+# is a price only for a store whose configured currency has three decimals.
+# --------------------------------------------------------------------------------------------
+
+SAMPLES = Path(__file__).resolve().parents[2] / "docs" / "store-qualification" / "samples"
+KUWAITI_SAMPLES = (
+    "bazza-alzouman/suggest-dress.json",
+    "bazza-alzouman/suggest-gown.json",
+    "hamsa-kw/suggest-abaya.json",
+    "hamsa-kw/suggest-kaftan.json",
+    "manal-smaoui/suggest-dress.json",
+    "manal-smaoui/suggest-kaftan.json",
+)
+REAL_DINAR_PRICES = [
+    ("260.000", 260.0),
+    ("245.000", 245.0),
+    ("55.000", 55.0),
+    ("5.000", 5.0),
+    ("29.000", 29.0),
+]
+
+
+def saved_kuwaiti_prices() -> list[str]:
+    """Every ``price`` string in the six saved Kuwaiti search responses, exactly as served."""
+    prices: list[str] = []
+    for name in KUWAITI_SAMPLES:
+        path = SAMPLES / name
+        assert path.is_file(), f"saved sample missing: {path}"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        prices.extend(p["price"] for p in data["resources"]["results"]["products"])
+    return prices
+
+
+def test_the_saved_kuwaiti_samples_really_write_prices_with_three_decimals() -> None:
+    prices = saved_kuwaiti_prices()
+
+    assert len(prices) == 24
+    assert all(re.fullmatch(r"\d+\.\d{3}", price) for price in prices)
+
+
+def test_every_price_in_the_saved_kuwaiti_samples_parses_for_a_dinar_store() -> None:
+    for text in saved_kuwaiti_prices():
+        parsed = parse_price(text, "KWD")
+
+        assert parsed == ParsedPrice(float(text), None), text
+
+
+@pytest.mark.parametrize(("text", "amount"), REAL_DINAR_PRICES)
+def test_real_dinar_price_strings_are_prices_for_a_dinar_store(text: str, amount: float) -> None:
+    assert parse_price(text, "KWD") == ParsedPrice(amount, None)
+
+
+@pytest.mark.parametrize(("text", "_amount"), REAL_DINAR_PRICES)
+@pytest.mark.parametrize("currency", ["AED", None])
+def test_the_same_strings_are_still_refused_for_a_dirham_store(
+    text: str, _amount: float, currency: str | None
+) -> None:
+    # Three decimals on a two-decimal currency most likely means a thousands separator, so
+    # "260.000" would be a price wrong by a factor of 1000.
+    with pytest.raises(PriceFormatError):
+        parse_price(text, currency)
+
+
+def test_leaving_the_currency_out_keeps_the_two_decimal_rule() -> None:
+    assert parse_price("535.00") == ParsedPrice(535.0, None)
+    with pytest.raises(PriceFormatError):
+        parse_price("535.000")
+
+
+@pytest.mark.parametrize("currency", ["KWD", "BHD", "OMR"])
+def test_each_three_decimal_currency_reads_three_decimals(currency: str) -> None:
+    assert parse_price("19.500", currency) == ParsedPrice(19.5, None)
+
+
+@pytest.mark.parametrize("currency", ["SAR", "QAR", "USD", "GBP"])
+def test_two_decimal_currencies_refuse_three_decimals(currency: str) -> None:
+    with pytest.raises(PriceFormatError):
+        parse_price("19.500", currency)
+    assert parse_price("19.50", currency) == ParsedPrice(19.5, None)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "260.00",  # two decimals: not a format the dinar stores were seen to use
+        "260.0",
+        "260",
+        "260.0000",
+        "1,260.000",
+        "260,000",
+        "1.260,000",
+        "KWD 260.000",
+        ".260",
+        "-5.000",
+        "NaN",
+    ],
+)
+def test_a_dinar_store_still_refuses_what_it_was_not_seen_to_write(text: str) -> None:
+    with pytest.raises(PriceFormatError):
+        parse_price(text, "KWD")
+
+
+def test_a_zero_dinar_price_parses_and_is_left_to_the_positive_price_check() -> None:
+    assert parse_price("0.000", "KWD").amount == 0.0
+
+
+def test_a_price_written_with_its_own_code_is_read_the_same_whatever_the_stores_currency() -> None:
+    # The store's currency only decides which bare decimal string is a price; the currency written
+    # in the text is still returned, and the normaliser compares it with the store's.
+    assert parse_price("AED 6,900", "KWD") == ParsedPrice(6900.0, "AED")
+    assert parse_price("AED 450", "AED") == ParsedPrice(450.0, "AED")

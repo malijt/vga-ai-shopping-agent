@@ -173,7 +173,7 @@ def _to_product(record: RawRecord, store: StoreConfig, base_url: str) -> Product
     if raw_price is None or (isinstance(raw_price, str) and not raw_price.strip()):
         return DropReason.MISSING_PRICE
     try:
-        parsed = parse_price(raw_price)
+        parsed = parse_price(raw_price, store.currency)
     except PriceFormatError as exc:
         log.warning(
             "price format not recognised; record dropped",

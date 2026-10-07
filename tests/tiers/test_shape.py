@@ -332,6 +332,9 @@ def test_relative_range_is_set_even_when_luxury_is_empty() -> None:
 
 
 def test_the_most_common_currency_is_shaped_and_the_rest_reported() -> None:
+    # Since the Kuwaiti stores the AED products are shaped because they are in the base currency
+    # and the USD ones have no rate (see tests/tiers/test_currencies.py), not because AED is the
+    # more common; the outcome for this data is the same.
     aed = make_pool([100.0, 200.0, 300.0, 400.0, 500.0])
     usd = make_pool([50.0, 60.0], currency="USD", start=50)
     result = shape([*usd, *aed], make_settings(), None, (LUXURY_STORE,))
@@ -342,11 +345,15 @@ def test_the_most_common_currency_is_shaped_and_the_rest_reported() -> None:
     assert "tier" not in result.warnings[0].lower()
 
 
-def test_a_currency_tie_goes_to_the_currency_of_the_best_scoring_product() -> None:
+def test_a_currency_tie_no_longer_decides_anything_a_currency_with_no_rate_is_left_out() -> None:
+    # Before the Kuwaiti stores the most common currency won, and a tie went to the currency of the
+    # best-scoring product (here USD). Now every product with a base-currency figure is shaped, and
+    # USD has no rate in these settings, so the better-scoring USD products are left out.
     usd = make_pool([100.0, 200.0], currency="USD", start=50, totals={0: 0.9, 1: 0.9})
     aed = make_pool([100.0, 200.0], currency="AED", start=60, totals={0: 0.5, 1: 0.5})
     result = shape([*aed, *usd], make_settings(), None, (LUXURY_STORE,))
-    assert result.currency == "USD"
+    assert result.currency == "AED"
+    assert {p.product.currency for p in result.products} == {"AED"}
 
 
 def test_leaving_products_out_for_currency_is_logged_as_a_warning(

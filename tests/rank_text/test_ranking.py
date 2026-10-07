@@ -139,6 +139,51 @@ def test_over_budget_products_are_kept_and_flagged_not_dropped() -> None:
     assert by_title["Black Blazer"].scores.price < by_title["Black Oversized Blazer"].scores.price
 
 
+def test_a_dinar_product_is_compared_with_an_aed_budget_in_dirhams() -> None:
+    fx = make_settings(fx_rates={"KWD": 10.0})  # 1 KWD is 10 AED
+    products = [
+        product("Black Oversized Blazer", 1, price=35.0, currency="KWD"),  # AED 350
+        product("Black Blazer", 2, price=45.0, currency="KWD"),  # AED 450
+        product("Black Jacket", 3, price=300.0, currency="AED"),
+    ]
+
+    scored = prefilter_and_score(ITEM, products, make_budget(max_price=400), fx)
+
+    by_title = {entry.product.title: entry for entry in scored}
+    assert by_title["Black Oversized Blazer"].flags == []
+    assert by_title["Black Oversized Blazer"].scores.price == 1.0
+    assert by_title["Black Blazer"].flags == [Flag.OVER_BUDGET]
+    assert 0 < by_title["Black Blazer"].scores.price < 1.0
+    assert by_title["Black Jacket"].flags == []
+    assert "Within your 400 AED budget." in by_title["Black Oversized Blazer"].reason
+    assert "Above your 400 AED budget." in by_title["Black Blazer"].reason
+
+
+def test_a_product_in_a_currency_with_no_rate_is_neutral_and_makes_no_budget_claim() -> None:
+    fx = make_settings(fx_rates={"KWD": 10.0}, neutral_price_score=0.4)
+
+    [scored] = prefilter_and_score(
+        ITEM,
+        [product("Black Oversized Blazer", 1, price=9000.0, currency="SAR")],
+        make_budget(max_price=400),
+        fx,
+    )
+
+    assert scored.flags == []
+    assert scored.scores.price == 0.4
+    assert "budget" not in scored.reason.lower()
+
+
+def test_scoring_leaves_the_base_price_to_the_price_range_shaper() -> None:
+    fx = make_settings(fx_rates={"KWD": 10.0})
+
+    [scored] = prefilter_and_score(
+        ITEM, [product("Black Oversized Blazer", 1, price=35.0, currency="KWD")], None, fx
+    )
+
+    assert scored.base_price is None
+
+
 def test_without_a_budget_nothing_is_flagged_and_price_is_neutral() -> None:
     settings = make_settings(neutral_price_score=0.4)
 

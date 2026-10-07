@@ -721,6 +721,14 @@ class ScoredProduct(VgaModel):
     reason: str = ""
     """Short sentence using only facts the code knows (PRD R11)."""
     flags: list[Flag] = Field(default_factory=list)
+    base_price: float | None = Field(default=None, gt=0)
+    """The product's price in the base currency (``Settings.base_currency``), at the fixed rate in
+    settings. Set only when ``product.currency`` differs from the base currency, and only by the
+    price-range shaper; ``None`` for a product priced in the base currency itself (its own price
+    is then already the base figure) and for one whose currency has no rate. Price ranges, their
+    spans and the over-budget flag are all measured on this figure, so a page, the command line
+    and the harness read it from here instead of converting again. It is approximate: the rate is
+    fixed, not live. Show it with ``vga.money.format_price``."""
 
 
 def _format_price(value: float) -> str:
@@ -752,7 +760,9 @@ class TierResult(VgaModel):
                 msg = "price_min must not exceed price_max"
                 raise ValueError(msg)
             for scored in self.results:
-                price = scored.product.price
+                # The span is in the range's currency (the base currency), so a converted product
+                # is measured on its base price and every other product on its own price.
+                price = scored.base_price if scored.base_price is not None else scored.product.price
                 if not self.price_min <= price <= self.price_max:
                     msg = (
                         f"result price {price} lies outside the span "
