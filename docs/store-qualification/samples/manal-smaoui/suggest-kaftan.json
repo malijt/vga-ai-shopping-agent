@@ -1,0 +1,108 @@
+{
+ "resources": {
+  "results": {
+   "products": [
+    {
+     "available": true,
+     "body": "<p><meta charset=\"utf-8\">Our Moroccan-inspired kaftans bring an air of elegance and sophistication to any wardrobe. Luxuriously embroidered, these pieces not only drape beautifully but also accentuate your figure, creating a flattering and graceful silhouette. Designed to elevate your style seamless",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "handle": "aicha-kaftan-brown",
+     "id": 10305877737765,
+     "image": "https://cdn.shopify.com/s/files/1/0682/5885/7253/files/0S5A7706.jpg?v=1767633486",
+     "price": "85.000",
+     "price_max": "85.000",
+     "price_min": "85.000",
+     "tags": [],
+     "title": "AICHA KAFTAN - BROWN",
+     "type": "KAFTANS",
+     "url": "/products/aicha-kaftan-brown?_pos=1&_psq=kaftan&_psid=63e84c880&_ss=e",
+     "variants": [],
+     "vendor": "MANAL SMAOUI",
+     "featured_image": {
+      "alt": "AICHA KAFTAN - BROWN",
+      "aspect_ratio": 0.667,
+      "height": 2999,
+      "url": "https://cdn.shopify.com/s/files/1/0682/5885/7253/files/0S5A7706.jpg?v=1767633486",
+      "width": 2000
+     }
+    },
+    {
+     "available": true,
+     "body": "<p>Our Moroccan-inspired kaftans bring an air of elegance and sophistication to any wardrobe. Luxuriously embroidered, these pieces not only drape beautifully but also accentuate your figure, creating a flattering and graceful silhouette. Designed to elevate your style seamlessly, these kaftans comb",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "handle": "aicha-kaftan-royal-blue",
+     "id": 9752814813477,
+     "image": "https://cdn.shopify.com/s/files/1/0682/5885/7253/files/0S5A7924.jpg?v=1767633769",
+     "price": "85.000",
+     "price_max": "85.000",
+     "price_min": "85.000",
+     "tags": [],
+     "title": "AICHA KAFTAN - BABY BLUE",
+     "type": "KAFTANS",
+     "url": "/products/aicha-kaftan-royal-blue?_pos=2&_psq=kaftan&_psid=63e84c880&_ss=e",
+     "variants": [],
+     "vendor": "MANAL SMAOUI",
+     "featured_image": {
+      "alt": "AICHA KAFTAN - BABY BLUE",
+      "aspect_ratio": 0.667,
+      "height": 2999,
+      "url": "https://cdn.shopify.com/s/files/1/0682/5885/7253/files/0S5A7924.jpg?v=1767633769",
+      "width": 2000
+     }
+    },
+    {
+     "available": true,
+     "body": "<p>Our Moroccan-inspired kaftans bring an air of elegance and sophistication to any wardrobe. Luxuriously embroidered, these pieces not only drape beautifully but also accentuate your figure, creating a flattering and graceful silhouette. Designed to elevate your style seamlessly, these kaftans comb",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "handle": "aicha-kaftan-royal-green",
+     "id": 9752814715173,
+     "image": "https://cdn.shopify.com/s/files/1/0682/5885/7253/files/0S5A8037.jpg?v=1767633101",
+     "price": "85.000",
+     "price_max": "85.000",
+     "price_min": "85.000",
+     "tags": [],
+     "title": "AICHA KAFTAN - ROYAL GREEN",
+     "type": "KAFTANS",
+     "url": "/products/aicha-kaftan-royal-green?_pos=3&_psq=kaftan&_psid=63e84c880&_ss=e",
+     "variants": [],
+     "vendor": "MANAL SMAOUI",
+     "featured_image": {
+      "alt": "AICHA KAFTAN - ROYAL GREEN",
+      "aspect_ratio": 0.667,
+      "height": 2468,
+      "url": "https://cdn.shopify.com/s/files/1/0682/5885/7253/files/0S5A8037.jpg?v=1767633101",
+      "width": 1646
+     }
+    },
+    {
+     "available": true,
+     "body": "<p>Elegant headbands designed to complement our dresses, adding a refined finishing touch to any look. </p>",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "handle": "headbands",
+     "id": 10315382096165,
+     "image": "https://cdn.shopify.com/s/files/1/0682/5885/7253/files/0S5A7678.jpg?v=1767697726",
+     "price": "5.000",
+     "price_max": "5.000",
+     "price_min": "5.000",
+     "tags": [],
+     "title": "HEADBANDS",
+     "type": "KAFTANS",
+     "url": "/products/headbands?_pos=4&_psq=kaftan&_psid=63e84c880&_ss=e",
+     "variants": [],
+     "vendor": "MANAL SMAOUI",
+     "featured_image": {
+      "alt": "HEADBANDS",
+      "aspect_ratio": 0.667,
+      "height": 2999,
+      "url": "https://cdn.shopify.com/s/files/1/0682/5885/7253/files/0S5A7678.jpg?v=1767697726",
+      "width": 2000
+     }
+    }
+   ]
+  }
+ }
+}

@@ -1,0 +1,65 @@
+{
+ "@context": "http://schema.org/",
+ "@type": "Product",
+ "name": "Riwaq Kaftan",
+ "url": "https://hamsakw.com/products/riwaq-kaftan",
+ "image": [
+  "https:files/W-26-0332.jpg"
+ ],
+ "description": "W-26-033\nDescription:\nA long kaftan with a straight, fluid silhouette, featuring velvet side panels and a woven fabric center. Finished with geometric embroidery at the neckline for a refined, understated look.\n\n\nSmall\nMedium\nLarge\n\nCare: Dry Clean Only",
+ "sku": "W-26-033 Gray-Silver",
+ "brand": {
+  "@type": "Thing",
+  "name": "Hamsa by Sharifa AlGhanim"
+ },
+ "offers": [
+  {
+   "@type": "Offer",
+   "sku": "W-26-033 Gray-Silver",
+   "availability": "http://schema.org/InStock",
+   "price": 95.0,
+   "priceCurrency": "KWD",
+   "url": "https://hamsakw.com/products/riwaq-kaftan?variant=51209805136189"
+  },
+  {
+   "@type": "Offer",
+   "sku": "W-26-033 Gray-Silver",
+   "availability": "http://schema.org/InStock",
+   "price": 95.0,
+   "priceCurrency": "KWD",
+   "url": "https://hamsakw.com/products/riwaq-kaftan?variant=51209805168957"
+  },
+  {
+   "@type": "Offer",
+   "sku": "W-26-033 Gray-Silver",
+   "availability": "http://schema.org/InStock",
+   "price": 95.0,
+   "priceCurrency": "KWD",
+   "url": "https://hamsakw.com/products/riwaq-kaftan?variant=51209820963133"
+  },
+  {
+   "@type": "Offer",
+   "sku": "W-26-033 Brown-Gold",
+   "availability": "http://schema.org/InStock",
+   "price": 95.0,
+   "priceCurrency": "KWD",
+   "url": "https://hamsakw.com/products/riwaq-kaftan?variant=51209820995901"
+  },
+  {
+   "@type": "Offer",
+   "sku": "W-26-033 Brown-Gold",
+   "availability": "http://schema.org/InStock",
+   "price": 95.0,
+   "priceCurrency": "KWD",
+   "url": "https://hamsakw.com/products/riwaq-kaftan?variant=51209821028669"
+  },
+  {
+   "@type": "Offer",
+   "sku": "W-26-033 Brown-Gold",
+   "availability": "http://schema.org/InStock",
+   "price": 95.0,
+   "priceCurrency": "KWD",
+   "url": "https://hamsakw.com/products/riwaq-kaftan?variant=51209821061437"
+  }
+ ]
+}

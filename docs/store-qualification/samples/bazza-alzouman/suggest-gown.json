@@ -1,0 +1,128 @@
+{
+ "resources": {
+  "results": {
+   "products": [
+    {
+     "available": true,
+     "body": "<ul>\n<li>Color:<strong> </strong>Black<span></span>\n</li>\n</ul>\n<ul>\n<li>\n<span>Fabric: </span><span>100% Polyester</span>\n</li>\n</ul>",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "handle": "slim-cut-crepe-gown-with-gathered-tulle-illusion-neckline-and-sleeve",
+     "id": 15705966772305,
+     "image": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/bazza_260438R.jpg?v=1771762772",
+     "price": "260.000",
+     "price_max": "260.000",
+     "price_min": "260.000",
+     "tags": [
+      "full sleeves",
+      "PF26",
+      "skinny gown",
+      "tulle sleeve"
+     ],
+     "title": "Slim Cut Crepe Gown With Gathered Tulle Illusion Neckline And Sleeve",
+     "type": "Dresses",
+     "url": "/products/slim-cut-crepe-gown-with-gathered-tulle-illusion-neckline-and-sleeve?_pos=1&_psq=gown&_psid=c54349b8e&_ss=e",
+     "variants": [],
+     "vendor": "Bazza Alzouman",
+     "featured_image": {
+      "alt": "Slim Cut Crepe Gown With Gathered Tulle Illusion Neckline And Sleeve",
+      "aspect_ratio": 0.667,
+      "height": 6000,
+      "url": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/bazza_260438R.jpg?v=1771762772",
+      "width": 4000
+     }
+    },
+    {
+     "available": true,
+     "body": "<p dir=\"ltr\"><span>Strapless gown with sculpted bodice with a cascading side organza drape that adds fluidity and dimension.</span></p>\n<p dir=\"ltr\"><span>Color: Cream</span></p>\n<p dir=\"ltr\"><span>Fabric: 100% Crepe</span></p>",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "handle": "strapless-gown-with-side-organza-ruched-drape",
+     "id": 7789946863697,
+     "image": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/BAZZA1114R.jpg?v=1752563110",
+     "price": "245.000",
+     "price_max": "245.000",
+     "price_min": "245.000",
+     "tags": [
+      "drape gown",
+      "PS26",
+      "skinny gown",
+      "strapless"
+     ],
+     "title": "Strapless Gown With Side Organza Ruched Drape",
+     "type": "Dresses",
+     "url": "/products/strapless-gown-with-side-organza-ruched-drape?_pos=2&_psq=gown&_psid=c54349b8e&_ss=e",
+     "variants": [],
+     "vendor": "Bazza Alzouman",
+     "featured_image": {
+      "alt": "Strapless Gown With Side Organza Ruched Drape",
+      "aspect_ratio": 0.667,
+      "height": 5040,
+      "url": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/BAZZA1114R.jpg?v=1752563110",
+      "width": 3360
+     }
+    },
+    {
+     "available": true,
+     "body": "<ul>\n<li>Color:<strong> </strong>Mint<span></span>\n</li>\n</ul>\n<ul>\n<li>\n<span>Fabric: </span><span>100% Polyester</span>\n</li>\n</ul>",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "handle": "off-shoulder-crepe-gown-with-wrap-skirt",
+     "id": 15725509083217,
+     "image": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/BAZZA00831.jpg?v=1773481745",
+     "price": "250.000",
+     "price_max": "250.000",
+     "price_min": "250.000",
+     "tags": [
+      "AW26",
+      "drape gown",
+      "Off-shoulder",
+      "skinny gown"
+     ],
+     "title": "Off-Shoulder Crepe Gown With Wrap Skirt",
+     "type": "Dresses",
+     "url": "/products/off-shoulder-crepe-gown-with-wrap-skirt?_pos=3&_psq=gown&_psid=c54349b8e&_ss=e",
+     "variants": [],
+     "vendor": "Bazza Alzouman",
+     "featured_image": {
+      "alt": "Off-Shoulder Crepe Gown With Wrap Skirt",
+      "aspect_ratio": 0.667,
+      "height": 5997,
+      "url": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/BAZZA00831.jpg?v=1773481745",
+      "width": 4000
+     }
+    },
+    {
+     "available": true,
+     "body": "<ul>\n<li>Color:<strong> </strong>Pink<span></span>\n</li>\n</ul>\n<ul>\n<li>\n<span>Fabric: </span><span>100% Polyester</span>\n</li>\n</ul>",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "handle": "one-shoulder-crepe-gown-with-gathered-tulle-at-neck-1",
+     "id": 15725519044689,
+     "image": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/BAZZA03491.jpg?v=1773485143",
+     "price": "235.000",
+     "price_max": "235.000",
+     "price_min": "235.000",
+     "tags": [
+      "AW26",
+      "Off-shoulder",
+      "one-shoulder",
+      "skinny gown"
+     ],
+     "title": "One Shoulder Crepe Gown With Gathered Tulle At Neck",
+     "type": "Dresses",
+     "url": "/products/one-shoulder-crepe-gown-with-gathered-tulle-at-neck-1?_pos=4&_psq=gown&_psid=c54349b8e&_ss=e",
+     "variants": [],
+     "vendor": "Bazza Alzouman",
+     "featured_image": {
+      "alt": "One Shoulder Crepe Gown With Gathered Tulle At Neck",
+      "aspect_ratio": 0.667,
+      "height": 5997,
+      "url": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/BAZZA03491.jpg?v=1773485143",
+      "width": 4000
+     }
+    }
+   ]
+  }
+ }
+}
