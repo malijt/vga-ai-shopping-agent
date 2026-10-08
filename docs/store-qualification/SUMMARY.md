@@ -175,6 +175,30 @@ The user named eight Kuwaiti designer brands. Full record: [designer-store-quali
 
 What it adds: evening gowns (Bazza Alzouman), a third abaya store (Hamsa) and mid-priced kaftans and sets (Manal Smaoui). What it does not add: an abaya below about AED 600, or anything in the budget range.
 
+## Update: Module 2.7, modest and ethnic wear, Kuwait first (2026-10-08)
+
+The user asked for more stores, naming the garments the demo must find: abayas, kaftans, burqas and kurtis for women; thobes, kurtas and shalwar kameez for men. Full record: [modest-ethnic-wear-discovery.md](modest-ethnic-wear-discovery.md). Nineteen candidates were listed, sixteen contacted (86 requests).
+
+| Store | Verdict | Currency | Price seen | Sells | Report |
+|---|---|---|---|---|---|
+| Daraat | readable (Shopify) | KWD | 8-29 | kaftans, summer dresses | [daraat.md](daraat.md) |
+| Shadow | readable (Shopify) | KWD | abayas 39-180 | abayas | [shadow-kw.md](shadow-kw.md) |
+| Her Highness Q8 | readable (Shopify) | KWD | 28.5-85 | daraas, kaftans, dresses | [her-highness-q8.md](her-highness-q8.md) |
+| Veil Essentials | readable (Shopify) | KWD | 7.55-33.5 | jilbabs, abayas, khimars | [veil-essentials-kw.md](veil-essentials-kw.md) |
+| Al Jazeera Clothing | readable (Shopify, `/en/` path only), thin | KWD | men's dishdasha 9 | dishdashas, mostly boys' | [al-jazeera-clothing.md](al-jazeera-clothing.md) |
+| Gul Ahmed UAE | readable (Shopify) | AED | 41.50-149 | men's shalwar kameez and kurtas, women's kurtis | [gul-ahmed-uae.md](gul-ahmed-uae.md) |
+| Ambrose Abayas | readable, but WooCommerce: needs a reader that is not built | KWD (two decimals) | 35-50 | abayas | discovery record |
+| Empress Clothing, Seerat Ethnic, My Little Jubba, YallaWorld | readable (Shopify), reserve: not Gulf stores | USD, INR, GBP, GBP | | salwar kameez sets, kurta sets, thobe sets | discovery record |
+| Yuehlia, Riva Fashion | not readable: HTTP 403 | | | | discovery record |
+| AlMubarkiya, Karaz Online | not usable live: robots.txt asks for 240 s and 30 s between requests | | | | discovery record |
+| Sara Arabia | undetermined: search address not known | | | | discovery record |
+
+**Decision (user, 2026-10-08): the store limit rises to 19 and work on stores that are not on Shopify is opened.** The six readable Gulf stores are added, each enabled only after its live smoke test (plan assumption A30, Modules 12.14-12.19). Ambrose Abayas follows on its own branch once its reader exists.
+
+What it adds: the first abaya below AED 600 (Veil Essentials, about AED 142-310), a Kuwaiti abaya label (Shadow), budget kaftans (Daraat), daraas (Her Highness Q8), men's shalwar kameez, kurtas and women's kurtis (Gul Ahmed UAE), and men's dishdashas (Al Jazeera Clothing). Still thin: adult men's thobes (three seen), and anything sold as a burqa.
+
+**Network note.** The Shopify requests of this pass went through Cloudflare WARP, which the user switched on after the machine's own network timed out connecting to Shopify (a time-out, never a refusal). The reasoning and what is not known are in the discovery record and in the plan, section 12.3.
+
 ## Not verified
 
 Terms of use for every store. Behaviour from any other network. What a non-member pays at Luxury For You. Pagination and Shopify limits above 10. The UCP/MCP endpoints (never requested). Tier hints for dropped stores (from public descriptions, not observed prices).

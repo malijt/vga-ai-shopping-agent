@@ -1,0 +1,108 @@
+{
+ "resources": {
+  "results": {
+   "products": [
+    {
+     "available": true,
+     "body": "",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Cotton Plain Taqiyah Triangle",
+      "aspect_ratio": 0.666,
+      "height": 1235,
+      "url": "https://cdn.shopify.com/s/files/1/0903/6224/9463/files/NB_70e32e3c-c6e1-4487-ba84-098b5f8ee9db.webp?v=1763534026",
+      "width": 823
+     },
+     "handle": "sh13170110050",
+     "id": 9844355793143,
+     "image": "https://cdn.shopify.com/s/files/1/0903/6224/9463/files/NB_70e32e3c-c6e1-4487-ba84-098b5f8ee9db.webp?v=1763534026",
+     "price": "4.000",
+     "price_max": "4.000",
+     "price_min": "4.000",
+     "tags": [],
+     "title": "Cotton Plain Taqiyah Triangle",
+     "type": "ACCESSORIES",
+     "url": "/products/sh13170110050?_pos=1&_psq=kaftan&_psid=4f442022d&_ss=e",
+     "variants": [],
+     "vendor": "Shadow"
+    },
+    {
+     "available": true,
+     "body": "",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Special Chiffon Crystalized Shaila",
+      "aspect_ratio": 0.667,
+      "height": 5472,
+      "url": "https://cdn.shopify.com/s/files/1/0903/6224/9463/files/2IMG_0009_2.jpg?v=1764049024",
+      "width": 3648
+     },
+     "handle": "sh13240108534",
+     "id": 9840227156215,
+     "image": "https://cdn.shopify.com/s/files/1/0903/6224/9463/files/2IMG_0009_2.jpg?v=1764049024",
+     "price": "18.900",
+     "price_max": "18.900",
+     "price_min": "18.900",
+     "tags": [],
+     "title": "Special Chiffon Crystalized Shaila",
+     "type": "SHEILA",
+     "url": "/products/sh13240108534?_pos=2&_psq=kaftan&_psid=4f442022d&_ss=e",
+     "variants": [],
+     "vendor": "Shadow"
+    },
+    {
+     "available": true,
+     "body": "",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Sepcial Chiffon Crystalized Shaila",
+      "aspect_ratio": 0.667,
+      "height": 5472,
+      "url": "https://cdn.shopify.com/s/files/1/0903/6224/9463/files/SH13240108539.jpg?v=1763375237",
+      "width": 3648
+     },
+     "handle": "sh13240108539",
+     "id": 9840218898679,
+     "image": "https://cdn.shopify.com/s/files/1/0903/6224/9463/files/SH13240108539.jpg?v=1763375237",
+     "price": "16.900",
+     "price_max": "16.900",
+     "price_min": "16.900",
+     "tags": [],
+     "title": "Sepcial Chiffon Crystalized Shaila",
+     "type": "SHEILA",
+     "url": "/products/sh13240108539?_pos=3&_psq=kaftan&_psid=4f442022d&_ss=e",
+     "variants": [],
+     "vendor": "Shadow"
+    },
+    {
+     "available": true,
+     "body": "",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Special Chiffon Crystalized Shaila",
+      "aspect_ratio": 0.667,
+      "height": 5472,
+      "url": "https://cdn.shopify.com/s/files/1/0903/6224/9463/files/SH13240108528_1.jpg?v=1763378283",
+      "width": 3648
+     },
+     "handle": "sh13240108528",
+     "id": 9840265625847,
+     "image": "https://cdn.shopify.com/s/files/1/0903/6224/9463/files/SH13240108528_1.jpg?v=1763378283",
+     "price": "19.000",
+     "price_max": "19.000",
+     "price_min": "19.000",
+     "tags": [],
+     "title": "Special Chiffon Crystalized Shaila",
+     "type": "SHEILA",
+     "url": "/products/sh13240108528?_pos=4&_psq=kaftan&_psid=4f442022d&_ss=e",
+     "variants": [],
+     "vendor": "Shadow"
+    }
+   ]
+  }
+ }
+}
