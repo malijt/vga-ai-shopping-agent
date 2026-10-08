@@ -5,6 +5,9 @@ which does no markdown or HTML parsing. The link goes only to ``Product.product_
 a new tab (``st.link_button`` does that). See ``app.safe_text`` for the one place a store name
 enters a label that reads markdown.
 
+The "View product" link is the card's main action, so it is filled with the theme's accent colour
+(`type="primary"`, no custom CSS).
+
 Limit: whether the picture loads is decided by the browser, not by this code, so a picture that
 fails to load shows the browser's own broken-image mark with the product title as its alt text.
 The "No image available" placeholder below covers a missing or unusable image address.
@@ -75,6 +78,7 @@ def render_result_card(scored: ScoredProduct, *, key: str, base_currency: str) -
                 f"View product on {name}",
                 product.product_url,
                 key=f"view_{key}",
+                type="primary",
                 width="stretch",
             )
         else:
