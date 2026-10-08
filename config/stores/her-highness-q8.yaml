@@ -1,0 +1,36 @@
+# Her Highness Q8: a Kuwaiti modest-wear label on Shopify (single brand, vendor "herhighnessq8"):
+# daraas, kaftans, dresses and sets, with a few girls' pieces.
+# Prices are in Kuwaiti dinars with three decimals ("45.000"); the response has no currency, so
+# KWD is pinned here. The app shows the dinar price and an approximate dirham figure (ADR 0006).
+# Data path: Shopify's public predictive search, /search/suggest.json, which robots.txt leaves open.
+# Evidence: docs/store-qualification/her-highness-q8.md. Quirks and what would break this file:
+# docs/store-notes/her-highness-q8.md
+id: her-highness-q8
+name: Her Highness Q8
+country: KW             # Kuwait is searched too through `extra_store_countries: [KW]` in config/settings.yaml
+currency: KWD           # the suggest response has no currency field; KWD is store-level (product page JSON-LD priceCurrency on 21 of 21 offers, Shopify.currency, Shopify.country KW)
+search_url_template: "https://herhighnessq8.com/search/suggest.json?q={query}&resources[type]=product&resources[limit]=10"
+allowed_hosts:
+  - herhighnessq8.com   # product links; the apex answered directly, no redirect
+  - cdn.shopify.com     # product images
+extraction:
+  strategies:
+    - name: shopify
+      # No options, on purpose.
+      # max_price_spread (ADR 0012) is left off. 19 of the 21 distinct products have one price on every
+      # variant (price_min = price_max = price), and `variants` is an empty list on all 21, so there is
+      # no cheap add-on variant that `price` could pick up (the trap at Hamsa). The only two records
+      # whose variants differ are girls' sizes: "Crescent Kids" (KWD 35 to 37) and "MZIANA - Moroccan
+      # Kids" (40 to 43), a spread of 1.06 and 1.08. That is a surcharge for a size, not a different
+      # item, and `price` is the smallest size, within 7.5% of the largest. Setting the option to 1
+      # would drop these two records for no gain; 1.25 would drop nothing seen. A test pins both facts.
+      # If the store starts listing add-ons (a scarf, a belt), set it to 1.25 and re-check the store.
+      # gender_fields is left at its default, [type, tags]: `type` is empty on 17 of 21 records
+      # ("Dress" on 3, "set" on 1) and `tags` is empty on all 21, so no field names a gender and every
+      # product's gender stays unknown (the ranker reads the title).
+genders:
+  - women               # daraas, kaftans, dresses, sets: 21 of 21 distinct records seen are women's or girls' pieces; no field names a gender, so this rests on the range and the brand
+categories:
+  - dresses             # 14 of 21 distinct records are daraas, kaftans or dresses (by title or description); the other 7 are 3 blazer-and-trousers suits (description only), 1 top ("Sahara Oversized Top") and 3 with no garment named. So a search for tops, blazers or trousers is not sent here (docs/store-qualification/her-highness-q8.md). No shoes seen
+tier_hint: mid_range    # KWD 28.5-85 seen, median 45 (adult pieces KWD 35-85), about AED 340-1,013, median 536; the same level as Manal Smaoui
+enabled: false          # not enabled yet: the live smoke test (tests/stores/her-highness-q8) has not been run
