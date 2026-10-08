@@ -978,6 +978,7 @@ Checked against all nine files in `docs/Best Practices/` and the hard rules in `
 | Fuse retrieval signals with rank fusion | Weighted sum | PRD R8 requires weights in one config file; ADR 0004 |
 | Push slow work to background jobs | One synchronous request | Single-user local demo; the request must finish in 30 s anyway |
 | Version the API, OpenAPI docs | None | There is no HTTP API; the UI calls the pipeline in-process |
+| CI runs the whole test suite on every pull request | CI runs lint, types and a critical suite of 143 tests (`tests/critical_suite.txt`); the complete suite (about 8,450 tests) runs locally before a push or merge, or in CI by hand | The user's decision on 2026-10-08: CI minutes cost money. The critical list covers every product rule and the demo's core path, and a guard test fails if the list rots. A regression outside the list is caught only by the local run |
 | IaC, containers, zero-downtime deploys, alerts, backups | None | Nothing is deployed |
 | TypeScript, code-splitting, Core Web Vitals | Python type hints + `mypy`; Streamlit defaults | The UI is Streamlit |
 | Automated accessibility assertions | Manual keyboard, contrast and width check | Streamlit widgets limit automation |

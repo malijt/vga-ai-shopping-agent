@@ -85,7 +85,7 @@ uv sync
 uv run pytest
 ```
 
-This needs no network and no key. At the time of writing it takes about three minutes and ends with `8386 passed, 13 skipped, 40 deselected`. The skips are expected: nine need the image-model packages (step 4) and four are contract checks that do not apply to every image ranker. The 40 deselected tests are the `live` ones (see [Tests](#tests)). The other gates that CI also runs:
+This needs no network and no key. At the time of writing it takes about three to four minutes and ends with about `8,450 passed, 13 skipped, 40 deselected` (the exact count grows with the code). The skips are expected: nine need the image-model packages (step 4) and four are contract checks that do not apply to every image ranker. The 40 deselected tests are the `live` ones (see [Tests](#tests)). The other gates that CI also runs:
 
 ```bash
 uv run ruff check        # lint, including security rules
@@ -452,7 +452,7 @@ docs/                 requirements, PRD, plan, ADRs, privacy note, store notes a
 
 Layers: the page calls the pipeline; the pipeline calls the OpenAI step, the store engine and the rankers; each outside system sits behind a small interface in `src/vga/interfaces.py`, so tests can swap in fakes. Untrusted text (what you type, the photo, and everything a store sends) is data and never instructions. No model ever reads store content. Store titles and links are never shown as HTML or markdown.
 
-**Continuous integration.** `.github/workflows/ci.yml` runs three jobs on every pull request and on pushes to `main` and `develop`: `test` (ruff, mypy, pytest without live tests), `pip-audit` (every locked dependency, including the `ml` group) and `gitleaks` (a secret scan of the whole history). The plan records (risk R23) that the workflow had not yet run on GitHub when it was written; watch the first run. **A one-time manual step for the repository owner:** in GitHub, protect `main` (Settings, Branches) and require the checks `test`, `pip-audit` and `gitleaks` plus a review before merging. That cannot be done from the code.
+**Continuous integration.** `.github/workflows/ci.yml` runs three jobs on every pull request and on pushes to `main`: `test` (ruff, mypy and the critical suite, `pytest -m critical`; the complete suite runs locally, or in CI by hand with "Run workflow" and `full_suite`), `pip-audit` (every locked dependency, including the `ml` group) and `gitleaks` (a secret scan of the whole history). The plan records (risk R23) that the workflow had not yet run on GitHub when it was written; watch the first run. **A one-time manual step for the repository owner:** in GitHub, protect `main` (Settings, Branches) and require the checks `test`, `pip-audit` and `gitleaks` plus a review before merging. That cannot be done from the code.
 
 **Licences.** Only components with commercial-friendly licences are allowed. After adding a dependency, run `uv run python scripts/licence_audit.py`; it rewrites [docs/licences.md](docs/licences.md) and flags copyleft, proprietary and unknown licences for a decision.
 
