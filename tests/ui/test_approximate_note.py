@@ -16,7 +16,7 @@ from tests.factories import (
     make_understand_result,
 )
 from tests.ui.conftest import InstallPipeline
-from tests.ui.helpers import plain_texts, search
+from tests.ui.helpers import chip_budget, plain_texts, search
 from tests.ui.test_currencies import bold_lines, dinar_scored, mixed_currency_response
 from vga.models import GarmentGroup, SearchResponse, Tier, TierResult
 
@@ -110,4 +110,4 @@ def test_the_budget_box_still_names_the_currency_the_budget_is_in(
 
     search(at)
 
-    assert at.number_input(key="chip_budget").label == "Budget in AED (optional)"
+    assert chip_budget(at).label == "Budget in AED (optional)"

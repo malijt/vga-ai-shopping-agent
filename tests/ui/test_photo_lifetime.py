@@ -21,6 +21,7 @@ from tests.ui.helpers import (
     PHOTO,
     SEARCH_BUTTON,
     TEXT_BOX,
+    chip_colour,
     holds_bytes,
     photo_key,
     plain_texts,
@@ -241,7 +242,7 @@ class TestWithTheRealPipeline:
         at.run()
         upload(at, photo, "black oversized blazer")
 
-        at.text_input(key="chip_0_colour").set_value("navy").run()
+        chip_colour(at, 0).set_value("navy").run()
         at.button(key=APPLY).click().run()
 
         assert not at.exception
@@ -260,7 +261,7 @@ class TestWithTheRealPipeline:
         upload(at, photo)
         assert live.understander.calls[0].text is None
 
-        at.text_input(key="chip_0_colour").set_value("navy").run()
+        chip_colour(at, 0).set_value("navy").run()
         at.button(key=APPLY).click().run()
 
         assert not at.exception

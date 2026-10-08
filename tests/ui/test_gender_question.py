@@ -19,7 +19,14 @@ from tests.factories import make_chip_edits, make_item_intent, make_understand_r
 from tests.fakes import FakeUnderstander
 from tests.pipeline.world import store_for
 from tests.ui.conftest import InstallLive
-from tests.ui.helpers import link_buttons, markdown_bodies, plain_texts, search
+from tests.ui.helpers import (
+    chip_colour,
+    chip_gender,
+    link_buttons,
+    markdown_bodies,
+    plain_texts,
+    search,
+)
 from tests.ui.live import LiveSearch
 from vga.models import (
     Budget,
@@ -183,7 +190,7 @@ class TestWhenTheQuestionIsAsked:
         # Rule 8: every store was searched, the chip is still empty, and the results are there.
         searched = {store for call in live.store_searches for store in call.store_ids}
         assert searched == {"alpha", "beta", "gamma"}
-        assert at.selectbox(key="chip_0_gender").value == "unset"
+        assert chip_gender(at, 0).value == "unset"
         assert link_buttons(at)
         page = list(at.main)
         question_at = [getattr(node, "key", None) for node in page].index(WOMEN)
@@ -248,7 +255,7 @@ class TestAnsweringWomenOrMen:
 
         item = response_of(at).understood.items[0]
         assert (item.gender, item.gender_source) == (Gender.MEN, GenderSource.EXPLICIT)
-        assert at.selectbox(key="chip_0_gender").value == "men"  # the guess was women: the choice
+        assert chip_gender(at, 0).value == "men"  # the guess was women: the choice
         assert not asked(at)
         assert GENDER_QUESTION not in " ".join(markdown_bodies(at))
 
@@ -257,7 +264,7 @@ class TestAnsweringWomenOrMen:
     ) -> None:
         live = install_live(FakeUnderstander(GUESSED_WOMEN), stores=stores)
         start(at, live)
-        at.text_input(key="chip_0_colour").set_value("white").run()
+        chip_colour(at, 0).set_value("white").run()
 
         at.button(key=WOMEN).click().run()
 
@@ -272,7 +279,7 @@ class TestAnsweringWomenOrMen:
         start(at, live)
         at.button(key=WOMEN).click().run()
 
-        at.text_input(key="chip_0_colour").set_value("navy").run()
+        chip_colour(at, 0).set_value("navy").run()
         at.button(key="chips_apply").click().run()
 
         assert not at.exception
@@ -293,7 +300,7 @@ class TestShowBoth:
         assert not at.exception
         assert searches_and_calls(live) == before
         assert [s.product.product_url for s in response_of(at).products] == results_before
-        assert at.selectbox(key="chip_0_gender").value == "unset"  # still not applied
+        assert chip_gender(at, 0).value == "unset"  # still not applied
         assert not asked(at)
         assert link_buttons(at)
 
@@ -343,8 +350,8 @@ class TestAnOutfit:
         assert [(i.gender, i.gender_source) for i in items] == [
             (Gender.WOMEN, GenderSource.EXPLICIT)
         ] * 2
-        assert at.selectbox(key="chip_0_gender").value == "women"
-        assert at.selectbox(key="chip_1_gender").value == "women"
+        assert chip_gender(at, 0).value == "women"
+        assert chip_gender(at, 1).value == "women"
         assert not asked(at)
 
     def test_a_garment_the_shopper_already_named_keeps_its_gender(

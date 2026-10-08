@@ -20,6 +20,10 @@ from tests.ui.conftest import InstallLive
 from tests.ui.helpers import (
     SEARCH_BUTTON,
     TEXT_BOX,
+    chip_budget,
+    chip_category,
+    chip_colour,
+    chip_gender,
     link_buttons,
     plain_texts,
     search,
@@ -272,7 +276,7 @@ class TestAChipEditAsksTheModelNothing:
         first_search(at, live)
         before = costs(live)
 
-        at.number_input(key="chip_budget").set_value(200.0).run()
+        chip_budget(at).set_value(200.0).run()
         at.button(key=APPLY).click().run()
 
         assert not at.exception
@@ -291,7 +295,7 @@ class TestAChipEditAsksTheModelNothing:
         before = costs(live)
         assert any(FLAG_TEXT[Flag.OVER_BUDGET] in text for text in plain_texts(at))
 
-        at.number_input(key="chip_budget").set_value(None).run()
+        chip_budget(at).set_value(None).run()
         at.button(key=APPLY).click().run()
 
         assert costs(live) == before
@@ -305,7 +309,7 @@ class TestAChipEditAsksTheModelNothing:
         first_search(at, live)
         before = costs(live)
 
-        at.text_input(key="chip_0_colour").set_value("navy").run()
+        chip_colour(at, 0).set_value("navy").run()
         at.button(key=APPLY).click().run()
 
         assert not at.exception
@@ -313,7 +317,7 @@ class TestAChipEditAsksTheModelNothing:
         assert after.openai_calls == before.openai_calls == 1
         assert after.store_searches == before.store_searches + 2  # both stores, the changed item
         assert response_of(at).understood.items[0].colour == "navy"
-        assert at.text_input(key="chip_0_colour").value == "navy"  # chips follow the new detection
+        assert chip_colour(at, 0).value == "navy"  # chips follow the new detection
 
     def test_a_changed_category_searches_again_and_the_group_follows(
         self, at: AppTest, install_live: InstallLive
@@ -322,7 +326,7 @@ class TestAChipEditAsksTheModelNothing:
         first_search(at, live)
         before = costs(live)
 
-        at.selectbox(key="chip_0_category").set_value(Category.SHOES).run()
+        chip_category(at, 0).set_value(Category.SHOES).run()
         at.button(key=APPLY).click().run()
 
         assert not at.exception
@@ -350,7 +354,7 @@ class TestAChipEditAsksTheModelNothing:
         first_search(at, live)
         at.text_input(key=TEXT_BOX).set_value("").run()
 
-        at.number_input(key="chip_budget").set_value(250.0).run()
+        chip_budget(at).set_value(250.0).run()
         at.button(key=APPLY).click().run()
 
         assert not at.exception
@@ -365,7 +369,7 @@ class TestAChipEditAsksTheModelNothing:
         first_search(at, live)
         at.sidebar.radio(key=MIX).set_value(MixPreset.LUXURY_FIRST).run()
 
-        at.number_input(key="chip_budget").set_value(300.0).run()
+        chip_budget(at).set_value(300.0).run()
         at.button(key=APPLY).click().run()
 
         assert targets(response_of(at))[3] > targets(response_of(at))[0]
@@ -403,7 +407,7 @@ class TestAGuessedGenderIsNotAppliedUntilTheShopperPicksIt:
 
         first_search(at, live)
 
-        assert at.selectbox(key="chip_0_gender").value == "unset"
+        assert chip_gender(at, 0).value == "unset"
         shown = " ".join(markdown.value for markdown in at.markdown)
         assert "not confirmed. The AI guessed Men" in shown
         assert any(
@@ -428,7 +432,7 @@ class TestAGuessedGenderIsNotAppliedUntilTheShopperPicksIt:
         live = install_live(FakeUnderstander(GUESSED_MEN), stores=stores)
         first_search(at, live)
 
-        at.selectbox(key="chip_0_gender").set_value("men").run()
+        chip_gender(at, 0).set_value("men").run()
         at.button(key=APPLY).click().run()
 
         assert not at.exception
@@ -441,7 +445,7 @@ class TestAGuessedGenderIsNotAppliedUntilTheShopperPicksIt:
         assert (
             expander.text[0].value == "gamma: Not searched: Gamma does not sell clothing for men."
         )
-        assert at.selectbox(key="chip_0_gender").value == "men"
+        assert chip_gender(at, 0).value == "men"
 
 
 # --------------------------------------------------------------------------------------------
@@ -488,7 +492,7 @@ class TestAnOutfitIsShownGarmentByGarment:
         before = costs(live)
         calls_before = len(live.store_searches)
 
-        at.text_input(key="chip_1_colour").set_value("navy").run()
+        chip_colour(at, 1).set_value("navy").run()
         at.button(key=APPLY).click().run()
 
         assert not at.exception

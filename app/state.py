@@ -35,6 +35,8 @@ _ACTIVE_REQUEST_ID = "active_request_id"
 _PHOTO_GENERATION = "photo_generation"
 _PHOTO_RELEASED = "photo_released"
 _GENDER_DISMISSED = "gender_question_dismissed"
+_CHIPS_GENERATION = "chips_generation"
+_GENDER_CHOSEN = "gender_chosen_on_page"
 
 
 @dataclass(frozen=True)
@@ -117,6 +119,9 @@ def drop_response() -> None:
     st.session_state[_RESPONSE] = None
     clear_chip_state()
     reopen_gender_question()
+    forget_gender_choices()
+    # The note says the photo was used for the results on the page; there are none any more.
+    set_photo_released(False)
 
 
 def gender_question_dismissed() -> bool:
@@ -135,6 +140,28 @@ def reopen_gender_question() -> None:
     st.session_state[_GENDER_DISMISSED] = False
 
 
+def gender_chosen_on_page(index: int) -> bool:
+    """True when the shopper chose this garment's gender on the page for the search that is
+    shown: with the question "Who is this for?" or in its chip. A gender the model reads out of
+    the request is explicit too, and the response cannot tell the two apart (both are
+    ``explicit``), so the page keeps the choices it saw."""
+    chosen = st.session_state.get(_GENDER_CHOSEN)
+    return isinstance(chosen, frozenset) and index in chosen
+
+
+def note_gender_choices(chips: ChipEdits) -> None:
+    """Remember the genders the shopper chose with this search again. Called once the search
+    succeeded, so a search that failed leaves the page as it was."""
+    chosen = {edit.index for edit in chips.items if edit.gender is not None}
+    earlier = st.session_state.get(_GENDER_CHOSEN)
+    st.session_state[_GENDER_CHOSEN] = frozenset(chosen | (earlier or frozenset()))
+
+
+def forget_gender_choices() -> None:
+    """A new search brings its own genders: nothing was chosen on the page for it yet."""
+    st.session_state[_GENDER_CHOSEN] = frozenset()
+
+
 def last_error() -> str | None:
     value = st.session_state.get(_ERROR)
     return value if isinstance(value, str) else None
@@ -149,8 +176,26 @@ def record_error(message: str) -> bool:
     return was_searching
 
 
+def chips_generation() -> int:
+    value = st.session_state.get(_CHIPS_GENERATION, 0)
+    return value if isinstance(value, int) else 0
+
+
+def chip_key(name: str) -> str:
+    """The widget key of one chip, for the chips that are on the page now: ``chip_g2_0_colour``.
+
+    The number after ``g`` is the generation of the chips. Streamlit gives a keyed widget an id
+    made from its key, and a browser keeps the value it holds for an id, whatever default the
+    page gives the widget later. Deleting the key from the session state does not change that.
+    The only way to make the chips show a new detection is to give them new ids: every time the
+    chips are to start again, the generation goes up, so every chip is a new widget."""
+    return f"{CHIP_KEY_PREFIX}g{chips_generation()}_{name}"
+
+
 def clear_chip_state() -> None:
-    """Forget the values in the chip widgets so they show what the response detected."""
+    """Start the chips again from what the response on the page detected: a new generation, so
+    new widgets (see ``chip_key``), and the old generation's values are dropped."""
+    st.session_state[_CHIPS_GENERATION] = chips_generation() + 1
     for key in [k for k in st.session_state if str(k).startswith(CHIP_KEY_PREFIX)]:
         del st.session_state[key]
 

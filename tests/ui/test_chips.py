@@ -12,7 +12,15 @@ from tests.factories import (
 )
 from tests.fakes import FakePipeline
 from tests.ui.conftest import InstallPipeline
-from tests.ui.helpers import SEARCH_BUTTON, TEXT_BOX, search
+from tests.ui.helpers import (
+    SEARCH_BUTTON,
+    TEXT_BOX,
+    chip_budget,
+    chip_category,
+    chip_colour,
+    chip_gender,
+    search,
+)
 from vga.errors import LlmError
 from vga.models import (
     Budget,
@@ -49,17 +57,17 @@ class TestChipsAreShown:
     def test_each_detected_item_gets_category_colour_and_gender_chips(
         self, results_at: AppTest
     ) -> None:
-        assert results_at.selectbox(key="chip_0_category").value is Category.OUTERWEAR
-        assert results_at.text_input(key="chip_0_colour").value == "black"
-        assert results_at.selectbox(key="chip_1_category").value is Category.SHOES
-        assert results_at.text_input(key="chip_1_colour").value == "white"
-        assert results_at.selectbox(key="chip_0_gender") is not None
-        assert results_at.selectbox(key="chip_1_gender") is not None
+        assert chip_category(results_at, 0).value is Category.OUTERWEAR
+        assert chip_colour(results_at, 0).value == "black"
+        assert chip_category(results_at, 1).value is Category.SHOES
+        assert chip_colour(results_at, 1).value == "white"
+        assert chip_gender(results_at, 0) is not None
+        assert chip_gender(results_at, 1) is not None
 
     def test_the_category_chip_offers_all_five_categories_dresses_last(
         self, results_at: AppTest
     ) -> None:
-        offered = results_at.selectbox(key="chip_0_category").options
+        offered = chip_category(results_at, 0).options
 
         assert offered == [
             "Tops",
@@ -80,8 +88,8 @@ class TestChipsAreShown:
 
         search(at)
 
-        assert at.selectbox(key="chip_0_category").value is Category.DRESSES
-        assert at.selectbox(key="chip_0_category").options[-1] == "Dresses and ethnic wear"
+        assert chip_category(at, 0).value is Category.DRESSES
+        assert chip_category(at, 0).options[-1] == "Dresses and ethnic wear"
 
     def test_every_chip_has_a_visible_label(self, results_at: AppTest) -> None:
         labels = [widget.label for widget in results_at.selectbox]
@@ -92,8 +100,8 @@ class TestChipsAreShown:
         assert len(set(labels)) == len(labels)
 
     def test_the_budget_chip_shows_the_detected_budget(self, results_at: AppTest) -> None:
-        assert results_at.number_input(key="chip_budget").value == 400.0
-        assert results_at.number_input(key="chip_budget").label == "Budget in AED (optional)"
+        assert chip_budget(results_at).value == 400.0
+        assert chip_budget(results_at).label == "Budget in AED (optional)"
 
 
 class TestInferredGenderStaysUnset:
@@ -102,7 +110,7 @@ class TestInferredGenderStaysUnset:
     ) -> None:
         assert SAMPLE.understood.items[0].gender_source is GenderSource.INFERRED
 
-        assert results_at.selectbox(key="chip_0_gender").value == "unset"
+        assert chip_gender(results_at, 0).value == "unset"
         notes = [markdown.value for markdown in results_at.markdown]
         assert any("not confirmed. The AI guessed Men" in note for note in notes)
 
@@ -116,7 +124,7 @@ class TestInferredGenderStaysUnset:
     def test_choosing_the_guessed_gender_is_sent_as_the_shoppers_confirmation(
         self, results_at: AppTest, pipeline: FakePipeline
     ) -> None:
-        results_at.selectbox(key="chip_0_gender").set_value("men").run()
+        chip_gender(results_at, 0).set_value("men").run()
         assert any("confirmed by you" in m.value for m in results_at.markdown)
 
         results_at.button(key=APPLY).click().run()
@@ -134,9 +142,9 @@ class TestInferredGenderStaysUnset:
 
         search(at)
 
-        assert at.selectbox(key="chip_0_gender").value == "women"
+        assert chip_gender(at, 0).value == "women"
         assert any("taken from your request" in m.value for m in at.markdown)
-        assert "Not set" not in at.selectbox(key="chip_0_gender").options
+        assert "Not set" not in chip_gender(at, 0).options
 
 
 class TestApply:
@@ -150,7 +158,7 @@ class TestApply:
     def test_editing_a_colour_and_applying_sends_exactly_that_edit(
         self, results_at: AppTest, pipeline: FakePipeline
     ) -> None:
-        results_at.text_input(key="chip_0_colour").set_value("navy").run()
+        chip_colour(results_at, 0).set_value("navy").run()
 
         results_at.button(key=APPLY).click().run()
 
@@ -159,10 +167,10 @@ class TestApply:
     def test_several_edits_to_several_items_arrive_together(
         self, results_at: AppTest, pipeline: FakePipeline
     ) -> None:
-        results_at.text_input(key="chip_0_colour").set_value("navy").run()
-        results_at.selectbox(key="chip_1_category").set_value(Category.BOTTOMS).run()
-        results_at.selectbox(key="chip_1_gender").set_value("women").run()
-        results_at.number_input(key="chip_budget").set_value(300.0).run()
+        chip_colour(results_at, 0).set_value("navy").run()
+        chip_category(results_at, 1).set_value(Category.BOTTOMS).run()
+        chip_gender(results_at, 1).set_value("women").run()
+        chip_budget(results_at).set_value(300.0).run()
 
         results_at.button(key=APPLY).click().run()
 
@@ -177,7 +185,7 @@ class TestApply:
     def test_changing_a_category_to_dresses_sends_that_edit(
         self, results_at: AppTest, pipeline: FakePipeline
     ) -> None:
-        results_at.selectbox(key="chip_1_category").set_value(Category.DRESSES).run()
+        chip_category(results_at, 1).set_value(Category.DRESSES).run()
 
         results_at.button(key=APPLY).click().run()
 
@@ -188,7 +196,7 @@ class TestApply:
     def test_clearing_the_budget_box_removes_the_budget(
         self, results_at: AppTest, pipeline: FakePipeline
     ) -> None:
-        results_at.number_input(key="chip_budget").set_value(None).run()
+        chip_budget(results_at).set_value(None).run()
 
         results_at.button(key=APPLY).click().run()
 
@@ -197,7 +205,7 @@ class TestApply:
     def test_an_emptied_colour_box_clears_the_colour(
         self, results_at: AppTest, pipeline: FakePipeline
     ) -> None:
-        results_at.text_input(key="chip_0_colour").set_value("   ").run()
+        chip_colour(results_at, 0).set_value("   ").run()
 
         results_at.button(key=APPLY).click().run()
 
@@ -273,43 +281,43 @@ class TestApply:
     def test_after_a_successful_apply_the_chips_start_again_from_the_new_detection(
         self, results_at: AppTest
     ) -> None:
-        results_at.text_input(key="chip_0_colour").set_value("navy").run()
+        chip_colour(results_at, 0).set_value("navy").run()
 
         results_at.button(key=APPLY).click().run()
 
-        assert results_at.text_input(key="chip_0_colour").value == "black"
+        assert chip_colour(results_at, 0).value == "black"
 
     def test_edits_survive_a_failed_search_again(
         self, results_at: AppTest, install_pipeline: InstallPipeline
     ) -> None:
-        results_at.text_input(key="chip_0_colour").set_value("navy").run()
+        chip_colour(results_at, 0).set_value("navy").run()
         install_pipeline(error=LlmError())
 
         results_at.button(key=APPLY).click().run()
 
         assert results_at.error
-        assert results_at.text_input(key="chip_0_colour").value == "navy"
+        assert chip_colour(results_at, 0).value == "navy"
         assert results_at.button(key=APPLY).disabled is False
 
 
 class TestReset:
     def test_reset_to_detected_restores_every_chip(self, results_at: AppTest) -> None:
-        results_at.text_input(key="chip_0_colour").set_value("navy").run()
-        results_at.selectbox(key="chip_0_category").set_value(Category.TOPS).run()
-        results_at.selectbox(key="chip_1_gender").set_value("women").run()
-        results_at.number_input(key="chip_budget").set_value(999.0).run()
+        chip_colour(results_at, 0).set_value("navy").run()
+        chip_category(results_at, 0).set_value(Category.TOPS).run()
+        chip_gender(results_at, 1).set_value("women").run()
+        chip_budget(results_at).set_value(999.0).run()
 
         results_at.button(key=RESET).click().run()
 
-        assert results_at.text_input(key="chip_0_colour").value == "black"
-        assert results_at.selectbox(key="chip_0_category").value is Category.OUTERWEAR
-        assert results_at.selectbox(key="chip_1_gender").value == "unset"
-        assert results_at.number_input(key="chip_budget").value == 400.0
+        assert chip_colour(results_at, 0).value == "black"
+        assert chip_category(results_at, 0).value is Category.OUTERWEAR
+        assert chip_gender(results_at, 1).value == "unset"
+        assert chip_budget(results_at).value == 400.0
 
     def test_after_a_reset_applying_sends_no_edits(
         self, results_at: AppTest, pipeline: FakePipeline
     ) -> None:
-        results_at.text_input(key="chip_0_colour").set_value("navy").run()
+        chip_colour(results_at, 0).set_value("navy").run()
         results_at.button(key=RESET).click().run()
 
         results_at.button(key=APPLY).click().run()

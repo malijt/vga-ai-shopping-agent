@@ -40,6 +40,10 @@ GENDER_LABELS: dict[Gender, str] = {
     Gender.UNISEX: "Unisex",
 }
 GENDER_NOT_SET = "Not set"
+# The line under an item's gender chip when the gender is in use. Where it came from is said in
+# words: the request, or the shopper's own answer or chip on the page.
+GENDER_NOTE_FROM_REQUEST = "Gender: taken from your request."
+GENDER_NOTE_CHOSEN_ON_PAGE = "Gender: you chose this on the page."
 
 # The question above the results when a gender was only guessed, or not found (BRD Rule 8). The
 # buttons answer it: "Women" and "Men" use GENDER_LABELS, "Show both" closes it.

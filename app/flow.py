@@ -79,9 +79,13 @@ def run_pending_search(inputs: InputState, settings: SettingsOverride) -> None:
         status.update(label="Search finished", state="complete", expanded=False)
 
     state.store_response(response, keep_chips=pending.keep_chips)
-    if pending.chips is None:
-        # A new search may ask who it is for again, whatever was answered for the last one.
+    if pending.chips is not None:
+        state.note_gender_choices(pending.chips)
+    else:
+        # A new search may ask who it is for again, whatever was answered for the last one, and
+        # nothing was chosen on the page for it yet.
         state.reopen_gender_question()
+        state.forget_gender_choices()
         # A new search used the photo, if there was one. It is done with: let go of it.
         state.set_photo_released(request.image is not None)
         if request.image is not None:

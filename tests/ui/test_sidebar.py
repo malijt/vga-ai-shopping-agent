@@ -7,7 +7,7 @@ from streamlit.testing.v1 import AppTest
 from app.components.sidebar import preset_caption
 from tests.fakes import FakePipeline
 from tests.ui.conftest import InstallPipeline
-from tests.ui.helpers import search
+from tests.ui.helpers import chip_budget, chip_colour, search
 from vga.errors import LlmError
 from vga.models import ChipEdits, MixPreset, SettingsOverride
 
@@ -48,7 +48,7 @@ class TestSidebarControls:
 
         search(at)
 
-        assert [box.key for box in at.number_input] == ["chip_budget"]
+        assert [box.key for box in at.number_input] == [chip_budget(at).key]
         assert not at.sidebar.number_input
 
 
@@ -138,11 +138,11 @@ class TestChangingTheMixShowsTheSameResultsReSorted:
     def test_chip_edits_the_shopper_has_not_applied_survive_a_new_mix(
         self, results_at: AppTest, pipeline: FakePipeline
     ) -> None:
-        results_at.text_input(key="chip_0_colour").set_value("navy").run()
+        chip_colour(results_at, 0).set_value("navy").run()
 
         results_at.sidebar.radio(key=MIX_KEY).set_value(MixPreset.VALUE_FIRST).run()
 
-        assert results_at.text_input(key="chip_0_colour").value == "navy"
+        assert chip_colour(results_at, 0).value == "navy"
         assert pipeline.calls[-1].overrides is not None
         assert pipeline.calls[-1].overrides.chips == ChipEdits()  # the edit was not applied
 

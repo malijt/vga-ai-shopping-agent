@@ -15,8 +15,10 @@ from streamlit.testing.v1 import AppTest
 from app import runner
 from tests.fakes import FakePipeline, FakeUnderstander, PipelineCall
 from tests.pipeline.world import StoreWorld, store_for
+from tests.ui.browser import browser_memory
 from tests.ui.helpers import search
 from tests.ui.live import LiveSearch, PerLoopFakeClock, build_live_search
+from tests.ui.scenario import what_the_model_sees
 from vga.errors import VgaError
 from vga.interfaces import ImageRanker
 from vga.log import ROOT_LOGGER_NAME
@@ -91,8 +93,8 @@ def pipeline(install_pipeline: InstallPipeline) -> FakePipeline:
 
 @pytest.fixture
 def at() -> AppTest:
-    """The page, not yet run."""
-    return AppTest.from_file(str(APP_PATH), default_timeout=60)
+    """The page, not yet run, in a tab that holds widget values like a browser (``browser.py``)."""
+    return browser_memory(AppTest.from_file(str(APP_PATH), default_timeout=60))
 
 
 @pytest.fixture
@@ -177,3 +179,11 @@ def install_live(
         return live
 
     return install
+
+
+@pytest.fixture
+def live(install_live: InstallLive) -> LiveSearch:
+    """The real pipeline behind the page, with the fake model of the two-photo scenario
+    (``tests/ui/scenario.py``): a photo of black abayas, then one of red, blue, black and white
+    kaftans."""
+    return install_live(FakeUnderstander(what_the_model_sees))
