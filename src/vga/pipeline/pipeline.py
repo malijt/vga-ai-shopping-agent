@@ -6,7 +6,10 @@ One run, in order (each stage reports its ``Step`` to ``on_step`` and is timed):
 2. understand one OpenAI call, or the earlier understanding reused with the chip edits applied
 3. search     every store that sells the item's category, and sells for its stated gender, gets
               its own search for it, all started together in item order and then store order; or
-              the item is reused from the re-run cache
+              the item is reused from the re-run cache. A re-run that changes only a garment's
+              gender (the answer to "Who is this for?", or the gender chip) reuses the products
+              already found for it and applies the gender to them: no store request, no model
+              call, no thumbnail
 4. filter     hard filters, text and price scores (``vga.rank.prefilter_and_score``)
 5. rank       the best matches are chosen to be compared with the photo
 6. image_rank the photo is compared with those products; the totals are recomputed. Only for a
@@ -74,7 +77,7 @@ from vga.pipeline.planning import (
     stores_for_item,
 )
 from vga.pipeline.reports import StoreSummary, outcomes_for_item, summarise
-from vga.pipeline.rerun import CachedItem, CachedRun, RerunCache
+from vga.pipeline.rerun import CachedItem, CachedRun, RerunCache, narrowed_to
 from vga.pipeline.state import ItemRun, RunState
 from vga.pipeline.validation import validate_request
 from vga.rank import apply_image_scores, prefilter_and_score
@@ -275,6 +278,8 @@ class SearchPipeline:
             run.cached = self._cache.reusable(
                 state.previous, index, item, tuple(store.id for store in searched)
             )
+            if run.cached is None:
+                self._reuse_for_gender(state, run, searched, skipped)
             state.items.append(run)
 
         # An outfit photo asks for one search per garment (PRD R8 wants image similarity for a
@@ -292,14 +297,39 @@ class SearchPipeline:
                 state.query = QueryImage(embedding=list(embedding))
 
         # The earlier search could not compare these products with the photo. If there is nothing
-        # to compare with now either, the results are still ranked without it, and still say so.
-        if (
-            state.compares_images
-            and state.query is None
-            and any(run.cached is not None and not run.cached.image_done for run in state.items)
+        # to compare with now either (or the garment is a gender answer, which fetches no
+        # thumbnail), the results are still ranked without it, and still say so.
+        if state.compares_images and any(
+            run.cached is not None
+            and not run.cached.image_done
+            and (state.query is None or run.images_frozen)
+            for run in state.items
         ):
             log.warning("image similarity unavailable; reused results are ranked without it")
             state.warn(messages.IMAGE_SIMILARITY_UNAVAILABLE)
+
+    def _reuse_for_gender(
+        self,
+        state: RunState,
+        run: ItemRun,
+        searched: list[StoreConfig],
+        skipped: list[StoreConfig],
+    ) -> None:
+        """Answer a change of gender from the products already found, when that is all that
+        changed: the earlier search of this garment asked for no gender, so what its stores
+        returned holds both, and the ranker's gender rule (``prefilter_and_score``) and the
+        stores' ``genders`` can be applied here. Sets nothing when the earlier search cannot be
+        used, and the garment is then searched like any other."""
+        origin = self._cache.reusable_after_gender(state.previous, run.index, run.item, searched)
+        if origin is None:
+            return
+        log.info(
+            "gender answered from the products already found; no store is asked",
+            extra={"item_index": run.index, "stores_kept": len(searched)},
+        )
+        run.cached = narrowed_to(origin, run.item, searched, skipped)
+        run.cached_origin = origin
+        run.images_frozen = True
 
     async def _search(self, state: RunState) -> None:
         pending: list[ItemRun] = []
@@ -403,6 +433,8 @@ class SearchPipeline:
         fresh search, and for a reused one whose earlier comparison did not happen."""
         if state.query is None or not run.scored:
             return False
+        if run.images_frozen:
+            return False  # a gender answer fetches nothing: the scores already worked out stand
         return run.cached is None or not run.cached.image_done
 
     def _final_rank(self, state: RunState, run: ItemRun) -> None:
@@ -647,8 +679,13 @@ class SearchPipeline:
         items: dict[int, CachedItem] = {}
         for run in state.items:
             if run.cached is not None:
-                earlier = run.cached
-                if not earlier.image_done and self._image_done(state, run):
+                # A gender answer remembers the search as it was made, not as it was narrowed.
+                earlier = run.cached_origin or run.cached
+                if (
+                    not earlier.image_done
+                    and not run.images_frozen
+                    and self._image_done(state, run)
+                ):
                     earlier = replace(earlier, image_scores=dict(run.image_scores), image_done=True)
                 items[run.index] = earlier  # keeps its own expiry: a re-run does not renew it
                 continue
