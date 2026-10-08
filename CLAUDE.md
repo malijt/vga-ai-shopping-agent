@@ -114,6 +114,10 @@ docs/adr/             decision records    docs/store-notes/, docs/store-qualific
   go/no-go, changes to the plan or contracts) run on **Opus 5.5**.
 - Work from the plan: one phase or module per assignment, staying inside its owned paths. One
   branch and one small PR per assignment; merge only with CI green and a review.
+- **Branches (user rule, 2026-10-08):** every feature or fix starts on a new branch cut from
+  `develop` (`feature/<name>` or `fix/<name>`) and is built in its own git worktree under
+  `.claude/worktrees/`. Never commit feature or fix work directly on `develop` or `main`; it
+  reaches `develop` only through a merge.
 - Contracts in `models.py`, `interfaces.py` and `errors.py` are frozen after Phase 1. Changing one
   is its own PR that updates every user.
 - When a task touches a domain, consult that domain's doc in `docs/Best Practices/` and apply it by
