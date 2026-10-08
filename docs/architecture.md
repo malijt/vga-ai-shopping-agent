@@ -359,7 +359,7 @@ There are two suites, and they answer different questions.
 - **The complete suite** (`uv run pytest`): about 8,450 tests, three to four minutes, no network and
   no key. It fakes only the outside world: store HTTP, the OpenAI client, the image-model weights
   and the clock. It is run **locally**, before a push or a merge.
-- **The critical suite** (`uv run pytest -m critical`): 143 of those tests, about 20 seconds. These
+- **The critical suite** (`uv run pytest -m critical`): 144 of those tests, about 20 seconds. These
   are the tests whose failure would mean a broken product rule or a broken demo. **This is what CI
   runs**, with `ruff` and `mypy`, on every pull request and on every push to `main`. The dependency
   audit (`pip-audit`) and the secret scan (`gitleaks`) run beside it.

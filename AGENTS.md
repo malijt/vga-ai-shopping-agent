@@ -77,7 +77,7 @@ file as the always-on summary and open the matching doc when you need full depth
 ```bash
 uv sync                                        # install (add --group ml for the image model)
 uv run pytest                                  # the complete suite (no network); run it before every push or merge
-uv run pytest -m critical                      # the 143 tests CI runs (about 20 s); the list is tests/critical_suite.txt
+uv run pytest -m critical                      # the 144 tests CI runs (about 20 s); the list is tests/critical_suite.txt
 uv run pytest -m live                          # live store / OpenAI tests; needs keys, never in CI
 uv run ruff check && uv run mypy src           # lint and types
 VGA_UI_FIXTURE=1 uv run streamlit run app/main.py   # the UI on sample data (run from the repo root)
