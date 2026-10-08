@@ -13,7 +13,8 @@ Two kinds of search:
 - A search again is built from the last response. It carries no text and no photo: the earlier
   detection (with the chip edits on top) and the photo's embedding travel in the overrides instead
   (assumption A8). The pipeline then asks OpenAI nothing, and asks the stores again only for a
-  garment whose searched item changed.
+  garment whose searched item changed or whose earlier answers are too old to reuse
+  (``store_cache_ttl_s``).
 """
 
 import streamlit as st

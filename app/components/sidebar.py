@@ -8,7 +8,9 @@ The shopper can also state a budget in the request text. The choice is returned 
 
 Once results are on the page, changing the choice shows the same results in the new mix right away
 (``state.request_mix_change``). That is a search again with nothing else changed: the pipeline
-re-sorts the products it already has, so no store and no AI is asked (plan 15.2.3).
+re-sorts the products it already has, so no AI is asked, and no store either while those products
+are still remembered (``store_cache_ttl_s``, 10 minutes; after that the stores are searched again)
+(plan 15.2.3).
 """
 
 import streamlit as st
@@ -43,5 +45,10 @@ def render_sidebar(*, disabled: bool) -> SettingsOverride:
         if state.get_response() is None:
             st.markdown("This applies to your next search.")
         else:
-            st.markdown("Changing this re-sorts the results below. No store is searched again.")
+            # ponytail: "10 minutes" is store_cache_ttl_s (600) written out; pass the setting in
+            # if that value ever changes.
+            st.markdown(
+                "Changing this re-sorts the results below. Stores are searched again only when "
+                "these results are more than 10 minutes old."
+            )
     return SettingsOverride(tier_mix=preset.mix)

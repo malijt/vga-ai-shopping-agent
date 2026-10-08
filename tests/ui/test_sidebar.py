@@ -156,7 +156,10 @@ class TestChangingTheMixShowsTheSameResultsReSorted:
         after = [markdown.value for markdown in at.sidebar.markdown]
 
         assert "This applies to your next search." in before
-        assert "Changing this re-sorts the results below. No store is searched again." in after
+        assert (
+            "Changing this re-sorts the results below. Stores are searched again only when "
+            "these results are more than 10 minutes old."
+        ) in after
 
     def test_the_mix_is_not_dropped_when_a_search_fails_afterwards(
         self, results_at: AppTest, install_pipeline: InstallPipeline
