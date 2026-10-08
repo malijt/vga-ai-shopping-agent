@@ -53,6 +53,13 @@ class SpyImageRanker:
         self._inner = inner
         self.calls: list[RankerCall] = []
 
+    def __getattr__(self, name: str) -> object:
+        """``warm_up`` (which only some rankers have) is passed on, so the pipeline's start-up
+        reaches the real ranker through the spy; anything else is not forwarded."""
+        if name == "warm_up":
+            return getattr(self._inner, name)
+        raise AttributeError(name)
+
     async def score(
         self, query: QueryImage | None, products: Sequence[Product]
     ) -> dict[str, float | None]:

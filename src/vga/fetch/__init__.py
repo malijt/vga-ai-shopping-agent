@@ -22,6 +22,7 @@ from vga.fetch.errors import (
     FetchTimeoutError,
     ResponseTooLargeError,
     RobotsDeniedError,
+    RobotsUnreadableError,
     TooManyRedirectsError,
     UrlNotAllowedError,
 )
@@ -44,6 +45,7 @@ __all__ = [
     "ResponseTooLargeError",
     "RobotsChecker",
     "RobotsDeniedError",
+    "RobotsUnreadableError",
     "SharedLimit",
     "TooManyRedirectsError",
     "UrlNotAllowedError",

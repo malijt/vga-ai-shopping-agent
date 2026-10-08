@@ -98,10 +98,11 @@ class StoreSearchEngine:
     async def warm_up(self) -> None:
         """Read robots.txt of every store that will be searched, now, so the first search does not
         pay for thirteen extra requests. The requests go through the same client as any other (one
-        queue per platform, cooldowns, no retry) and the verdicts are cached for the day, as ever.
-        Never raises: a robots.txt that cannot be read is handled as it is during a search
-        (everything disallowed until the cooldown ends), and one store's failure, or a bug in its
-        code path, touches no other store."""
+        queue per platform, cooldowns, no retry) and the verdicts are cached as ever (a day for a
+        real answer). Never raises: a robots.txt that cannot be read is handled as it is during a
+        search (nothing is sent to that store, and the file is read again once
+        ``robots_unreadable_retry_s`` has passed), and one store's failure, or a bug in its code
+        path, touches no other store."""
         stores = [
             store for store in self.registry.active(self.settings) if not self._skip_reason(store)
         ]

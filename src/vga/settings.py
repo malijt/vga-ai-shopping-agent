@@ -143,6 +143,12 @@ class Settings(VgaModel):
     willing to answer."""
     store_cache_ttl_s: int = Field(default=600, ge=0)
     store_cooldown_s: int = Field(default=900, ge=0)
+    robots_unreadable_retry_s: int = Field(default=60, ge=0)
+    """How long a robots.txt that could not be read (a timeout, a network error, a 5xx) is
+    remembered as "no search is sent". Short on purpose: a failure on our side must not switch a
+    store off for long, and a burst of searches must still not hammer a struggling host. A file
+    that was read (rules, or a 404 for none) is remembered for a day; a block (401, 403, 429)
+    starts ``store_cooldown_s``."""
     max_response_bytes: int = Field(default=2_000_000, gt=0)
     """Size cap, in bytes, for one HTTP response. ``StoreConfig.max_response_bytes`` overrides it
     for a single store."""

@@ -17,7 +17,12 @@ from tests.fakes import FakeClock
 from tests.fetch.conftest import ALLOW_ALL_ROBOTS, HOST, ROBOTS_URL, fixture_text, text_response
 from vga.errors import StoreBlockedError
 from vga.fetch.client import PoliteClient
-from vga.fetch.errors import BlockedError, CooldownError, RobotsDeniedError
+from vga.fetch.errors import (
+    BlockedError,
+    CooldownError,
+    RobotsDeniedError,
+    RobotsUnreadableError,
+)
 from vga.fetch.robots import ROBOTS_TTL_S, RobotsChecker
 from vga.models import StoreConfig
 from vga.settings import Settings
@@ -392,7 +397,7 @@ async def test_a_parsed_robots_file_is_trusted_for_a_day_then_fetched_again(
     assert route.call_count == 2
 
 
-async def test_an_unreachable_verdict_is_remembered_for_the_cooldown_without_new_requests(
+async def test_an_unreadable_verdict_is_remembered_only_briefly_without_new_requests(
     robots: RobotsChecker,
     router: respx.MockRouter,
     clock: FakeClock,
@@ -402,13 +407,115 @@ async def test_an_unreachable_verdict_is_remembered_for_the_cooldown_without_new
     store = make_store_config()
     assert await robots.can_fetch(f"https://{HOST}/search?q=a", store) is False
 
+    clock.advance(settings.robots_unreadable_retry_s - 1)
     assert await robots.can_fetch(f"https://{HOST}/search?q=b", store) is False
-    assert route.call_count == 1  # no retry, no new request, within the cooldown
+    assert route.call_count == 1  # a burst of searches does not hammer a struggling host
 
-    clock.advance(settings.store_cooldown_s + 1)
+    clock.advance(2)  # the short memory has passed; far short of the store cooldown
+    assert clock.monotonic() < 1000.0 + settings.store_cooldown_s
     route.mock(return_value=text_response(ALLOW_ALL_ROBOTS))
     assert await robots.can_fetch(f"https://{HOST}/search?q=c", store) is True
     assert route.call_count == 2
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [
+        httpx.ReadTimeout("slow"),
+        httpx.ConnectError("refused"),
+        httpx.Response(500),
+        httpx.Response(200, text="<!doctype html><html></html>"),
+    ],
+    ids=["timeout", "connection", "5xx", "html-instead"],
+)
+async def test_every_unreadable_robots_txt_is_asked_for_again_after_the_short_memory(
+    robots: RobotsChecker,
+    router: respx.MockRouter,
+    clock: FakeClock,
+    settings: Settings,
+    failure: object,
+) -> None:
+    route = router.get(ROBOTS_URL)
+    if isinstance(failure, Exception):
+        route.mock(side_effect=failure)
+    else:
+        route.mock(return_value=failure)
+    store = make_store_config()
+    assert await robots.can_fetch(f"https://{HOST}/search?q=a", store) is False
+
+    clock.advance(settings.robots_unreadable_retry_s + 1)
+    route.mock(return_value=text_response(ALLOW_ALL_ROBOTS))
+
+    assert await robots.can_fetch(f"https://{HOST}/search?q=a", store) is True
+
+
+async def test_a_readable_robots_txt_keeps_the_long_memory(
+    robots: RobotsChecker, router: respx.MockRouter, clock: FakeClock, settings: Settings
+) -> None:
+    route = router.get(ROBOTS_URL).mock(return_value=text_response("User-agent: *\nDisallow: /x\n"))
+    store = make_store_config()
+    await robots.ensure_allowed(f"https://{HOST}/search?q=a", store)
+
+    clock.advance(settings.robots_unreadable_retry_s * 10)
+    await robots.ensure_allowed(f"https://{HOST}/search?q=a", store)
+
+    assert route.call_count == 1  # a real answer is not asked for again for the day
+
+
+async def test_a_404_robots_txt_keeps_the_long_memory(
+    robots: RobotsChecker, router: respx.MockRouter, clock: FakeClock, settings: Settings
+) -> None:
+    route = router.get(ROBOTS_URL).mock(return_value=httpx.Response(404))
+    store = make_store_config()
+    await robots.ensure_allowed(f"https://{HOST}/search?q=a", store)
+
+    clock.advance(settings.robots_unreadable_retry_s * 10)
+    await robots.ensure_allowed(f"https://{HOST}/search?q=a", store)
+
+    assert route.call_count == 1
+
+
+@pytest.mark.parametrize("status", [401, 403, 429])
+async def test_a_block_on_robots_txt_still_stops_the_store_for_its_whole_cooldown(
+    robots: RobotsChecker,
+    client: PoliteClient,
+    router: respx.MockRouter,
+    clock: FakeClock,
+    settings: Settings,
+    status: int,
+) -> None:
+    route = router.get(ROBOTS_URL).mock(return_value=httpx.Response(status))
+    store = make_store_config()
+    with pytest.raises(BlockedError):
+        await robots.ensure_allowed(f"https://{HOST}/search?q=a", store)
+
+    clock.advance(settings.robots_unreadable_retry_s + 1)  # past the short memory only
+    with pytest.raises(CooldownError):
+        await robots.ensure_allowed(f"https://{HOST}/search?q=b", store)
+    assert route.call_count == 1
+
+
+async def test_an_unreadable_robots_txt_has_its_own_error_that_says_it_could_not_be_checked(
+    robots: RobotsChecker, router: respx.MockRouter
+) -> None:
+    router.get(ROBOTS_URL).mock(side_effect=httpx.ReadTimeout("slow"))
+
+    with pytest.raises(RobotsUnreadableError) as unreadable:
+        await robots.ensure_allowed(f"https://{HOST}/search?q=a", make_store_config())
+
+    assert isinstance(unreadable.value, RobotsDeniedError)  # still a refusal to search
+    assert unreadable.value.store_status.value == "robots_denied"
+
+
+async def test_a_robots_txt_that_disallows_is_not_called_unreadable(
+    robots: RobotsChecker, router: respx.MockRouter
+) -> None:
+    router.get(ROBOTS_URL).mock(return_value=text_response("User-agent: *\nDisallow: /search\n"))
+
+    with pytest.raises(RobotsDeniedError) as denied:
+        await robots.ensure_allowed(f"https://{HOST}/search?q=a", make_store_config())
+
+    assert not isinstance(denied.value, RobotsUnreadableError)
 
 
 async def test_concurrent_first_searches_share_one_robots_request(

@@ -177,6 +177,42 @@ async def test_a_robots_txt_that_cannot_be_read_means_no_search_is_sent(
     assert world.stray == []
 
 
+@pytest.mark.parametrize("robots", UNREADABLE.values(), ids=list(UNREADABLE))
+async def test_a_store_whose_robots_txt_could_not_be_read_is_not_said_to_forbid_the_search(
+    robots: Reply, world: GuardWorld, build: GuardPipelines, settings: Settings
+) -> None:
+    one_store_denying(world, robots)
+    pipeline = build(understander=understanding(BLAZER))
+
+    response = await pipeline.run(make_search_request(text="black oversized blazer"), settings)
+
+    [skipped] = response.stores_skipped
+    assert skipped.status is StoreStatus.ROBOTS_DENIED  # nothing is sent either way
+    assert skipped.reason == (
+        "We could not check whether this store allows searching, so we skipped it."
+    )
+    assert "Alpha was skipped because we could not check whether it allows searching." in (
+        response.warnings
+    )
+    assert not any("asks automated tools" in text for text in response.warnings)
+
+
+@pytest.mark.parametrize("robots", DENIALS.values(), ids=list(DENIALS))
+async def test_a_store_that_forbids_the_search_is_still_said_to_ask_not_to_be_searched(
+    robots: str, world: GuardWorld, build: GuardPipelines, settings: Settings
+) -> None:
+    one_store_denying(world, robots)
+    pipeline = build(understander=understanding(BLAZER))
+
+    response = await pipeline.run(make_search_request(text="black oversized blazer"), settings)
+
+    [skipped] = response.stores_skipped
+    assert skipped.reason == "This store asks automated tools not to search it, so we skipped it."
+    assert "Alpha was skipped because it asks automated tools not to search it." in (
+        response.warnings
+    )
+
+
 # --------------------------------------------------------------------------------------------
 # Thumbnails are held to the image host's robots.txt too
 # --------------------------------------------------------------------------------------------

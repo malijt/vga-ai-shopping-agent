@@ -8,10 +8,14 @@ would have cached them, a file that cannot be read still means "everything disal
 is a block (it starts its cooldown). ``warm_up()`` never raises because of a store.
 """
 
+import asyncio
+
+import httpx
 import pytest
 
 from tests.factories import make_search_request
-from tests.fakes import FakeClock
+from tests.fakes import FakeClock, FakeImageRanker
+from tests.fetch.conftest import ALLOW_ALL_ROBOTS, text_response
 from tests.guards.scraping.support import (
     GuardPipelines,
     GuardWorld,
@@ -192,3 +196,127 @@ async def test_a_disabled_store_is_not_asked_for_its_robots_txt(
 
     assert world.requests_to("alpha.example") == 1
     assert world.requests_to("off.example") == 0
+
+
+# --------------------------------------------------------------------------------------------
+# The model load must not starve the robots.txt reads (seen on the real page, 2026-10-08)
+# --------------------------------------------------------------------------------------------
+
+
+class BlockingModelLoad(FakeImageRanker):
+    """A model load that holds up everything else for a long time, as the real one does in its
+    heavy stretches: it takes the clock ``blocked_s`` forward in one step, so every time limit
+    that is running while it works runs out."""
+
+    def __init__(self, world: GuardWorld, clock: FakeClock, *, blocked_s: float = 60.0) -> None:
+        super().__init__()
+        self._world = world
+        self._clock = clock
+        self._blocked_s = blocked_s
+        self.robots_finished_at_start: int | None = None
+
+    async def warm_up(self) -> bool:
+        self.robots_finished_at_start = robots_total(self._world)
+        for _ in range(60):  # the load gets going while any robots.txt read is in flight
+            await asyncio.sleep(0)
+        self._clock.advance(self._blocked_s)  # ...and is slow and blocking
+        return True
+
+
+async def test_a_slow_blocking_model_load_makes_no_robots_txt_read_time_out(
+    world: GuardWorld, build: GuardPipelines, settings: Settings, clock: FakeClock
+) -> None:
+    for key in ("alpha", "beta", "gamma"):
+        world.add(store_for(key))
+
+        async def slow_answer(_request: httpx.Request) -> httpx.Response:
+            for _ in range(400):  # in flight for a good while, in event-loop turns not seconds
+                await asyncio.sleep(0)
+            return text_response(ALLOW_ALL_ROBOTS)
+
+        world.router.get(f"https://{key}.example/robots.txt").mock(side_effect=slow_answer)
+    loader = BlockingModelLoad(world, clock)
+    pipeline = build(understander=understanding(BLAZER), image_ranker=loader)
+
+    ready = await pipeline.warm_up()
+
+    assert ready is True
+    # The files are read before the model starts loading, not beside it.
+    assert world.requests_to("alpha.example") == 1
+    response = await pipeline.run(make_search_request(text="black oversized blazer"), settings)
+    assert [r.store_id for r in response.stores_used] == ["alpha", "beta", "gamma"]
+    assert response.stores_skipped == []
+
+
+async def test_warm_up_starts_the_model_load_only_after_every_robots_txt_was_read(
+    world: GuardWorld, thirteen: None, build: GuardPipelines, clock: FakeClock
+) -> None:
+    loader = BlockingModelLoad(world, clock, blocked_s=0.0)
+    pipeline = build(understander=understanding(BLAZER), image_ranker=loader)
+
+    await pipeline.warm_up()
+
+    assert loader.robots_finished_at_start == 13
+
+
+# --------------------------------------------------------------------------------------------
+# Recovery: a robots.txt that failed at start-up is read again, and the store comes back
+# --------------------------------------------------------------------------------------------
+
+
+async def test_a_store_whose_robots_txt_timed_out_at_start_up_is_skipped_then_comes_back(
+    world: GuardWorld, build: GuardPipelines, settings: Settings, clock: FakeClock
+) -> None:
+    state = {"up": False}
+
+    def alpha_robots(request: httpx.Request) -> httpx.Response:
+        if not state["up"]:
+            raise httpx.ReadTimeout("no answer", request=request)
+        return text_response(ALLOW_ALL_ROBOTS)
+
+    world.add(store_for("alpha"), robots=alpha_robots)
+    world.add(store_for("beta"))
+    pipeline = build(understander=understanding(BLAZER))
+    await pipeline.warm_up()  # alpha's robots.txt times out here
+    request = make_search_request(text="black oversized blazer")
+
+    first = await pipeline.run(request, settings)
+
+    assert world.queries("alpha") == []  # nothing is sent without a readable robots.txt
+    [skipped] = first.stores_skipped
+    assert (skipped.store_id, skipped.status) == ("alpha", StoreStatus.ROBOTS_DENIED)
+    assert skipped.reason == (
+        "We could not check whether this store allows searching, so we skipped it."
+    )
+    assert "Alpha was skipped because we could not check whether it allows searching." in (
+        first.warnings
+    )
+    assert not any("asks automated tools" in text for text in first.warnings)
+    assert [report.store_id for report in first.stores_used] == ["beta"]
+
+    state["up"] = True  # the store is fine; only the short memory is in the way
+    clock.advance(settings.robots_unreadable_retry_s + 1)
+    robots_before = world.requests_to("alpha.example")
+
+    second = await pipeline.run(request, settings)
+
+    assert world.requests_to("alpha.example") == robots_before + 2  # robots.txt, then the search
+    assert world.queries("alpha") != []
+    assert [report.store_id for report in second.stores_used] == ["alpha", "beta"]
+    assert second.stores_skipped == []
+    assert world.stray == []
+
+
+async def test_a_burst_of_searches_within_the_short_memory_does_not_ask_robots_txt_again(
+    world: GuardWorld, build: GuardPipelines, settings: Settings, clock: FakeClock
+) -> None:
+    world.add(store_for("alpha"), robots=reply_status(503))
+    pipeline = build(understander=understanding(BLAZER))
+    await pipeline.warm_up()
+    request = make_search_request(text="black oversized blazer")
+
+    await pipeline.run(request, settings)
+    clock.advance(settings.robots_unreadable_retry_s / 2)
+    await pipeline.run(request, settings)
+
+    assert world.requests_to("alpha.example") == 1  # the one start-up read, nothing since

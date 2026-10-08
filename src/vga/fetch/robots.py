@@ -19,8 +19,11 @@ The decisions follow RFC 9309 and the findings of the store qualification:
 - A block while fetching robots.txt (403, 429, challenge page) is a block like any other: the
   store goes into cooldown. Fetching robots.txt follows the same client rules as every request.
 
-Verdicts are cached per host: 24 hours for a parsed file, ``store_cooldown_s`` for "unreachable"
-(so a failing robots.txt is not asked for again on every search).
+Verdicts are cached per host: 24 hours for a parsed file (or a 404, "no rules"), and only
+``robots_unreadable_retry_s`` (60 s by default) for "unreachable". The short memory keeps a burst
+of searches from hammering a struggling host, yet a timeout on our own side does not switch a store
+off for long; after it, robots.txt is read again before any search is sent. A block (401, 403, 429,
+a challenge page) is not a verdict at all: it starts the store's cooldown (``store_cooldown_s``).
 """
 
 import asyncio
@@ -33,7 +36,14 @@ from vga.fetch.allowlist import check_url
 from vga.fetch.blocking import looks_like_html
 from vga.fetch.client import PoliteClient
 from vga.fetch.deadline import waiting_in_queue
-from vga.fetch.errors import BlockedError, CooldownError, FetchError, RobotsDeniedError
+from vga.fetch.errors import (
+    ROBOTS_UNREADABLE_DETAIL,
+    BlockedError,
+    CooldownError,
+    FetchError,
+    RobotsDeniedError,
+    RobotsUnreadableError,
+)
 from vga.log import get_logger
 from vga.models import StoreConfig
 
@@ -76,7 +86,7 @@ class RobotsChecker:
         host = check_url(url, store.allowed_hosts)
         verdict = await self._verdict(host, store)
         if verdict.rules is None:
-            raise RobotsDeniedError(detail=f"{verdict.reason} ({host})")
+            raise RobotsUnreadableError(detail=f"{verdict.reason} ({host})")
         if not verdict.rules.can_fetch(url, self._user_agent):
             log.info(
                 "robots.txt disallows the URL; skipped",
@@ -88,9 +98,9 @@ class RobotsChecker:
         """Read the robots.txt of ``url``'s host now and remember the verdict, so the first search
         does not have to. It is the very fetch ``ensure_allowed`` would make, through the same
         client (rate limits, platform queue, cooldowns), and the verdict is cached the same way,
-        including "unreadable means disallowed". It never raises for a robots.txt that cannot be
-        read; a block (HTTP 429 and the rest) starts its cooldown as it always does and is
-        logged."""
+        including "unreadable means disallowed" (for a short while only). It never raises for a
+        robots.txt that cannot be read; a block (HTTP 429 and the rest) starts its cooldown as it
+        always does and is logged."""
         host = check_url(url, store.allowed_hosts)
         try:
             await self._verdict(host, store)
@@ -154,7 +164,7 @@ class RobotsChecker:
         except (BlockedError, CooldownError):
             raise  # a block (the client started the cooldown) or a store still cooling: not cached
         except FetchError as exc:
-            return self._unusable(host, f"robots.txt could not be read ({exc.code})")
+            return self._unusable(host, f"{ROBOTS_UNREADABLE_DETAIL} ({exc.code})")
 
         if 400 <= response.status < 500:  # RFC 9309: no robots.txt means everything is allowed
             log.info(
@@ -163,9 +173,10 @@ class RobotsChecker:
             )
             return self._parsed(host, Protego.parse(""))
         if not response.ok:
-            return self._unusable(host, f"robots.txt answered HTTP {response.status}")
+            return self._unusable(host, f"{ROBOTS_UNREADABLE_DETAIL} (HTTP {response.status})")
         if looks_like_html(response.body, response.content_type):
-            return self._unusable(host, "an HTML page was served instead of robots.txt")
+            html = f"{ROBOTS_UNREADABLE_DETAIL} (an HTML page was served instead)"
+            return self._unusable(host, html)
 
         text = response.text
         if MALFORMED_RULE.search(text):
@@ -191,9 +202,9 @@ class RobotsChecker:
         return verdict
 
     def _unusable(self, host: str, reason: str) -> _Verdict:
-        """Remember that robots.txt cannot be used: everything is disallowed until the cooldown
-        period ends, with no request made in between."""
-        ttl = float(self._client.settings.store_cooldown_s)
+        """Remember that robots.txt cannot be used: everything is disallowed, with no request made
+        in between, but only for ``robots_unreadable_retry_s``. Then it is read again."""
+        ttl = float(self._client.settings.robots_unreadable_retry_s)
         verdict = _Verdict(None, reason, self._client.clock.monotonic() + ttl)
         self._cache[host] = verdict
         log.warning(

@@ -132,13 +132,19 @@ class SearchPipeline:
     # ------------------------------------------------------------------------------------
 
     async def warm_up(self) -> bool:
-        """Get ready for the first search: load the image model and read the stores' robots.txt
-        files, both now, side by side, so the first search waits for neither. ``True`` when image
-        scoring is ready (or the ranker needs no loading), ``False`` when it is unavailable. The
-        robots.txt reading cannot make this raise or change its answer: a file that cannot be read
-        is handled as it is in a search."""
-        ready, _ = await asyncio.gather(self._load_image_ranker(), self._read_robots())
-        return ready
+        """Get ready for the first search: read the stores' robots.txt files, then load the image
+        model, so the first search waits for neither. ``True`` when image scoring is ready (or the
+        ranker needs no loading), ``False`` when it is unavailable. The robots.txt reading cannot
+        make this raise or change its answer: a file that cannot be read is handled as it is in a
+        search.
+
+        One after the other, robots.txt first, on purpose. The model load is heavy work that holds
+        up everything else in the process for seconds at a time, and a robots.txt request that is
+        in flight meanwhile runs out of its 6 seconds through no fault of the store (seen on the
+        real page: six of thirteen stores). Reading the files first costs a few seconds of
+        start-up (the platform queue lets two requests a second through) and nothing else."""
+        await self._read_robots()
+        return await self._load_image_ranker()
 
     async def _load_image_ranker(self) -> bool:
         warm = getattr(self._image_ranker, "warm_up", None)
@@ -638,7 +644,7 @@ class SearchPipeline:
                 },
             )
             name = names.get(report.store_id, report.store_id)
-            warning = messages.store_warning(name, report.status)
+            warning = messages.store_warning(name, report.status, report.reason)
             if warning is not None:
                 state.warn(warning)
         if not state.timed_out:  # at the deadline, the deadline warning explains the gaps

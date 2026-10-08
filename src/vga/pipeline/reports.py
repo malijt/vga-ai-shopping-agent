@@ -97,7 +97,9 @@ def _report_for(store: StoreConfig, result: StoreResult | None) -> StoreReport:
         )
     if result.status is StoreStatus.OK:
         return StoreReport.from_result(result)
-    return StoreReport.from_result(result, reason=messages.store_reason(result.status))
+    return StoreReport.from_result(
+        result, reason=messages.store_reason(result.status, result.detail)
+    )
 
 
 def summarise(active: Sequence[StoreConfig], runs: Sequence[ItemRun]) -> StoreSummary:

@@ -247,7 +247,7 @@ async def test_warm_up_asks_the_searcher_that_has_one_to_read_its_robots_files(
     assert searcher.warmed == 1
 
 
-async def test_warm_up_loads_the_model_and_reads_robots_side_by_side(stores: list) -> None:
+async def test_warm_up_reads_robots_first_and_only_then_loads_the_model(stores: list) -> None:
     order: list[str] = []
 
     class Slow(FakeImageRanker):
@@ -267,7 +267,8 @@ async def test_warm_up_loads_the_model_and_reads_robots_side_by_side(stores: lis
 
     assert await pipeline.warm_up() is True
 
-    assert order == ["model starts", "robots start", "robots read", "model ready"]
+    # Not side by side: a model load holds the process up and would starve a robots.txt read.
+    assert order == ["robots start", "robots read", "model starts", "model ready"]
 
 
 async def test_a_searcher_that_fails_to_warm_up_does_not_fail_or_change_the_answer(

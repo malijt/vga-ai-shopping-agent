@@ -38,7 +38,7 @@ from tests.fetch.conftest import (
 )
 from tests.pipeline.conftest import PipelineMaker
 from tests.pipeline.world import CDN_HOST, CDN_PREFIX, Site, StoreWorld, generated_body
-from vga.interfaces import Understander
+from vga.interfaces import ImageRanker, Understander
 from vga.models import (
     InputType,
     ItemIntent,
@@ -232,6 +232,7 @@ class GuardPipelines:
         self,
         *,
         understander: Understander | None = None,
+        image_ranker: ImageRanker | None = None,
         stores: Sequence[StoreConfig] | None = None,
         thumbnails: bool = False,
         engine_settings: Settings | None = None,
@@ -239,6 +240,7 @@ class GuardPipelines:
         self._world.seal()
         return self._maker(
             understander=understander,
+            image_ranker=image_ranker,
             stores=stores,
             thumbnails=thumbnails,
             engine_settings=engine_settings,
