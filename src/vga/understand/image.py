@@ -35,8 +35,9 @@ UNREADABLE_PHOTO_MESSAGE = (
 )
 
 
-def prepare_image(data: bytes) -> bytes:
-    """Return the photo as a metadata-free JPEG whose long edge is at most ``MAX_EDGE_PX``.
+def prepare_image(data: bytes, max_edge: int = MAX_EDGE_PX) -> bytes:
+    """Return the photo as a metadata-free JPEG whose long edge is at most ``max_edge`` pixels
+    (``MAX_EDGE_PX`` unless a smaller picture is wanted, such as the page's preview).
 
     Raises ``InvalidInputError`` (plain message, no image data) when the bytes are not a readable
     image.
@@ -50,7 +51,7 @@ def prepare_image(data: bytes) -> bytes:
                     detail=f"photo has {width * height} pixels, the limit is {MAX_SOURCE_PIXELS}",
                 )
             # JPEGs can be decoded at a fraction of their size: much less memory for a big photo.
-            source.draft("RGB", (MAX_EDGE_PX, MAX_EDGE_PX))
+            source.draft("RGB", (max_edge, max_edge))
             upright = ImageOps.exif_transpose(source)  # apply the rotation BEFORE dropping EXIF
             flat = _flatten_to_rgb(upright)
     except InvalidInputError:
@@ -62,7 +63,7 @@ def prepare_image(data: bytes) -> bytes:
             UNREADABLE_PHOTO_MESSAGE, detail=f"cannot decode photo: {type(exc).__name__}"
         ) from exc
 
-    flat.thumbnail((MAX_EDGE_PX, MAX_EDGE_PX), Image.Resampling.LANCZOS)
+    flat.thumbnail((max_edge, max_edge), Image.Resampling.LANCZOS)
     # Draw the pixels into a new image, which carries none of the source's ``info``. Saving ``flat``
     # itself is not enough: Pillow's JPEG writer falls back on ``image.info`` for a comment when
     # none is passed, so a JPEG comment (or a PNG text chunk named "comment") went to OpenAI with

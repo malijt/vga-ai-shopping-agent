@@ -66,7 +66,10 @@ file as the always-on summary and open the matching doc when you need full depth
 1. Every result links to the **original store's product page**, and only to a host on that store's `allowed_hosts`.
 2. Respect robots.txt. No login-walled pages. No CAPTCHA solving. About 1 request/s per store, and at most 2 requests/s in total to all stores on one storefront platform (every store today is on Shopify, which throttles a client across all its shops). A store that blocks an honest client is **dropped, never bypassed**, and is not contacted again during its cooldown.
 3. Never guess body size from a photo.
-4. Never keep an uploaded photo after the request: not on disk, not in logs, not in the cache.
+4. Never keep an uploaded photo after the request: not on disk, not in logs, not in the cache. One
+   exception (decided by the user 2026-10-08, ADR 0005 update): a small preview (longest side 512
+   pixels, no EXIF) stays in the page's session memory, so the shopper sees the reference photo
+   with the results until the page is refreshed or a new search starts.
 5. Only components with commercial-friendly licences (run the licence audit after adding a dependency).
 6. This is a demo. Store terms of use must be checked before any real users.
 7. Never send price words ("cheap", "budget") to a store search; they are filters only.

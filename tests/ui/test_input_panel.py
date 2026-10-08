@@ -13,6 +13,7 @@ from app.components.input_panel import (
     message_too_large,
     sniff_image_kind,
 )
+from app.copy import NOTE_PHOTO
 from tests.factories import make_image_bytes
 from tests.ui.conftest import InstallPipeline
 from tests.ui.helpers import PHOTO, SEARCH_BUTTON, TEXT_BOX, search
@@ -128,8 +129,17 @@ class TestPhotoChecks:
     def test_the_photo_notice_is_next_to_the_uploader(self, at: AppTest) -> None:
         at.run()
 
-        notice = "Your photo is sent to OpenAI for analysis and is not stored by us."
-        assert notice in [markdown.value for markdown in at.markdown]
+        assert NOTE_PHOTO in [markdown.value for markdown in at.markdown]
+
+    def test_the_photo_notice_says_where_the_photo_goes_and_how_long_a_copy_stays(self) -> None:
+        # Owner's decision 2026-10-08: a small copy stays on the page. The old sentence ("is not
+        # stored by us") would now be untrue, so the notice says what stays, for how long, and
+        # that nothing is saved.
+        assert "sent to OpenAI" in NOTE_PHOTO
+        assert "small copy stays on this page" in NOTE_PHOTO
+        assert "refresh the page or start a new search" in NOTE_PHOTO
+        assert "do not save your photo" in NOTE_PHOTO
+        assert "not stored by us" not in NOTE_PHOTO
 
     @pytest.mark.parametrize(
         ("filename", "data", "mime"),

@@ -4,8 +4,9 @@ Run from the repository root:  ``uv run streamlit run app/main.py``  (it needs `
 add ``VGA_UI_FIXTURE=1`` instead to see the page with sample results, with no key and no network).
 
 Page order, top to bottom: title and trust notes, anything that stops a search from working, the
-input panel, any error, what the AI detected (chips), the search itself while it runs, then the
-results or the first-screen help.
+input panel, any error, what the AI saw in the photo (only after a search that used one), the
+search details (stores searched and skipped, timings and AI use), what the AI detected (chips), the
+search itself while it runs, then the results or the first-screen help.
 """
 # ruff: noqa: E402  (the repository root is put on sys.path before the app imports below)
 
@@ -28,6 +29,7 @@ from app.components.gender_question import render_gender_question
 from app.components.groups import render_groups
 from app.components.input_panel import render_input_panel
 from app.components.run_details import render_run_details
+from app.components.search_summary import render_search_summary
 from app.components.sidebar import render_sidebar
 from app.components.status import render_error, render_notes, render_setup_problem
 from app.copy import APP_TITLE, NOTE_AI, NOTE_DEMO
@@ -77,6 +79,9 @@ def render_page() -> None:
 
     response = state.get_response()
     if response is not None:
+        if state.results_used_photo():
+            render_search_summary(response.understood, state.photo_preview())
+        render_run_details(response)
         render_chips(response.understood, disabled=searching)
 
     flow.run_pending_search(inputs, settings_override)
@@ -86,12 +91,10 @@ def render_page() -> None:
     elif response.result_count == 0:
         render_no_results(response)
         render_notes(response.warnings)
-        render_run_details(response)
     else:
         render_gender_question(response, disabled=searching)
         render_notes(response.warnings)
         render_groups(response, base_currency=settings.base_currency)
-        render_run_details(response)
 
 
 def main() -> None:

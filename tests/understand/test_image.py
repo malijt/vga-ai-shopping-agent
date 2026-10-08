@@ -133,6 +133,31 @@ def test_long_edge_is_at_most_the_cap_and_the_shape_is_kept(size: tuple[int, int
     assert width / height == pytest.approx(size[0] / size[1], abs=0.01)
 
 
+@pytest.mark.parametrize("size", [(3000, 1500), (1500, 3000)])
+def test_a_smaller_cap_can_be_asked_for_and_is_kept(size: tuple[int, int]) -> None:
+    # The page's preview uses the same preparation with a cap of 512 pixels.
+    out = prepare_image(make_image_bytes("PNG", size), max_edge=512)
+
+    width, height = _open(out).size
+    assert max(width, height) == 512
+    assert width / height == pytest.approx(size[0] / size[1], abs=0.01)
+
+
+def test_a_smaller_cap_still_drops_the_metadata() -> None:
+    out = prepare_image(_jpeg_with_exif((2000, 1000)), max_edge=512)
+
+    image = _open(out)
+    assert max(image.size) == 512
+    assert dict(image.getexif()) == {}
+    assert b"SecretPhone" not in out
+
+
+def test_without_a_cap_the_photo_is_still_prepared_for_openai_at_the_usual_size() -> None:
+    out = prepare_image(make_image_bytes("PNG", (3000, 1500)))
+
+    assert max(_open(out).size) == MAX_EDGE_PX
+
+
 def test_a_small_photo_is_not_enlarged() -> None:
     out = prepare_image(make_image_bytes("PNG", (300, 200)))
 

@@ -55,3 +55,54 @@ The decision stands and is now built and audited. The text above is kept as writ
   turned back into a picture. What Streamlit keeps of an upload on a running page. The page's wording
   ("is not stored by us") says nothing about OpenAI's side and should be reworded once the retention
   question is decided (`docs/privacy.md`).
+
+## Update (2026-10-08, the owner's decision): a small preview stays on the page
+
+After using the page with a photo search, the owner asked that the reference photo stay visible with
+the results until the page is refreshed or a new search starts. This changes BRD Rule 4 for one
+thing. The text above is kept as written.
+
+**What changed.** Option 1 above, "keep the photo in the session", was rejected. It is now adopted
+for a **small preview only**, never for the upload:
+
+- When a new search that used a photo finishes, the page draws the photo again from its pixels and
+  keeps only that in the session (`app/photo_preview.py`, `app/state.py`). It is at most 512 pixels
+  on the long side and a new JPEG: transparency is flattened onto white, and no EXIF, GPS position,
+  colour profile, XMP or comment goes with it. It reuses the step that prepares the photo for OpenAI
+  (`prepare_image`, now with an optional `max_edge`; the default and so the picture sent to OpenAI
+  are unchanged).
+- It is drawn in the block "What the AI saw in your photo", at a fixed small width, with a visible
+  caption and a text alternative of its own.
+- It stays through a search again (chips, the answer to "Who is this for?", the price-range mix). It
+  is replaced when a new search with a photo finishes, removed when a new search without a photo
+  finishes, removed when the page drops the results after an error, and gone on a refresh because
+  the session is new. A search that fails changes nothing.
+- If the photo cannot be drawn again, the search still succeeds, no preview is kept (an earlier one
+  is removed too) and one warning is logged with the request number and the kind of error, never any
+  part of the image.
+- The page's two photo sentences now say so: "A small copy stays on this page until you refresh the
+  page or start a new search", and that nothing is saved.
+
+**What did not change.**
+
+- The uploaded file is still released after its search (the uploader's key is rotated). The page
+  holds no copy of the upload. A test checks the session for the uploaded bytes and for pieces of
+  them.
+- The pipeline, the response, the logs, the caches and the debug dump never hold the photo or the
+  preview. Nothing is written to disk. Nothing is sent to OpenAI, a store or any other service: the
+  preview is only shown to the shopper in their own browser.
+- A search again still works from the stored embedding, never from the photo or the preview.
+- The embedding rules, the lifetimes above and the OpenAI side are as before.
+
+**Consequences.**
+
+- The preview may show a person, a face or a child. It sits in the process's memory (and in
+  Streamlit's in-memory picture store while it is drawn) for as long as the session shows it, and in
+  the shopper's browser. The legal review that was already needed before real users (UAE PDPL, GDPR)
+  now covers it too, and a hosted version would need a time limit and a fresh look
+  (`docs/privacy.md`, "The preview that stays on the page").
+- "The photo lives for one request" is no longer the whole truth, so the notice was reworded. The
+  OpenAI-side wording is still open (zero data retention).
+- Not verified: when Streamlit's in-memory store lets go of the picture after the page stops showing
+  it (read from its source, not run on a live page).
+- Checked by `tests/ui/test_photo_lifetime.py` and `tests/ui/test_photo_preview.py`.
