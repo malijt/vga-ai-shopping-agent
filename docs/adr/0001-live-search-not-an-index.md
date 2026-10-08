@@ -29,3 +29,29 @@ Search each enabled store's own search page live, once per request (2-3 keyword 
 - The 30 second budget covers the live requests. An outfit photo needs about 4 times the search pages (R13), handled with limits and a global deadline that returns partial results.
 - Price ranges can only be computed from the candidates found for this search, not from a market-wide catalogue (ADR 0004).
 - **Revisit** with a sitemap-lite index only if live search proves too slow or fragile after the demo (plan section 10).
+
+## Update (2026-10-08): what the build changed
+
+The decision stands. Several details of it changed. The text above is kept as it was written.
+
+- **Keyword variants.** The Decision says 2-3 variants per store. A search now sends each store one
+  variant per garment, and a second only to a store whose first returned fewer than 5 usable
+  products. Never a third. Reason: all thirteen stores sit on one platform, and a burst of searches
+  was refused (ADR 0010).
+- **Parallel, but paced.** Stores are still searched in parallel. But every request to the stores of
+  one platform now goes through one queue of 2 requests a second, on top of 1 a second per store.
+  Asking all thirteen stores costs about 6 to 6.5 seconds of store time, not about 2 (CHANGELOG,
+  2026-10-08).
+- **Measured, not estimated.** Real searches took 5 to 10 seconds for text, about 19 seconds for a
+  product photo on a warm app and about 9 seconds for an outfit photo. A cold four-garment outfit
+  can reach the 30-second limit and returns what arrived (ADR 0013).
+- **The store gate.** The gate of at least 4 working stores failed on 2026-10-07: no large GCC
+  retailer can be read by an honest client. It passed after a Shopify discovery pass. The demo now
+  searches thirteen Shopify storefronts. The limit rose from 6 to 10 to 13 on the user's decision
+  (plan A25 and A28).
+- **Padded results.** Store search pads its answers with unrelated items, as the Consequences
+  predicted. Besides the minimum match score, a store file can now say which categories and genders
+  the store sells, and the store is not asked for others (ADR 0007).
+- **Revisit.** The condition has not been tested: the acceptance run is not finished. Phases 17 to 19
+  (agent endpoints, store APIs, a category and sitemap index) are planned and none has started.
+  Phase 19 would reverse this decision for stores that disallow search, and starts with its own ADR.

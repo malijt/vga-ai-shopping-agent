@@ -34,3 +34,19 @@ The user named eight Kuwaiti designer brands to add. Four can be read by an hone
 - The AED figure is approximate. The rate drifts (the dinar is pegged to an undisclosed basket), so it must be refreshed before any real use; the configuration says so.
 - A shopper who buys pays the store's own price in dinar; the AED figure is a guide, and the page labels it "about".
 - A store in pounds or dollars is not carried until a rate for it is added on purpose (Heba Shaikh, in GBP, is held in reserve for that reason).
+
+## Update (2026-10-08): what the build changed
+
+The decision is built as written. The text above is kept. Three things were added or learned.
+
+- **Where the AED figure lives.** The price-range shaper writes it onto the shown product as
+  `ScoredProduct.base_price`, and only when the product's currency is not AED. The page and the
+  command line convert nothing. The page adds one sentence above the results saying that ranges and
+  the budget go by the AED figure. A range holding a converted product has its span widened to whole
+  AED, so a header does not claim cents from an approximate rate.
+- **A price trap in one dinar store.** Hamsa's search price is the cheapest variant, which was a
+  scarf's on half its abayas. Those records are dropped, not corrected (ADR 0012).
+- **Still to do before real use.** The rate is a fixed approximation from 2026-10-07. It drifts and
+  must be refreshed by hand, with its source and date, before anyone relies on it.
+- **Still true.** The three dinar stores are enabled (Bazza Alzouman, Hamsa, Manal Smaoui). Heba
+  Shaikh (GBP) is still in reserve and needs a rate before it can be added.

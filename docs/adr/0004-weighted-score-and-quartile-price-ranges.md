@@ -40,3 +40,27 @@ Range borders:
 - The score is easy to explain and to test, but the weights may prove unstable across queries. **Revisit** with rank fusion only if weight tuning proves unstable across queries (plan section 10).
 - Quartiles are relative to this search's candidates, not the whole market (risk R12). On a small or single-store pool they are not very meaningful, which is why the real span, the `few_options` flag and the `relative_range` flag are shown.
 - The PRD's open question 4 (quartiles versus fixed AED bands, and whether the even mix is the right default) is answered here only as the default; fixed bands remain possible if the business asks.
+
+## Update (2026-10-08): what the build changed
+
+The decision stands. The text above is kept as written.
+
+- **Thin ranges borrow from the next range only.** The Decision says "fill gaps from the nearest
+  range". The code and plan assumption A21 are stricter: a range borrows only from the range
+  directly below or directly above (the cheaper one tried first), and never from two steps away.
+  Otherwise it shows fewer results. Reason: each header shows its real price span, and a 1,600 AED
+  item must not make a "Budget" list.
+- **Ranges are in AED.** Prices, borders, spans, the budget and the over-budget flag are all worked
+  out in the base currency (ADR 0006). A range holding a converted price has its span widened to
+  whole AED.
+- **Not-compared products.** Only the best 40 candidates get an image score. A product that was not
+  compared is totalled with the average image score of those that were, so being compared is not a
+  penalty. Without this the image signal worked as one.
+- **The weights are still the first defaults** (text 0.5, image 0.3, price 0.2). The plan tunes them
+  against a recorded acceptance run (16.3.1). The first recorded run was throttled and is not a
+  result, so no tuning has happened.
+- **Known weak spots, not fixed.** When a thin range borrows from its neighbour, the two spans can
+  overlap ("Premium 380-915", "Luxury 549-2,650"). An abaya search fills Budget with other dresses,
+  because no store sells an abaya under about AED 600. Both are recorded in `CHANGELOG.md`.
+- **`relative_range`** is flagged on Luxury unless one of the stores searched for that garment has
+  `tier_hint: luxury`. Three enabled stores have it: Bazza Alzouman, Maison Arabelle and Maison D'Vie.

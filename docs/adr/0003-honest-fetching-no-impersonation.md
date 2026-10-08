@@ -33,3 +33,32 @@ Store access is the biggest risk (plan R1). Checked from the build machine on 20
 - Fewer stores will work than were shortlisted. The plan sets a gate of at least 4 working stores (target 5) including at least 1 luxury-leaning, because the cap of 6 results per store means 3 stores can give at most 18 results, below the 20 required (R2). If the gate fails, the decision goes back to the user; the answer is never to bypass.
 - The fetch engine stays small and auditable, and its guards (block policy, request budget, host and link safety) are tested against the real engine in Phase 14.
 - Every store's terms of use still need checking before any real users (BRD Rule 6, R9). Fixtures and recordings of real store responses are kept trimmed in a private repository (R10).
+
+## Update (2026-10-08): what the build changed
+
+The decision stands and was tested harder than expected. The text above is kept as written.
+
+- **Rates.** Besides 1 request a second per store, every store on one platform shares a queue of
+  2 requests a second (ADR 0010). The first acceptance run showed why: all thirteen stores answered
+  HTTP 429 within 11 milliseconds of each other. Thumbnails: at most 40 per search, at most 10 per
+  store, 5 a second per image host.
+- **Keyword variants.** "2-3 keyword variants already give redundancy" no longer holds. One variant,
+  and a second only for a thin answer (ADR 0010).
+- **What counts as a block.** A 401, 403 or 429, a redirect to a login page, or a bot-challenge page.
+  A 429 from a store's own site also stops every store on the platform, drops the requests still
+  queued, and obeys a `Retry-After` (capped at 24 hours). The cooldown starts only after a block. A
+  store that only errors or times out is skipped for that search and asked again on the next one.
+- **Redirects.** A redirect to another registered domain stops the request. The robots.txt of a
+  redirect's target is read before the redirect is followed, for search pages and thumbnails.
+- **robots.txt.** Read for every store when the app starts. An unreadable file means "everything
+  disallowed" and is remembered for the cooldown period, not for a day. A `Crawl-delay` can only slow
+  the store down. Thumbnails pass the same check as search pages.
+- **No cookies, no proxies.** The client rejects every cookie and ignores proxy settings in the
+  environment. The settings refuse a User-Agent that looks like a browser.
+- **Addresses.** An IP address in any notation, a local host name, a port other than 443 and
+  credentials in a URL are refused. A listed host name whose DNS record points at a private address
+  is not caught (noted in `src/vga/fetch/allowlist.py`).
+- **Qualification outcome.** Of 34 sites checked on 2026-10-07, 3 were readable. After the Shopify
+  discovery pass, thirteen Shopify storefronts are enabled. Nothing was bypassed to get there.
+- **Still open.** No store's terms of use have been reviewed (`docs/store-notes/SUMMARY.md`). Whether
+  2 requests a second is under Shopify's allowance is not known.
