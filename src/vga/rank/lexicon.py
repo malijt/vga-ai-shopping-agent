@@ -76,8 +76,21 @@ _SYNONYMS: dict[str, str] = {
     "jean": "jeans",
     "bootie": "boot",
     "windbreaker": "jacket",
+    # The men's Gulf robe has a name per country and a shopper expects any of them: thobe (Saudi,
+    # Qatari), dishdasha (Kuwaiti, Omani, Iraqi), kandura (Emirati), plus their spellings. Not
+    # folded in: jubba (an outer robe whose cut and wearer vary by country), daraa, and kaftan or
+    # jalabiya (different garments to a Gulf shopper).
+    "thawb": "thobe",
+    "thoub": "thobe",
+    "dishdasha": "thobe",
+    "dishdashah": "thobe",
+    "dishdash": "thobe",
+    "kandura": "thobe",
+    "kandora": "thobe",
+    "kandoura": "thobe",
 }
-"""Words that mean the same thing in a title, folded to one spelling before overlap is counted."""
+"""Words that mean the same thing in a title, folded to one spelling before overlap is counted.
+A key is the singular form of the word (``canon`` looks it up after ``singular``)."""
 
 
 def canon(token: str) -> str:
@@ -317,20 +330,27 @@ CATEGORY_WORDS: dict[Category, frozenset[str]] = {
     Category.DRESSES: _with_plurals(
         # dresses and gowns
         "dress", "gown",
-        # Gulf and North African one-piece garments
+        # Gulf and North African one-piece garments. "Dara'a" is "daraa" once ``tokenize`` has
+        # dropped the apostrophe.
         "kaftan", "kaftaan", "caftan", "abaya", "jalabiya", "jalabiyah", "jellabiya",
-        "djellaba", "jilbab", "kandura", "thobe",
+        "djellaba", "jilbab", "daraa", "burqa", "burka", "burkha",
+        # the men's Gulf robe under its regional names and spellings (see ``_SYNONYMS``)
+        "thobe", "thawb", "thoub", "dishdasha", "dishdashah", "dishdash", "kandura", "kandora",
+        "kandoura", "jubba", "jubbah",
         # South Asian garments and sets
         "kurta", "kurti", "kameez", "lehenga", "anarkali", "sharara", "gharara",
     ),
 }  # fmt: skip
 """Title words that name a garment in one of the five categories. Dresses and ethnic wear is the
-fifth (BRD, 2026-10-08): dresses, gowns, kaftans, abayas, jalabiyas, kurtas and similar one-piece
-or ethnic garments. Words that are ambiguous in retail use are left out on purpose (cardigan,
-gilet, vest, kimono, overshirt, corset, suit, maxi, saree): a product with only those words has no
-inferred category, so it is kept rather than dropped. "Suit" is the clearest case: a South Asian
-suit at Nishat Linen UAE and a men's suit at Sacoor Brothers UAE, with nothing in the title to
-tell them apart."""
+fifth (BRD, 2026-10-08): dresses, gowns, kaftans, abayas, jalabiyas, daraas, burqas, jilbabs,
+kurtas and similar one-piece or ethnic garments, and the men's robe sold as a thobe, dishdasha,
+kandura or jubba, with their common spellings. Words that are ambiguous in retail use are left out
+on purpose (cardigan, gilet, vest, kimono, overshirt, corset, suit, maxi, saree): a product with
+only those words has no inferred category, so it is kept rather than dropped. "Suit" is the
+clearest case: a South Asian suit at Nishat Linen UAE and a men's suit at Sacoor Brothers UAE,
+with nothing in the title to tell them apart. Two groups wait for the project owner to decide and
+are left out as well: khimar (a garment or a head covering) and shalwar, salwar and sherwal
+(trousers on their own, or half of a set)."""
 
 OUT_OF_SCOPE_WORDS: frozenset[str] = _with_plurals(
     # one-piece garments the BRD does not cover: "similar" to a dress means a dress-like garment,
@@ -344,7 +364,9 @@ OUT_OF_SCOPE_WORDS: frozenset[str] = _with_plurals(
     "earring", "bracelet", "bangle", "ring", "brooch", "anklet", "charm", "watch", "tie",
     "necktie", "bowtie", "cufflink", "lanyard", "keyring", "keychain", "umbrella",
     # head coverings sold next to abayas, kurtas and kandouras
-    "sheila", "shayla", "hijab", "niqab", "dupatta", "turban", "ghutra", "shemagh",
+    # ("shaila" and the taqiyah cap are Shadow's, Kuwait: "Special Chiffon Crystalized Shaila")
+    "sheila", "shayla", "shaila", "hijab", "niqab", "dupatta", "turban", "ghutra", "shemagh",
+    "taqiyah",
     # hosiery and underwear
     "sock", "stocking", "bra", "bralette", "knicker", "thong",
     # care products that search pads in ("black boots" finds boot polish)
@@ -432,16 +454,18 @@ GENDER_WORDS: frozenset[str] = (
 
 
 CHILDREN_WORDS: frozenset[str] = _with_plurals(
-    "boy", "girl", "kid", "baby", "toddler", "infant", "junior"
+    "boy", "girl", "kid", "baby", "toddler", "infant", "junior", "youth", "newborn"
 )
-"""Title words that mark a children's product ("Boys Crew Neck T-shirt")."""
+"""Title words that mark a children's product ("Boys Crew Neck T-shirt"). "Youth" and "newborn"
+come from Al Jazeera Clothing (Kuwait): "Youth Summer Dishdasha by Al Jazeera with Elegant Fit",
+"Newborn White Dishdasha by Al Jazeera"."""
 
 _BABY_FORMS = frozenset({"baby", "babies"})
 
 
 def is_childrens_title(title: str) -> bool:
-    """Whether the title marks a children's product: boys, girls, kids, baby, toddler, infant or
-    junior (each also in its plural).
+    """Whether the title marks a children's product: boys, girls, kids, baby, toddler, infant,
+    junior, youth or newborn (each also in its plural).
 
     Whole words only, so "boyfriend" and "kidskin" do not count. "Baby" is skipped where it is a
     shade or a style and not a child: before a colour word ("Baby Blue", "Baby Pink") and in "Baby

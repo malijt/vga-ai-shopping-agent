@@ -374,6 +374,51 @@ def test_words_that_only_look_like_a_childrens_marker_do_not_drop_an_adult_produ
     assert result.keep
 
 
+THOBE_FOR_MEN = make_item_intent(
+    category=Category.DRESSES,
+    gender=Gender.MEN,
+    gender_source=GenderSource.EXPLICIT,
+    search_keywords=["white thobe"],
+)
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Boys' Bright White Summer Dishdasha by Al Jazeera",
+        "Kids' Linen Dishdasha by Al Jazeera",
+        "Youth Summer Dishdasha by Al Jazeera with Elegant Fit",
+        "Newborn White Dishdasha by Al Jazeera",
+        "White Emirati Kandora-Babies",
+    ],
+)
+def test_a_childrens_robe_is_dropped_for_an_explicit_mens_thobe_request(title: str) -> None:
+    """Al Jazeera Clothing (Kuwait) and a UAE thobe store sell the same robe in children's sizes."""
+    result = apply_hard_filters(THOBE_FOR_MEN, product(title))
+
+    assert not result.keep
+    assert result.reason is DropReason.CHILDRENS_ITEM
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Men's Summer Dishdasha by Al Jazeera",
+        "Men's Elegant Winter Dishdasha by Al Jazeera",
+        "White Kuwaiti Dishdasha-Mens",
+        "Khaki Green Emirati Kandora - Men",
+        "Mens Qatari Thobe 3 Pcs Set",
+    ],
+)
+def test_a_mens_robe_is_kept_and_labelled_dresses_for_an_explicit_mens_thobe_request(
+    title: str,
+) -> None:
+    result = apply_hard_filters(THOBE_FOR_MEN, product(title))
+
+    assert result.keep
+    assert result.category is Category.DRESSES
+
+
 # --------------------------------------------------------------------------------------------
 # Stock
 # --------------------------------------------------------------------------------------------
