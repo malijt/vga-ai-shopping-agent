@@ -120,6 +120,8 @@ def drop_response() -> None:
     clear_chip_state()
     reopen_gender_question()
     forget_gender_choices()
+    # The note says the photo was used for the results on the page; there are none any more.
+    set_photo_released(False)
 
 
 def gender_question_dismissed() -> bool:
