@@ -130,6 +130,19 @@ def budget_shown(at: AppTest) -> float | None:
     return shown_number(at, chip_budget(at))
 
 
+def gender_notes(at: AppTest) -> list[str | None]:
+    """The line under each item's chips that says where its gender stands, in item order
+    (``None`` for an item whose box says nothing: no gender was found, not even a guess)."""
+    boxes = {getattr(node, "key", None): node for node in at.get("container")}
+    notes: list[str | None] = []
+    for index in range(chip_count(at)):
+        lines = [
+            m.value for m in boxes[f"chips_item_{index}"].markdown if m.value.startswith("Gender:")
+        ]
+        notes.append(lines[0] if lines else None)
+    return notes
+
+
 def holds_bytes(value: object, needle: bytes, _seen: set[int] | None = None) -> bool:
     """Whether ``needle`` (a photo) is anywhere inside ``value``: as bytes, inside an uploaded
     file, or in any attribute, item or field, however deep. Pydantic fields that are excluded from

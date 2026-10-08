@@ -36,6 +36,7 @@ _PHOTO_GENERATION = "photo_generation"
 _PHOTO_RELEASED = "photo_released"
 _GENDER_DISMISSED = "gender_question_dismissed"
 _CHIPS_GENERATION = "chips_generation"
+_GENDER_CHOSEN = "gender_chosen_on_page"
 
 
 @dataclass(frozen=True)
@@ -118,6 +119,7 @@ def drop_response() -> None:
     st.session_state[_RESPONSE] = None
     clear_chip_state()
     reopen_gender_question()
+    forget_gender_choices()
 
 
 def gender_question_dismissed() -> bool:
@@ -134,6 +136,28 @@ def reopen_gender_question() -> None:
     """A new search from the boxes asks again, if it needs to. A search again from the chips or
     the price-range mix does not: it is the same search."""
     st.session_state[_GENDER_DISMISSED] = False
+
+
+def gender_chosen_on_page(index: int) -> bool:
+    """True when the shopper chose this garment's gender on the page for the search that is
+    shown: with the question "Who is this for?" or in its chip. A gender the model reads out of
+    the request is explicit too, and the response cannot tell the two apart (both are
+    ``explicit``), so the page keeps the choices it saw."""
+    chosen = st.session_state.get(_GENDER_CHOSEN)
+    return isinstance(chosen, frozenset) and index in chosen
+
+
+def note_gender_choices(chips: ChipEdits) -> None:
+    """Remember the genders the shopper chose with this search again. Called once the search
+    succeeded, so a search that failed leaves the page as it was."""
+    chosen = {edit.index for edit in chips.items if edit.gender is not None}
+    earlier = st.session_state.get(_GENDER_CHOSEN)
+    st.session_state[_GENDER_CHOSEN] = frozenset(chosen | (earlier or frozenset()))
+
+
+def forget_gender_choices() -> None:
+    """A new search brings its own genders: nothing was chosen on the page for it yet."""
+    st.session_state[_GENDER_CHOSEN] = frozenset()
 
 
 def last_error() -> str | None:

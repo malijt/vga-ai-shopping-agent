@@ -29,6 +29,8 @@ from app.copy import (
     CATEGORY_LABELS,
     GENDER_LABELS,
     GENDER_NOT_SET,
+    GENDER_NOTE_CHOSEN_ON_PAGE,
+    GENDER_NOTE_FROM_REQUEST,
 )
 from vga.models import (
     DEFAULT_CURRENCY,
@@ -198,13 +200,16 @@ def _render_item(index: int, item: ItemIntent, *, multiple: bool, disabled: bool
                 key=gender_key(index),
                 disabled=disabled,
             )
-        _render_gender_status(item, _gender_from_option(chosen))
+        _render_gender_status(
+            item, _gender_from_option(chosen), chosen_on_page=state.gender_chosen_on_page(index)
+        )
 
 
-def _render_gender_status(item: ItemIntent, chosen: Gender | None) -> None:
-    """Say in words whether the gender is being used (never by colour alone)."""
+def _render_gender_status(item: ItemIntent, chosen: Gender | None, *, chosen_on_page: bool) -> None:
+    """Say in words whether the gender is being used, and where it came from (never by colour
+    alone). ``chosen_on_page`` is true when the shopper chose it with the question or a chip."""
     if item.gender_source is GenderSource.EXPLICIT:
-        st.markdown("Gender: taken from your request.")
+        st.markdown(GENDER_NOTE_CHOSEN_ON_PAGE if chosen_on_page else GENDER_NOTE_FROM_REQUEST)
     elif item.gender is not None and chosen is None:
         guess = GENDER_LABELS[item.gender]
         st.markdown(
