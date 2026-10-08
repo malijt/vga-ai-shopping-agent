@@ -132,12 +132,30 @@ class SearchPipeline:
     # ------------------------------------------------------------------------------------
 
     async def warm_up(self) -> bool:
-        """Load the image model now so the first search does not wait for it. ``True`` when image
-        scoring is ready (or the ranker needs no loading), ``False`` when it is unavailable."""
+        """Get ready for the first search: load the image model and read the stores' robots.txt
+        files, both now, side by side, so the first search waits for neither. ``True`` when image
+        scoring is ready (or the ranker needs no loading), ``False`` when it is unavailable. The
+        robots.txt reading cannot make this raise or change its answer: a file that cannot be read
+        is handled as it is in a search."""
+        ready, _ = await asyncio.gather(self._load_image_ranker(), self._read_robots())
+        return ready
+
+    async def _load_image_ranker(self) -> bool:
         warm = getattr(self._image_ranker, "warm_up", None)
         if warm is None:
             return True
         return bool(await warm())
+
+    async def _read_robots(self) -> None:
+        """Ask the searcher, if it can, to read the robots.txt of the stores it will search (the
+        real store engine does; a fake or a recording has nothing to read)."""
+        warm = getattr(self._searcher, "warm_up", None)
+        if warm is None:
+            return
+        try:
+            await warm()
+        except Exception:  # start-up must not fail because of a store
+            log.warning("reading the stores' robots.txt at start-up failed", exc_info=True)
 
     async def aclose(self) -> None:
         """Release what the parts hold open (the store engine's HTTP client)."""

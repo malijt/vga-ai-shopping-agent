@@ -530,3 +530,68 @@ async def test_a_shorter_crawl_delay_on_the_other_host_does_not_undo_a_longer_on
     await client.fetch("https://www.shop.example/page", store, client.page_policy(store))
 
     assert clock.monotonic() - first >= 5.0 - 1e-9
+
+
+# --------------------------------------------------------------------------------------------
+# preload: reading robots.txt at start-up
+# --------------------------------------------------------------------------------------------
+
+
+async def test_preload_reads_robots_txt_once_and_a_later_check_asks_for_nothing(
+    robots: RobotsChecker, router: respx.MockRouter
+) -> None:
+    route = router.get("https://shop.example/robots.txt").mock(
+        return_value=text_response("User-agent: *\nDisallow: /cart\n")
+    )
+    store = store_for("shop.example")
+
+    await robots.preload("https://shop.example/search?q=dress", store)
+    await robots.ensure_allowed("https://shop.example/search?q=blazer", store)
+
+    assert route.call_count == 1
+    assert await robots.can_fetch("https://shop.example/cart", store) is False  # it was parsed
+
+
+async def test_preload_caches_what_a_search_would_have_cached_for_an_unreadable_file(
+    robots: RobotsChecker, router: respx.MockRouter
+) -> None:
+    route = router.get("https://shop.example/robots.txt").mock(return_value=httpx.Response(503))
+    store = store_for("shop.example")
+
+    await robots.preload("https://shop.example/search?q=dress", store)  # does not raise
+
+    with pytest.raises(RobotsDeniedError):  # unreadable means disallowed, as in any search
+        await robots.ensure_allowed("https://shop.example/search?q=blazer", store)
+    assert route.call_count == 1  # and it is not asked for again
+
+
+async def test_preload_does_not_raise_for_a_connection_failure(
+    robots: RobotsChecker, router: respx.MockRouter
+) -> None:
+    router.get("https://shop.example/robots.txt").mock(side_effect=httpx.ConnectError("down"))
+
+    await robots.preload("https://shop.example/search?q=dress", store_for("shop.example"))
+
+
+async def test_preload_of_a_blocked_robots_txt_starts_the_cooldown_and_does_not_raise(
+    robots: RobotsChecker, client: PoliteClient, router: respx.MockRouter
+) -> None:
+    router.get("https://shop.example/robots.txt").mock(return_value=httpx.Response(403))
+    store = store_for("shop.example")
+
+    await robots.preload("https://shop.example/search?q=dress", store)
+
+    assert client.cooldown_remaining(store) > 0
+    with pytest.raises(CooldownError):
+        await robots.ensure_allowed("https://shop.example/search?q=blazer", store)
+
+
+async def test_preload_refuses_a_host_that_is_not_the_stores(
+    robots: RobotsChecker, router: respx.MockRouter
+) -> None:
+    from vga.fetch.errors import UrlNotAllowedError
+
+    with pytest.raises(UrlNotAllowedError):
+        await robots.preload("https://elsewhere.example/search?q=dress", store_for("shop.example"))
+
+    assert router.calls.call_count == 0

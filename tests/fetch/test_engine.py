@@ -1318,3 +1318,98 @@ def test_two_separate_event_loops_can_use_one_engine(
     second = asyncio.run(engine.search(item("b two"), [shopify_store()]))
 
     assert [first[0].status, second[0].status] == [StoreStatus.OK, StoreStatus.OK]
+
+
+# --------------------------------------------------------------------------------------------
+# warm_up: robots.txt at start-up
+# --------------------------------------------------------------------------------------------
+
+
+def two_stores_in_a_registry(settings: Settings, clock: FakeClock) -> StoreSearchEngine:
+    return StoreSearchEngine(
+        settings, StoreRegistry([shopify_store(), club_l_store()]), clock=clock
+    )
+
+
+async def test_warm_up_reads_the_robots_txt_of_every_active_store_through_the_queue(
+    settings: Settings, clock: FakeClock, router: respx.MockRouter
+) -> None:
+    engine = two_stores_in_a_registry(settings, clock)
+    arrivals: list[float] = []
+
+    def stamped(_request: httpx.Request) -> httpx.Response:
+        arrivals.append(clock.monotonic())
+        return text_response(ALLOW_ALL_ROBOTS)
+
+    router.get(OHPOLLY_ROBOTS_URL).mock(side_effect=stamped)
+    router.get(CLUBL_ROBOTS_URL).mock(side_effect=stamped)
+    started = clock.monotonic()
+
+    await engine.warm_up()
+
+    assert [t - started for t in arrivals] == pytest.approx([0.0, 0.5])  # one platform, one queue
+    assert router.calls.call_count == 2  # nothing but the two robots.txt files
+
+
+async def test_a_search_after_warm_up_does_not_ask_for_robots_txt_again(
+    settings: Settings, clock: FakeClock, router: respx.MockRouter
+) -> None:
+    engine = two_stores_in_a_registry(settings, clock)
+    robots_route, search_route = mock_oh_polly(router)
+    await engine.warm_up()
+    clock.advance(30)
+
+    [result] = await engine.search(item("black blazer"), [shopify_store()])
+
+    assert result.status is StoreStatus.OK
+    assert robots_route.call_count == 1  # the one at start-up
+    assert search_route.call_count == 1
+
+
+async def test_warm_up_skips_the_stores_a_search_would_skip(
+    settings: Settings, clock: FakeClock, router: respx.MockRouter
+) -> None:
+    kuwait = shopify_store(
+        id="kw",
+        country="KW",
+        search_url_template="https://kw.example/s?q={query}",
+        allowed_hosts=["kw.example", "cdn.shopify.com"],
+    )
+    off = shopify_store(
+        id="off",
+        enabled=False,
+        search_url_template="https://off.example/s?q={query}",
+        allowed_hosts=["off.example", "cdn.shopify.com"],
+    )
+    engine = StoreSearchEngine(settings, StoreRegistry([shopify_store(), kuwait, off]), clock=clock)
+    robots_route = router.get(OHPOLLY_ROBOTS_URL).mock(return_value=text_response(ALLOW_ALL_ROBOTS))
+
+    await engine.warm_up()  # Kuwait is not among the countries searched, "off" is not enabled
+
+    assert robots_route.call_count == 1
+    assert router.calls.call_count == 1
+
+
+async def test_warm_up_never_raises_whatever_a_store_does(
+    settings: Settings, clock: FakeClock, router: respx.MockRouter
+) -> None:
+    engine = two_stores_in_a_registry(settings, clock)
+    router.get(OHPOLLY_ROBOTS_URL).mock(side_effect=RuntimeError("bug in a handler"))
+    club_l = router.get(CLUBL_ROBOTS_URL).mock(return_value=text_response(ALLOW_ALL_ROBOTS))
+
+    await engine.warm_up()
+
+    assert club_l.call_count == 1  # the other store was still read
+    # The failure was not turned into a verdict: a search meets it as it would have without the
+    # warm-up, and one store's bug still touches no other store.
+    [result] = await engine.search(item("black blazer"), [shopify_store()])
+    assert result.status is StoreStatus.ERROR
+    assert "RuntimeError" in (result.detail or "")
+
+
+async def test_warm_up_with_no_stores_does_nothing(
+    settings: Settings, clock: FakeClock, router: respx.MockRouter
+) -> None:
+    await StoreSearchEngine(settings, StoreRegistry([]), clock=clock).warm_up()
+
+    assert router.calls.call_count == 0

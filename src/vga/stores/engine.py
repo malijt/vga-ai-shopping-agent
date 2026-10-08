@@ -56,6 +56,10 @@ _FAILURE_PRIORITY = (
 )
 _KEEP_GOING = frozenset({StoreStatus.OK, StoreStatus.EMPTY})
 
+WARM_UP_QUERY = "dress"
+"""Any ordinary word: start-up only needs the host of a store's search address, to read the
+robots.txt there."""
+
 MAX_VARIANTS = 2
 """The most keyword variants any store is sent for one garment. The first is the most specific; a
 second is a fallback for a store that had little to show for the first. Never a third: every extra
@@ -90,6 +94,24 @@ class StoreSearchEngine:
 
     async def aclose(self) -> None:
         await self.client.aclose()
+
+    async def warm_up(self) -> None:
+        """Read robots.txt of every store that will be searched, now, so the first search does not
+        pay for thirteen extra requests. The requests go through the same client as any other (one
+        queue per platform, cooldowns, no retry) and the verdicts are cached for the day, as ever.
+        Never raises: a robots.txt that cannot be read is handled as it is during a search
+        (everything disallowed until the cooldown ends), and one store's failure, or a bug in its
+        code path, touches no other store."""
+        stores = [
+            store for store in self.registry.active(self.settings) if not self._skip_reason(store)
+        ]
+        await asyncio.gather(*(self._warm_store(store) for store in stores))
+
+    async def _warm_store(self, store: StoreConfig) -> None:
+        try:
+            await self.robots.preload(build_search_url(store, WARM_UP_QUERY), store)
+        except Exception:  # complete isolation, as in a search
+            log.exception("robots.txt warm-up crashed", extra={"store": store.id})
 
     # ------------------------------------------------------------------------------------
     # StoreSearcher

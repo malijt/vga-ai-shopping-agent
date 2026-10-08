@@ -30,6 +30,12 @@ class SpySearcher:
         )
         return await self._inner.search(item, stores)
 
+    async def warm_up(self) -> None:
+        """Forward the start-up reading of robots.txt, as the pipeline asks for it of its searcher
+        (a searcher with nothing to read has no ``warm_up``, and this one is only built around the
+        real engine, which has)."""
+        await self._inner.warm_up()  # type: ignore[attr-defined]
+
 
 @dataclass(frozen=True)
 class RankerCall:

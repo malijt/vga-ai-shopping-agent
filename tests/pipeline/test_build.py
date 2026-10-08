@@ -218,3 +218,80 @@ async def test_the_factory_builds_a_pipeline_from_the_three_boundaries(
     assert isinstance(pipeline, Pipeline)
     assert response.result_count > 0
     assert {r.store_id for r in response.stores_used} == {"alpha", "beta"}
+
+
+# --------------------------------------------------------------------------------------------
+# warm_up also reads the stores' robots.txt
+# --------------------------------------------------------------------------------------------
+
+
+class _Warmable(_NoSearch):
+    def __init__(self, error: Exception | None = None) -> None:
+        self.warmed = 0
+        self._error = error
+
+    async def warm_up(self) -> None:
+        self.warmed += 1
+        if self._error is not None:
+            raise self._error
+
+
+async def test_warm_up_asks_the_searcher_that_has_one_to_read_its_robots_files(
+    stores: list,
+) -> None:
+    searcher = _Warmable()
+    pipeline = SearchPipeline(FakeUnderstander(), searcher, FakeImageRanker(), stores)
+
+    assert await pipeline.warm_up() is True
+
+    assert searcher.warmed == 1
+
+
+async def test_warm_up_loads_the_model_and_reads_robots_side_by_side(stores: list) -> None:
+    order: list[str] = []
+
+    class Slow(FakeImageRanker):
+        async def warm_up(self) -> bool:
+            order.append("model starts")
+            await asyncio.sleep(0.01)
+            order.append("model ready")
+            return True
+
+    class Reading(_Warmable):
+        async def warm_up(self) -> None:
+            order.append("robots start")
+            await asyncio.sleep(0)
+            order.append("robots read")
+
+    pipeline = SearchPipeline(FakeUnderstander(), Reading(), Slow(), stores)
+
+    assert await pipeline.warm_up() is True
+
+    assert order == ["model starts", "robots start", "robots read", "model ready"]
+
+
+async def test_a_searcher_that_fails_to_warm_up_does_not_fail_or_change_the_answer(
+    stores: list,
+) -> None:
+    class Missing(FakeImageRanker):
+        async def warm_up(self) -> bool:
+            return False
+
+    pipeline = SearchPipeline(
+        FakeUnderstander(), _Warmable(RuntimeError("bug in a store")), Missing(), stores
+    )
+
+    assert await pipeline.warm_up() is False  # the model's answer, untouched
+
+
+async def test_warming_up_the_real_pipeline_reads_each_stores_robots_txt_and_nothing_else(
+    world: StoreWorld, stores: list, clock: FakeClock, settings: Settings
+) -> None:
+    pipeline = build_pipeline(settings, registry=StoreRegistry(stores), clock=clock)
+
+    assert await pipeline.warm_up() is True
+
+    assert world.all_requests() == 2
+    assert world.search_requests() == 0
+    assert world.requests_to("alpha.example") == world.requests_to("beta.example") == 1
+    await pipeline.aclose()
