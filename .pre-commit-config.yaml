@@ -1,7 +1,19 @@
-# Local gate before every commit: lint and secret scan. Install once with:
+# Local gates. Install the commit gate (lint and secret scan) once with:
 #   uv run pre-commit install
 # CI runs the same checks (.github/workflows/ci.yml), so skipping this locally only delays the
 # failure, it does not avoid it.
+#
+# Opt-in second gate, the complete test suite before every push. CI runs only the critical tests
+# to save minutes, so the complete suite is yours to run before a push or a merge. Install it once
+# with this one command (it is not installed for you):
+#   uv run pre-commit install --hook-type pre-push
+# It takes about 4 minutes. Skip it for one push with `git push --no-verify`, or run it by hand
+# with `uv run pytest`. Remove it with `uv run pre-commit uninstall --hook-type pre-push`.
+
+# The commit hooks stay commit hooks: without this, a hook that names no stage would also run
+# at pre-push once the pre-push gate is installed.
+default_stages: [pre-commit]
+
 repos:
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.30.1
@@ -18,3 +30,12 @@ repos:
         language: system
         types_or: [python, pyi]
         require_serial: true
+
+      # The complete suite (about 8,450 tests, no network, no key; live tests stay skipped).
+      - id: pytest-complete
+        name: complete test suite (about 4 minutes)
+        entry: uv run pytest
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
