@@ -30,14 +30,19 @@ from tests.ui.scenario import (
     APPLY,
     DRESSES,
     KAFTAN_PHOTO,
+    MEN,
     NOT_SET,
     WOMEN,
     answer,
     asks_who_it_is_for,
+    costs,
+    response_of,
     search_with_photo,
 )
 from vga.models import (
     Category,
+    Gender,
+    GenderSource,
 )
 
 
@@ -135,3 +140,61 @@ class TestANewSearchStartsWithCleanChips:
             "black",
             "white",
         ]
+
+
+class TestTheGenderAnswerAfterASecondSearchCostsNothing:
+    def test_it_makes_no_store_request_and_no_openai_call(
+        self, after_the_abayas_were_answered: AppTest, live: LiveSearch
+    ) -> None:
+        at = after_the_abayas_were_answered
+        search_with_photo(at, KAFTAN_PHOTO)
+        before = costs(live)
+
+        answer(at, WOMEN)
+
+        assert costs(live) == before
+
+    def test_it_changes_the_gender_of_every_item_and_nothing_else(
+        self, after_the_abayas_were_answered: AppTest
+    ) -> None:
+        at = after_the_abayas_were_answered
+        search_with_photo(at, KAFTAN_PHOTO)
+        detected = response_of(at).understood.items
+
+        answer(at, WOMEN)
+
+        answered = response_of(at).understood.items
+        assert [(i.category, i.colour, i.style, i.material) for i in answered] == [
+            (i.category, i.colour, i.style, i.material) for i in detected
+        ]
+        assert [(i.gender, i.gender_source) for i in answered] == [
+            (Gender.WOMEN, GenderSource.EXPLICIT)
+        ] * 4
+        assert response_of(at).understood.budget is None
+
+    def test_it_costs_nothing_for_men_either(
+        self, after_the_abayas_were_answered: AppTest, live: LiveSearch
+    ) -> None:
+        at = after_the_abayas_were_answered
+        search_with_photo(at, KAFTAN_PHOTO)
+        before = costs(live)
+
+        answer(at, MEN)
+
+        assert costs(live) == before
+        assert {i.gender for i in response_of(at).understood.items} == {Gender.MEN}
+
+    def test_a_search_again_right_after_the_second_search_changes_only_what_was_edited(
+        self, after_the_abayas_were_answered: AppTest, live: LiveSearch
+    ) -> None:
+        at = after_the_abayas_were_answered
+        search_with_photo(at, KAFTAN_PHOTO)
+        asked_before = len(live.store_searches)
+
+        chip_colour(at, 2).set_value("green").run()
+        at.button(key=APPLY).click().run()
+
+        assert not at.exception
+        assert [colour for _, colour, _ in chips_shown(at)] == ["red", "blue", "green", "white"]
+        assert len(live.store_searches) - asked_before == 2  # the one changed item, two stores
+        assert live.openai_calls == 2  # the two photos, nothing for the search again
