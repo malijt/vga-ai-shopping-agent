@@ -62,6 +62,7 @@ class TestShippedSettingsFile:
         assert settings.outfit_results_per_garment == 12
         assert settings.store_cache_ttl_s == 600
         assert settings.store_cooldown_s == 900
+        assert settings.robots_unreadable_retry_s == 60
         assert settings.rps_images_per_host == 5
 
     def test_openai_model_is_pinned_to_gpt_6_luna(self) -> None:

@@ -78,6 +78,21 @@ class RobotsDeniedError(StoreBlockedError, FetchError):
     store_status = StoreStatus.ROBOTS_DENIED
 
 
+ROBOTS_UNREADABLE_DETAIL = "robots.txt could not be read"
+"""Every ``RobotsUnreadableError.detail`` starts with this, and ``StoreResult.detail`` carries it
+on to the pipeline, which uses it to tell the shopper "we could not check" instead of "the store
+asks not to be searched". One constant, so the two sides cannot drift apart."""
+
+
+class RobotsUnreadableError(RobotsDeniedError):
+    """robots.txt could not be read (a timeout, a network error, a 5xx, an HTML page): the store
+    said nothing, so nothing is sent to it, but it did not ask us to stay away. Still the
+    ``robots_denied`` status; the difference is in the words the shopper reads."""
+
+    default_code = "robots_unreadable"
+    default_message = "We could not check whether this store allows searching, so we skipped it."
+
+
 class CooldownError(StoreBlockedError, FetchError):
     """The store blocked us recently and is still in cooldown: no request is made."""
 

@@ -21,6 +21,7 @@ rps_images_per_host: 5          # Thumbnail downloads per second per image host 
 second_variant_below: 5         # A store gets a garment's second keyword variant only if its first returned fewer usable products than this. Never a third. 0 = never a second.
 store_cache_ttl_s: 600          # Identical store searches within this time are served from memory.
 store_cooldown_s: 900           # A store that blocked us is not contacted again for this long (errors and timeouts do not start it, ADR 0003).
+robots_unreadable_retry_s: 60   # A robots.txt that could not be read (timeout, network error, 5xx) means no search is sent, but only for this long; then it is read again. A real answer is kept for a day; a block starts store_cooldown_s.
 max_response_bytes: 2000000     # Size cap for one HTTP response; a store can override it (max_response_bytes in its file).
 
 # --- Currencies ---------------------------------------------------------------------------
