@@ -17,8 +17,9 @@ slots are given out in the order they are asked for, so every store gets its fir
 before any store gets its second. A request that cannot go yet because its own store is not ready
 does not hold the shared queue up: later requests may take the free slots before it.
 
-``Cooldowns`` remembers which stores or image hosts turned an honest request away and for
-how long they must be left alone.
+``Cooldowns`` remembers which stores, platforms or image hosts turned an honest request away and for
+how long they must be left alone. When a whole platform is told to stop, the requests still waiting
+in its queue are taken out of it unsent (``RateLimiter.drop_waiting``).
 """
 
 import asyncio
@@ -41,6 +42,11 @@ class SharedLimit:
     rps: float
 
 
+class RequestDropped(Exception):
+    """A request waiting for its slot was taken out of the queue unsent (its platform was told to
+    stop). Not a ``VgaError``: the client turns it into a ``CooldownError``."""
+
+
 class RateLimiter:
     """Spaces requests under one key, and under the shared limit the key belongs to, if any.
 
@@ -57,6 +63,8 @@ class RateLimiter:
         self._min_interval: dict[str, dict[str, float]] = {}
         self._taken: dict[str, list[float]] = {}
         """Send times already handed out under each shared limit, in ascending order."""
+        self._waiting: dict[str, set[asyncio.Future[None]]] = {}
+        """Per shared limit: one future for every request waiting for its slot, to drop it."""
 
     def set_min_interval(self, key: str, seconds: float, *, source: str | None = None) -> None:
         """Never go faster than one request per ``seconds`` under ``key`` (a robots.txt
@@ -72,7 +80,9 @@ class RateLimiter:
     async def acquire(self, key: str, rps: float) -> float:
         """Wait for this key's next free slot. Returns how long the caller waited, in seconds.
 
-        A request cancelled while it waits (the deadline) gives its slot back.
+        A request cancelled while it waits (the deadline) gives its slot back. Raises
+        ``RequestDropped`` if it is taken out of the queue while it waits (``drop_waiting``); its
+        slot is then given back too.
         """
         interval = max([1.0 / rps, *self._min_interval.get(key, {}).values()])
         now = self._clock.monotonic()
@@ -86,7 +96,7 @@ class RateLimiter:
         wait = slot - now
         try:
             if wait > 0:
-                await self._wait(wait)
+                await self._wait(shared, wait)
             elif shared is not None:
                 # Let the other tasks that are ready ask for their slots before this one asks for
                 # its next: every store's first request is then queued before any store's second.
@@ -95,6 +105,17 @@ class RateLimiter:
             self._give_back(key, shared, slot, before, interval)
             raise
         return max(wait, 0.0)
+
+    def drop_waiting(self, name: str) -> int:
+        """Take every request that is waiting under the shared limit ``name`` out of the queue, so
+        that it does not go. Returns how many were waiting. Each one's ``acquire`` raises
+        ``RequestDropped``."""
+        dropped = 0
+        for future in list(self._waiting.get(name, ())):
+            if not future.done():
+                future.set_result(None)
+                dropped += 1
+        return dropped
 
     # ------------------------------------------------------------------------------------
 
@@ -114,9 +135,25 @@ class RateLimiter:
         bisect.insort(taken, slot)
         return slot
 
-    async def _wait(self, seconds: float) -> None:
+    async def _wait(self, shared: SharedLimit | None, seconds: float) -> None:
         with waiting_in_queue():  # a request waiting for its slot has not started
-            await self._clock.sleep(seconds)
+            if shared is None:
+                await self._clock.sleep(seconds)
+            elif await self._sleep_unless_dropped(shared, seconds):
+                raise RequestDropped
+
+    async def _sleep_unless_dropped(self, shared: SharedLimit, seconds: float) -> bool:
+        """Sleep for ``seconds``; return True if the request was dropped from the queue first."""
+        dropped: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+        waiting = self._waiting.setdefault(shared.name, set())
+        waiting.add(dropped)
+        sleeper = asyncio.ensure_future(self._clock.sleep(seconds))
+        try:
+            await asyncio.wait({sleeper, dropped}, return_when=asyncio.FIRST_COMPLETED)
+        finally:
+            waiting.discard(dropped)
+            sleeper.cancel()
+        return dropped.done()
 
     def _give_back(
         self,
@@ -127,7 +164,7 @@ class RateLimiter:
         interval: float,
     ) -> None:
         """Release the slot of a request that will never be sent, so it does not delay the next
-        search (a request cancelled at the deadline)."""
+        search (a request cancelled at the deadline, or dropped from a stopped platform)."""
         if shared is not None:
             taken = self._taken.get(shared.name, [])
             index = bisect.bisect_left(taken, slot)
@@ -141,18 +178,28 @@ class RateLimiter:
 
 
 class Cooldowns:
-    """Keys (a store id, or ``host:<name>`` for an image host) that must not be contacted until
-    their cooldown ends."""
+    """Keys (a store id, ``platform:<name>`` for a whole platform, or ``host:<name>`` for an image
+    host) that must not be contacted until their cooldown ends."""
 
     def __init__(self, clock: Clock, duration_s: float) -> None:
         self._clock = clock
         self._duration_s = duration_s
         self._until: dict[str, float] = {}
 
-    def start(self, key: str) -> None:
-        """Begin a cooldown for ``key``. A zero duration (the setting allows it) disables it."""
-        if self._duration_s > 0:
-            self._until[key] = self._clock.monotonic() + self._duration_s
+    def start(self, key: str, *, at_least_s: float = 0.0) -> float:
+        """Begin a cooldown for ``key`` and return how long it lasts, in seconds.
+
+        It lasts the configured duration, or ``at_least_s`` if that is longer: a server that says
+        how long to wait (``Retry-After``) is obeyed. A zero configured duration (the setting
+        allows it) disables the cooldown, unless the server asked for a wait. A cooldown that is
+        already running is never shortened.
+        """
+        duration = max(self._duration_s, at_least_s)
+        if duration <= 0:
+            return 0.0
+        until = self._clock.monotonic() + duration
+        self._until[key] = max(self._until.get(key, 0.0), until)
+        return duration
 
     def remaining(self, key: str) -> float:
         """Seconds left in ``key``'s cooldown; ``0.0`` when it is not cooling down."""

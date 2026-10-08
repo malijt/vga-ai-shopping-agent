@@ -7,62 +7,22 @@ the queue its whole platform shares.
 """
 
 import asyncio
-from typing import Any
 
 import httpx
 import pytest
 import respx
 
-from tests.factories import make_settings, make_store_config
+from tests.factories import make_settings
 from tests.fakes import FakeClock
 from tests.fetch.conftest import ALLOW_ALL_ROBOTS, text_response
+from tests.fetch.platforms import FakeShops, get, shopify, store_on
 from vga.fetch import PoliteClient, RobotsChecker, platform_of
-from vga.models import ExtractionConfig, StoreConfig, StrategyConfig
-
-
-def store_on(strategy: str, key: str, **overrides: Any) -> StoreConfig:
-    """A store ``key`` at ``https://<key>.example`` that reads its answers with ``strategy``."""
-    fields: dict[str, Any] = {
-        "id": key,
-        "name": key.title(),
-        "search_url_template": f"https://{key}.example/search?q={{query}}",
-        "allowed_hosts": [f"{key}.example", "cdn.shopify.com"],
-        "extraction": ExtractionConfig(strategies=[StrategyConfig(name=strategy)]),
-    }
-    return make_store_config(**{**fields, **overrides})
-
-
-def shopify(key: str, **overrides: Any) -> StoreConfig:
-    return store_on("shopify", key, **overrides)
-
-
-class FakeShops:
-    """Every ``*.example`` shop and the image CDN answer anything with 200, and note when each
-    request arrived (seconds after the shops were set up, on the fake clock)."""
-
-    def __init__(self, router: respx.MockRouter, clock: FakeClock) -> None:
-        self._clock = clock
-        self._start = clock.monotonic()
-        self.arrivals: list[tuple[str, float]] = []
-        router.get(url__regex=r"https://([a-z0-9-]+\.example|cdn\.shopify\.com)/.*").mock(
-            side_effect=self._answer
-        )
-
-    def _answer(self, request: httpx.Request) -> httpx.Response:
-        self.arrivals.append((str(request.url), self._clock.monotonic() - self._start))
-        return text_response(ALLOW_ALL_ROBOTS)
-
-    def times(self, only: str = "") -> list[float]:
-        return sorted(time for url, time in self.arrivals if only in url)
+from vga.models import ExtractionConfig, StrategyConfig
 
 
 @pytest.fixture
 def shops(router: respx.MockRouter, clock: FakeClock) -> FakeShops:
     return FakeShops(router, clock)
-
-
-async def get(client: PoliteClient, store: StoreConfig, path: str = "/p") -> None:
-    await client.fetch(f"https://{store.id}.example{path}", store, client.page_policy(store))
 
 
 # --------------------------------------------------------------------------------------------

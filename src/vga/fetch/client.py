@@ -15,7 +15,10 @@ One honest ``httpx`` client, and these rules for every request, whatever it is f
   ``vga.fetch.platform``), because a hosted platform counts requests per client, not per shop;
 - a total time limit and a response size limit; a response that grows past the cap is aborted;
 - a 401, 403 or 429, a login redirect or a bot-challenge page means the store is *blocked*: the
-  request is not repeated, and the key it belongs to is put in cooldown (``vga.fetch.ratelimit``);
+  request is not repeated, and the key it belongs to is put in cooldown (``vga.fetch.ratelimit``).
+  A 429 from a store's own site is also the whole platform's answer: every store on the platform
+  goes into cooldown at once, at least as long as the ``Retry-After`` it names, and the requests
+  still queued for the platform are dropped unsent. Any other block is that store's alone;
 - **no retries, ever.** A failed request is reported, not repeated.
 
 The client holds no store knowledge beyond what a ``StoreConfig`` says about hosts, rate and size.
@@ -26,6 +29,7 @@ import http.cookiejar
 import urllib.request
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
+from datetime import UTC, datetime
 from urllib.parse import urljoin, urlsplit
 
 import httpx
@@ -34,8 +38,10 @@ from vga.fetch.allowlist import belongs_to_store_site, check_url, normalise_host
 from vga.fetch.blocking import (
     BLOCKING_STATUSES,
     LOGIN_PATH,
+    RATE_LIMITED_STATUS,
     REDIRECT_STATUSES,
     find_challenge_marker,
+    parse_retry_after,
 )
 from vga.fetch.deadline import run_with_deadline
 from vga.fetch.errors import (
@@ -49,7 +55,7 @@ from vga.fetch.errors import (
     UrlNotAllowedError,
 )
 from vga.fetch.platform import platform_of
-from vga.fetch.ratelimit import Cooldowns, RateLimiter, SharedLimit
+from vga.fetch.ratelimit import Cooldowns, RateLimiter, RequestDropped, SharedLimit
 from vga.interfaces import Clock, SystemClock
 from vga.log import get_logger
 from vga.models import StoreConfig
@@ -116,6 +122,7 @@ class _RawResponse:
     location: str | None
     body: bytes
     charset: str | None
+    retry_after: str | None = None
 
 
 class _RejectAllCookies(http.cookiejar.CookiePolicy):
@@ -155,6 +162,7 @@ class PoliteClient:
         transport: httpx.AsyncBaseTransport | None = None,
         limiter: RateLimiter | None = None,
         cooldowns: Cooldowns | None = None,
+        wall_clock: Callable[[], datetime] | None = None,
     ) -> None:
         self.settings = settings
         self.clock: Clock = clock or SystemClock()
@@ -163,6 +171,8 @@ class PoliteClient:
         are first requested."""
         self.limiter = limiter or RateLimiter(self.clock, group_of=self._platform_limits.get)
         self.cooldowns = cooldowns or Cooldowns(self.clock, settings.store_cooldown_s)
+        self._wall_clock = wall_clock or (lambda: datetime.now(UTC))
+        """The date, for a ``Retry-After`` given as one. Tests pass a fixed one."""
         self._transport = transport
         self._client: httpx.AsyncClient | None = None
         self._client_loop: asyncio.AbstractEventLoop | None = None
@@ -252,27 +262,42 @@ class PoliteClient:
         current = url
         for hop in range(MAX_REDIRECTS + 1):
             host = check_url(current, store.allowed_hosts)
-            self._raise_if_cooling(policy.cooldown_key)
+            contact = self.contact_key(store, host)
+            own_site = contact == store.id  # else an image host, which is not on the platform
+            on_platform = store if own_site else None
+            self._raise_if_cooling(policy.cooldown_key, on_platform)
             if hop > 0 and vet_redirect is not None:
                 await vet_redirect(current, store)
-            contact = self.contact_key(store, host)
-            if contact == store.id:  # the store's own site: it shares its platform's queue
+            if own_site:  # the store's own site shares its platform's queue
                 self._platform_limits[store.id] = SharedLimit(
                     platform_of(store), self.settings.rps_per_platform
                 )
-            await self.limiter.acquire(contact, policy.rps)
+            try:
+                await self.limiter.acquire(contact, policy.rps)
+            except RequestDropped as exc:  # the platform was told to stop while this one queued
+                self._raise_if_cooling(policy.cooldown_key, on_platform)
+                msg = f"dropped from the queue of {platform_of(store)}"
+                raise CooldownError(detail=msg) from exc
             # Another task may have been turned away while this one waited for its slot.
-            self._raise_if_cooling(policy.cooldown_key)
+            self._raise_if_cooling(policy.cooldown_key, on_platform)
             raw = await self._send(current, policy, store.id)
 
             if raw.status in BLOCKING_STATUSES:
-                raise self._blocked(policy, store.id, current, f"HTTP {raw.status}")
+                rate_limited = raw.status == RATE_LIMITED_STATUS and own_site
+                raise self._blocked(
+                    policy,
+                    store,
+                    current,
+                    f"HTTP {raw.status}",
+                    platform_wide=rate_limited,
+                    retry_after=raw.retry_after if rate_limited else None,
+                )
             if raw.status in REDIRECT_STATUSES and raw.location:
-                current = self._next_hop(current, raw.location, first_domain, policy, store.id)
+                current = self._next_hop(current, raw.location, first_domain, policy, store)
                 continue
             marker = find_challenge_marker(raw.body, raw.content_type)
             if marker:
-                raise self._blocked(policy, store.id, current, f"challenge page ({marker!r})")
+                raise self._blocked(policy, store, current, f"challenge page ({marker!r})")
             return FetchResponse(current, raw.status, raw.content_type, raw.body, raw.charset)
         # The last response was yet another redirect: it is not followed.
         raise TooManyRedirectsError(
@@ -280,7 +305,12 @@ class PoliteClient:
         )
 
     def _next_hop(
-        self, current: str, location: str, first_domain: str, policy: FetchPolicy, store_id: str
+        self,
+        current: str,
+        location: str,
+        first_domain: str,
+        policy: FetchPolicy,
+        store: StoreConfig,
     ) -> str:
         """The URL a redirect points at, or an error if following it is not allowed."""
         target = urljoin(current, location)
@@ -291,25 +321,69 @@ class PoliteClient:
         if registered_domain(target_host) != first_domain:
             log.warning(
                 "redirect to another domain not followed",
-                extra={"store": store_id, "from_url": current[:200], "to_host": target_host},
+                extra={"store": store.id, "from_url": current[:200], "to_host": target_host},
             )
             raise CrossDomainRedirectError(
                 detail=f"redirected from {first_domain} to another domain: {target_host}"
             )
         if LOGIN_PATH.search(urlsplit(target).path):
-            raise self._blocked(policy, store_id, target, "login wall (redirect to a login page)")
+            raise self._blocked(policy, store, target, "login wall (redirect to a login page)")
         return target
 
-    def _raise_if_cooling(self, key: str) -> None:
-        remaining = self.cooldowns.remaining(key)
-        if remaining > 0:
-            raise CooldownError(detail=f"{key} is in cooldown for another {remaining:.0f} s")
+    def cooldown_remaining(self, store: StoreConfig) -> float:
+        """Seconds left before ``store``'s own site may be asked again: the longer of its own
+        cooldown and its platform's. ``0.0`` when it may be asked now."""
+        return max(self.cooldowns.remaining(store.id), self.cooldowns.remaining(platform_of(store)))
 
-    def _blocked(self, policy: FetchPolicy, store_id: str, url: str, why: str) -> BlockedError:
-        self.cooldowns.start(policy.cooldown_key)
+    def _raise_if_cooling(self, key: str, store: StoreConfig | None = None) -> None:
+        """Raise ``CooldownError`` if ``key`` is cooling down or, for a request to ``store``'s own
+        site (pass ``store``), if the platform it is on is."""
+        remaining, cooling = self.cooldowns.remaining(key), key
+        if store is not None:
+            platform = platform_of(store)
+            on_platform = self.cooldowns.remaining(platform)
+            if on_platform > remaining:
+                remaining, cooling = on_platform, platform
+        if remaining > 0:
+            raise CooldownError(detail=f"{cooling} is in cooldown for another {remaining:.0f} s")
+
+    def _blocked(
+        self,
+        policy: FetchPolicy,
+        store: StoreConfig,
+        url: str,
+        why: str,
+        *,
+        platform_wide: bool = False,
+        retry_after: str | None = None,
+    ) -> BlockedError:
+        """Start the cooldown a refusal earns and return the error to raise.
+
+        The store (or image host) that refused is always put in cooldown. With ``platform_wide``
+        (an HTTP 429 from a store's own site) every store on its platform is too, and the requests
+        queued for the platform are dropped unsent. A ``Retry-After`` in the answer sets the least
+        time the cooldown lasts.
+        """
+        asked_s = parse_retry_after(retry_after, self._wall_clock()) or 0.0
+        cooldown_s = self.cooldowns.start(policy.cooldown_key, at_least_s=asked_s)
+        extra = {"store": store.id, "url": url[:200], "reason": why, "key": policy.cooldown_key}
+        if not platform_wide:
+            log.warning("store blocked the request; no retry, cooldown started", extra=extra)
+            return BlockedError(detail=f"{why} on {url[:200]}")
+
+        platform = platform_of(store)
+        platform_cooldown_s = self.cooldowns.start(platform, at_least_s=asked_s)
+        dropped = self.limiter.drop_waiting(platform) if platform_cooldown_s > 0 else 0
         log.warning(
-            "store blocked the request; no retry, cooldown started",
-            extra={"store": store_id, "url": url[:200], "reason": why, "key": policy.cooldown_key},
+            "platform answered too many requests; every store on it is paused, no retry",
+            extra={
+                **extra,
+                "platform": platform,
+                "retry_after": (retry_after or "")[:60] or None,
+                "retry_after_s": asked_s or None,
+                "cooldown_s": max(cooldown_s, platform_cooldown_s),
+                "dropped_requests": dropped,
+            },
         )
         return BlockedError(detail=f"{why} on {url[:200]}")
 
@@ -344,7 +418,14 @@ class PoliteClient:
                 content_type = response.headers.get("content-type", "")
                 location = response.headers.get("location")
                 if response.status_code in BLOCKING_STATUSES | REDIRECT_STATUSES:
-                    return _RawResponse(response.status_code, content_type, location, b"", None)
+                    return _RawResponse(
+                        response.status_code,
+                        content_type,
+                        location,
+                        b"",
+                        None,
+                        response.headers.get("retry-after"),
+                    )
                 declared = response.headers.get("content-length", "")
                 if declared.isdigit() and int(declared) > policy.max_bytes:
                     raise ResponseTooLargeError(

@@ -178,7 +178,7 @@ class StoreSearchEngine:
     async def _search_variant(self, store: StoreConfig, variant: str) -> StoreResult:
         """Search one store for one query variant. Always returns a result."""
         started = self.clock.monotonic()
-        remaining = self.client.cooldowns.remaining(store.id)
+        remaining = self.client.cooldown_remaining(store)  # its own, or its platform's
         if remaining > 0:
             log.warning(
                 "store in cooldown; no request made",

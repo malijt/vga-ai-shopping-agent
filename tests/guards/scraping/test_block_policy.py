@@ -2,7 +2,8 @@
 never bypassed, and left alone for its cooldown.
 
 Each test runs the real pipeline and the real store engine against a fake store that answers with a
-403, a 429, a bot-challenge page, a CAPTCHA page, a login redirect or a blocked robots.txt.
+403, a 401, a bot-challenge page, a CAPTCHA page, a login redirect or a blocked robots.txt. (A 429
+is the platform's answer and stops every store on it: see ``test_platform_limit.py``.)
 "Exactly one request" counts the store's search-page requests: robots.txt is fetched first, once,
 by design, so a blocked search page is two requests to the host in all and a blocked robots.txt is
 one.
@@ -32,13 +33,15 @@ from vga.settings import Settings
 
 BLOCKS: dict[str, Reply] = {
     "http_403": reply_status(403),
-    "http_429_with_retry_after": reply_status(429, **{"Retry-After": "1"}),
     "http_401": reply_status(401),
     "cloudflare_challenge_page": reply_html(CHALLENGE_HTML),
     "captcha_page_with_a_503": reply_html(CAPTCHA_HTML, status=503),
     "redirect_to_a_login_page": reply_redirect("/account/login?return_url=%2Fsearch"),
 }
-"""Every way a store says "not you" that the client must not argue with."""
+"""Every way a store says "not you" that the client must not argue with, and that is that store's
+matter alone: the stores beside it carry on. HTTP 429 ("too many requests") is not here: on a
+platform shared by many shops it is the platform's answer, not the shop's, and stops every store on
+the platform, so it has its own guards in ``test_platform_limit.py``."""
 
 JARGON = ("http", "403", "429", "401", "captcha", "challenge", "cloudflare", "login", "robots")
 """Words that mean something to an engineer and nothing to a shopper."""
