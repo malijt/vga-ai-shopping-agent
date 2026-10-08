@@ -199,7 +199,8 @@ async def test_the_libraries_that_carry_the_photo_do_not_log_it_even_at_debug_le
 async def test_when_the_model_is_down_the_typed_words_go_to_the_stores_and_the_photo_does_not(
     run,
 ) -> None:
-    """The shopper is told so ("we searched with your words as typed"). The photo is not used."""
+    """The shopper is told so ("we searched with your words as typed"). The photo goes to no store:
+    it is only compared on this computer, to sort the results."""
     audited = await run(MODEL_DOWN_WITH_TEXT)
 
     queries = audited.rig.world.queries("alpha")

@@ -48,7 +48,8 @@ Details that matter:
 - **The stores get search words, not the photo.** Those words are what the AI wrote after reading
   your photo and text. If OpenAI cannot be reached and you also typed text, the app falls back to
   your own words and tells you so ("we searched with your words as typed"): then what you typed goes
-  to the stores. The photo is not used in that case. **Checked.**
+  to the stores. The photo still goes to no store in that case: it is only compared with the stores'
+  pictures on this computer, to sort the results. **Checked.**
 - **No cookies** are sent to or kept from the stores, and no browser is imitated. Read in
   `src/vga/fetch/client.py`.
 - **Nothing is sent to the people who make Streamlit.** `.streamlit/config.toml` turns their usage
