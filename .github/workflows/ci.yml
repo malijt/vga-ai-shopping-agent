@@ -1,9 +1,27 @@
-# Continuous integration: lint, types, tests, dependency audit and secret scan.
+# Continuous integration: lint, types, the critical tests, dependency audit and secret scan.
 #
 # Three separate jobs so each is its own required status check on `main`:
-#   test        ruff, mypy, pytest (live tests are excluded by the pytest config)
+#   test        ruff, mypy and the CRITICAL test suite (pytest -m critical)
 #   pip-audit   known-vulnerability scan of every locked dependency, including the `ml` group
 #   gitleaks    secret scan of the full git history
+#
+# What CI runs, and what it no longer runs. CI minutes cost money, so CI does not run the complete
+# suite (about 8,450 tests, 3 to 4 minutes). It runs the critical suite: about 140 tests, under a
+# minute, the ones whose failure would mean a broken product rule or a broken demo. They are named
+# in one reviewable list, tests/critical_suite.txt, and tests/foundation/test_critical_suite.py
+# fails if that list rots. `-m critical` replaces the `-m 'not live'` of the pytest config, so that
+# test also fails if a critical test is marked `live`; live tests never run in CI.
+#
+# A green CI therefore does NOT mean the complete suite passes. Run the complete suite on your own
+# machine before a push or a merge:
+#   uv run pytest              the complete suite, about 4 minutes (opt-in pre-push hook:
+#                              see .pre-commit-config.yaml)
+#   uv run pytest -m critical  the same tests CI runs, under a minute
+# or have GitHub run it: Actions > CI > Run workflow, then set "full_suite" to true. That is the
+# only way the complete suite runs here; nothing is scheduled.
+#
+# Each commit is checked once: by the pull request run, or by the push to `main` after a merge.
+# A push to a branch that has an open pull request starts no run of its own.
 #
 # Actions are pinned to full commit SHAs (the comment gives the tag) so a moved tag cannot change
 # what runs. Nothing here needs a secret: live store and OpenAI tests never run in CI.
@@ -12,7 +30,13 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main, develop]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      full_suite:
+        description: "Run the complete test suite (about 4 minutes) instead of the critical one"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -45,7 +69,13 @@ jobs:
         run: uv run ruff check
       - name: Types
         run: uv run mypy src
-      - name: Tests (no network, no live tests)
+      - name: Tests, the critical suite (no network, no live tests)
+        if: ${{ !inputs.full_suite }}
+        run: uv run pytest -m critical
+      # Only a manual run with "full_suite" set to true gets here. The complete suite includes the
+      # critical tests, so that run does not repeat them. The pytest config still skips `live`.
+      - name: Tests, the complete suite (only when asked for by hand)
+        if: ${{ inputs.full_suite }}
         run: uv run pytest
 
   pip-audit:

@@ -162,10 +162,24 @@ The page tells you what is AI-inferred and that the photo is sent to OpenAI. Aft
 ## Tests
 
 ```bash
-uv run pytest                 # the default suite: no network, no key, about 3 minutes
+uv run pytest                 # the complete suite: no network, no key, about 4 minutes
+uv run pytest -m critical     # the critical suite, the one CI runs: about 140 tests, under a minute
 uv run pytest tests/guards    # only the three guard suites (757 tests, about 40 seconds)
 uv run pytest -m live tests/stores/hanayen   # ONE store's live smoke test (real requests)
 ```
+
+**What CI runs, and what it does not.** CI minutes cost money, so CI no longer runs the complete suite (about 8,450 tests). On every pull request, and on every push to `main`, the `test` job runs ruff, mypy and the **critical suite**: the few tests whose failure would mean a broken rule (store access, links and hosts, price words, photo privacy, untrusted text, secrets and errors, a guessed gender) or a broken demo (contracts, understanding, store data, ranking, price ranges, the pipeline, the page, the acceptance harness). A push to a branch that has an open pull request starts no run of its own, so each commit is checked once. **A green CI does not mean the complete suite passes. Run the complete suite on your machine before a push or a merge.** The three commands:
+
+```bash
+uv run pytest -m critical     # 1. what CI runs
+uv run pytest                 # 2. the complete suite, before every push or merge
+# 3. the complete suite on GitHub, when you want CI to do it: Actions > CI > Run workflow,
+#    then set "full_suite" to true (nothing is scheduled)
+```
+
+To have git run the complete suite before each push, install the opt-in hook once with `uv run pre-commit install --hook-type pre-push` (about 4 minutes per push; `git push --no-verify` skips it for one push).
+
+**The critical list.** The critical tests are named in one reviewable file, [`tests/critical_suite.txt`](tests/critical_suite.txt): one pytest node id per line, under fifteen headings that say what each group protects. `tests/conftest.py` gives every test the list names the `critical` marker, so no test file carries a decorator for it. To add a test, find its id (`uv run pytest --collect-only -q tests/path/test_file.py`), add the line under the heading it protects and run `uv run pytest -m critical -q`. Prefer a test that runs the real pipeline to a narrow unit test, and one case of a parametrised table to the whole table. Never list a `live` test. `tests/foundation/test_critical_suite.py` is itself critical and fails when the list rots: an entry that names no test (a renamed test or a changed case id), a critical test that is also marked `live` (`-m critical` replaces the `-m 'not live'` of the default run, so a live one would reach the network), a heading with no test, or a count over its ceiling (150, raised on purpose in that file).
 
 **What the default suite covers.** Many fast unit tests (price ranges and rounding, filters, scores, price parsing, validation, word lists), contract tests that make sure each fake behaves like the real thing, integration tests that run the *real* pipeline, fetch engine, extractors, ranker and price-range shaper with only the three outside boundaries faked (store HTTP, OpenAI, the image model) from `tests/fakes.py`, and Streamlit `AppTest` tests of the page. Each store has an offline test over real recorded answers. Default tests never read your real `.env` or see your credentials: `tests/conftest.py` points the loader away from `.env` and removes every `OPENAI_*` and `VGA_*` variable from the environment for any test not marked `live` (a test that needs one sets it itself). There is no coverage percentage target; the risky logic comes first. A bug fix needs a test that fails without it.
 

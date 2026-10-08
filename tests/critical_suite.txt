@@ -1,0 +1,208 @@
+# The critical suite: the few tests whose failure would mean a broken rule or a broken demo.
+#
+# CI runs only these (`uv run pytest -m critical`, well under a minute). The complete suite
+# (`uv run pytest`, about 4 minutes) is a local job and must pass before a push or a merge.
+# tests/conftest.py reads this file and gives every test it names the `critical` marker; no test
+# file carries a decorator for it.
+#
+# Format: one pytest node id per line. An entry names one case (file::test[case]), a test with all
+# its cases (file::test), a class (file::TestClass) or a whole file. Blank lines and lines that
+# start with # are ignored. Each group below is headed "# [n] ..." with n from 1 to 15; those are
+# the fifteen lines of what "critical" means: 1 to 7 are rules that must never regress (the
+# product rules of CLAUDE.md), 8 to 15 are what makes the demo work. Prefer one test that runs the
+# real pipeline over a narrow unit test, and one case of a parametrised table over the whole table.
+#
+# To add a test: find its id with `uv run pytest --collect-only -q <path>`, add it under the
+# heading it protects, run `uv run pytest -m critical -q`. A test that is not listed here still
+# runs in the complete suite. Never list a test marked `live`. tests/foundation/test_critical_suite.py
+# fails if an entry names no test (a renamed test, a changed case id), if a critical test is also
+# marked live, if a heading has no test or if the count passes its ceiling (raise it on purpose).
+
+# [1] Store access. A path robots.txt disallows is never requested. An unreadable robots.txt means
+# no search. A 403 gets exactly one request, no retry and a cooldown; a 429 the same for the whole
+# platform. Requests to one platform are never closer than the platform limit, and each store is
+# sent at most one a second. Every request carries the honest User-Agent. A store that is not
+# enabled gets no request.
+tests/guards/scraping/test_robots_policy.py::test_a_search_url_that_robots_txt_disallows_is_never_requested[the search path]
+tests/guards/scraping/test_robots_policy.py::test_a_search_url_that_robots_txt_disallows_is_never_requested[a wildcard in the path]
+tests/guards/scraping/test_robots_policy.py::test_a_robots_txt_that_cannot_be_read_means_no_search_is_sent[server_error_500]
+tests/guards/scraping/test_robots_policy.py::test_a_robots_txt_that_cannot_be_read_means_no_search_is_sent[timeout]
+tests/guards/scraping/test_block_policy.py::test_a_store_that_blocks_the_search_gets_exactly_one_search_request[http_403]
+tests/guards/scraping/test_block_policy.py::test_a_second_search_inside_the_cooldown_sends_the_blocked_store_nothing[http_403]
+tests/guards/scraping/test_platform_limit.py::test_a_store_that_answers_429_gets_exactly_one_search_request_and_no_retry
+tests/guards/scraping/test_platform_limit.py::test_one_429_among_thirteen_stores_sends_not_one_more_search_to_any_of_them
+tests/guards/scraping/test_platform_limit.py::test_the_whole_platform_is_left_alone_for_the_cooldown_and_then_asked_again
+tests/guards/scraping/test_request_budget.py::test_requests_to_all_the_stores_of_one_platform_are_never_closer_than_the_platform_rate
+tests/guards/scraping/test_request_budget.py::test_no_store_is_sent_requests_faster_than_one_a_second
+tests/guards/scraping/test_request_budget.py::test_every_request_carries_the_honest_user_agent_and_no_cookie_or_identity
+tests/guards/scraping/test_price_words_and_kill_switch.py::test_a_store_that_is_not_enabled_gets_no_request_at_all
+
+# [2] Links and hosts. A product link is only ever on the store's own site, over https. No request
+# goes to an off-list or private address. A redirect off the list is not followed.
+tests/guards/scraping/test_host_and_link_safety.py::test_every_link_in_the_response_is_https_and_on_its_own_stores_allowed_hosts
+tests/guards/scraping/test_host_and_link_safety.py::test_a_hostile_product_link_in_a_store_response_is_never_requested[another_domain]
+tests/guards/scraping/test_host_and_link_safety.py::test_a_hostile_product_link_in_a_store_response_is_never_requested[private_address]
+tests/guards/scraping/test_host_and_link_safety.py::test_a_hostile_product_link_in_a_store_response_is_never_requested[credentials_naming_our_host_but_going_elsewhere]
+tests/guards/scraping/test_host_and_link_safety.py::test_a_hostile_product_link_in_a_store_response_does_not_reach_the_response[plain_http_on_the_real_host]
+tests/guards/scraping/test_host_and_link_safety.py::test_a_hostile_image_link_in_a_store_response_is_never_requested[image_on_another_domain]
+tests/guards/scraping/test_host_and_link_safety.py::test_a_search_page_that_redirects_to_another_host_is_not_followed[another_domain]
+tests/guards/scraping/test_host_and_link_safety.py::test_a_robots_txt_that_redirects_to_another_domain_is_not_followed_and_no_search_is_sent
+tests/guards/scraping/test_host_and_link_safety.py::test_the_thumbnail_fetcher_makes_no_request_for_an_image_off_the_stores_hosts[a_private_address]
+
+# [3] Price words never reach a store URL (a price word is a filter, never a search term).
+tests/guards/scraping/test_price_words_and_kill_switch.py::test_a_price_phrase_and_a_budget_stay_out_of_the_store_urls
+tests/guards/scraping/test_price_words_and_kill_switch.py::test_an_arabic_price_word_the_model_leaves_in_a_keyword_does_not_reach_the_stores
+
+# [4] Photo privacy. After a request nothing of the photo is in a file, a log, memory or a cache,
+# and the photo sent to OpenAI carries no hidden field. The three canaries prove that the audit
+# can fail: without them a clean result could mean a blind instrument.
+tests/guards/privacy/test_no_retention.py::test_a_request_leaves_no_trace_of_the_photo[photo and text / prompts on, dump on]
+tests/guards/privacy/test_no_retention.py::test_a_request_leaves_no_trace_of_the_photo[outfit / prompts on, dump on]
+tests/guards/privacy/test_no_retention.py::test_a_request_leaves_no_trace_of_the_photo[chip edit after a photo / prompts on, dump on]
+tests/guards/privacy/test_sent_photo.py::test_nothing_but_the_picture_goes_to_openai[JPEG EXIF (camera make, description)]
+tests/guards/privacy/test_sent_photo.py::test_nothing_but_the_picture_goes_to_openai[PNG EXIF, GPS and colour profile]
+tests/guards/privacy/test_sent_photo.py::test_every_call_to_openai_asks_for_nothing_to_be_stored
+tests/guards/privacy/test_caches.py::test_no_store_cache_holds_the_photo
+tests/guards/privacy/test_caches.py::test_the_rerun_cache_holds_no_bytes_and_no_picture_at_all
+tests/guards/privacy/test_canaries.py::test_the_file_check_catches[a shrunk copy]
+tests/guards/privacy/test_canaries.py::test_the_log_check_catches[the whole photo in a message]
+tests/guards/privacy/test_canaries.py::test_the_memory_check_catches[the re-run cache]
+tests/guards/privacy/test_cli.py::test_a_search_prints_no_photo_writes_no_photo_and_leaves_the_photo_file_alone
+
+# [5] Untrusted text. Injected text in the request cannot reach a store URL or invent a category.
+# No store text ever reaches the model. A hostile store title comes out as plain text.
+tests/guards/injection/test_request_injection.py::test_no_store_search_carries_a_link_markup_control_character_or_price_word[e01-adds_the_link_to_the_keywords]
+tests/guards/injection/test_request_injection.py::test_no_store_search_carries_a_link_markup_control_character_or_price_word[e03-adds_bare_domains_to_the_keywords]
+tests/guards/injection/test_request_injection.py::test_no_store_search_carries_a_link_markup_control_character_or_price_word[e04-writes_markup_and_the_delimiter_into_a_keyword]
+tests/guards/injection/test_request_injection.py::test_every_outgoing_request_goes_to_a_host_on_a_stores_allowed_hosts[e01-searches_another_site_instead]
+tests/guards/injection/test_request_injection.py::test_the_understanding_keeps_categories_in_the_allowed_set_and_text_clean[e04-sets_a_foreign_category]
+tests/guards/injection/test_request_injection.py::test_the_shoppers_text_cannot_close_its_block_or_reach_the_system_message[e01]
+tests/guards/scraping/test_host_and_link_safety.py::test_a_search_keyword_cannot_change_which_url_is_requested[an_extra_parameter]
+tests/guards/injection/test_store_content_injection.py::test_the_fake_model_receives_no_store_text_on_the_first_search
+tests/guards/injection/test_store_content_injection.py::test_the_fake_model_receives_no_store_text_after_a_chip_edit_that_searches_again
+tests/guards/injection/test_store_content_injection.py::test_only_the_shoppers_own_photo_is_ever_sent_to_openai_never_a_store_image
+tests/guards/injection/test_store_content_injection.py::test_a_hostile_title_comes_out_as_the_same_inert_text[ZQSCRIPT]
+tests/guards/injection/test_store_content_injection.py::test_a_hostile_title_comes_out_as_the_same_inert_text[ZQMDLINK]
+tests/guards/injection/test_store_content_injection.py::test_the_reason_sentence_holds_no_text_a_store_supplied
+tests/ui/test_untrusted_text.py::TestStoreTextShowsAsTyped::test_a_title_with_html_and_markdown_appears_as_literal_text
+tests/ui/test_untrusted_text.py::TestNothingUntrustedReachesAMarkdownReader::test_no_hostile_text_is_in_any_markdown_element_heading_or_label
+
+# [6] Secrets and errors. The logger hides secrets. A default test cannot see the developer's .env
+# or key. The page shows a plain message and never a stack trace.
+tests/foundation/test_log.py::TestRedaction::test_api_key_in_the_message_is_not_written
+tests/foundation/test_log.py::TestRedaction::test_base64_photo_and_data_urls_are_not_written
+tests/understand/test_logging.py::test_the_api_key_never_appears_in_any_log_output
+tests/foundation/test_environment_isolation.py::test_a_default_test_starts_without_credentials_or_settings_in_its_environment
+tests/foundation/test_environment_isolation.py::test_the_conftest_keeps_a_hostile_dotenv_and_its_key_out_of_the_tests
+tests/ui/test_status_and_errors.py::TestErrorBoundary::test_any_other_exception_shows_the_generic_message_and_none_of_its_text
+tests/ui/test_status_and_errors.py::TestErrorBoundary::test_the_traceback_is_logged_with_the_request_id_not_shown
+tests/pipeline/test_failures.py::test_an_unexpected_crash_in_the_understander_becomes_a_plain_llm_error
+tests/guards/injection/test_request_injection.py::test_a_model_that_obeys_still_leaves_the_shopper_a_plain_error_message[e02-replies_with_the_word_it_was_told_to]
+
+# [7] A guessed gender is not applied until the shopper answers, and the answer costs no store
+# request and no model call.
+tests/pipeline/test_gender.py::test_a_guessed_gender_is_shown_but_not_applied
+tests/guards/injection/test_request_injection.py::test_a_gender_the_shopper_never_stated_is_shown_but_not_applied[e04]
+tests/ui/test_live_search.py::TestAGuessedGenderIsNotAppliedUntilTheShopperPicksIt::test_every_store_is_searched_while_the_guess_is_unconfirmed
+tests/guards/scraping/test_gender_answer.py::test_a_gender_only_rerun_makes_no_request_of_any_kind[women]
+tests/pipeline/test_gender_answer.py::test_the_answer_makes_no_store_request_no_model_call_and_no_thumbnail_fetch[women]
+tests/ui/test_chips_across_searches.py::TestTheGenderAnswerAfterASecondSearchCostsNothing::test_it_makes_no_store_request_and_no_openai_call
+
+# [8] Contracts. The Pipeline contract suite on the real pipeline (only store HTTP, OpenAI and the
+# image model are faked) and the core model validations: https-only product links, a request needs
+# text or a photo, the photo and the embedding never print or serialise, a store's search address
+# must be on its own host, only the five categories exist.
+tests/pipeline/test_contract.py::TestSearchPipelineContract
+tests/foundation/test_models.py::TestProduct::test_urls_must_be_absolute_https_without_credentials_or_whitespace[product_url-http://www.demo-store.example/p/1]
+tests/foundation/test_models.py::TestSearchRequest::test_request_with_neither_text_nor_image_is_rejected
+tests/foundation/test_models.py::TestSearchRequest::test_photo_never_appears_in_repr_or_json
+tests/foundation/test_models.py::TestSearchResponse::test_query_embedding_is_excluded_from_json_and_repr
+tests/foundation/test_models.py::TestStoreConfig::test_template_host_must_be_allowed
+tests/foundation/test_models.py::TestItemIntentAndUnderstandResult::test_category_outside_the_five_is_rejected[accessories]
+
+# [9] Understanding. A valid answer is parsed. One corrective retry, then the raw-text fallback.
+# The kind of request is decided by code, not by the model's label. A budget needs a number the
+# shopper typed. An Arabic request works.
+tests/understand/test_validation.py::test_a_valid_answer_becomes_contract_objects
+tests/understand/test_corrective_retry_and_fallback.py::test_an_invalid_answer_gets_exactly_one_corrective_retry
+tests/understand/test_corrective_retry_and_fallback.py::test_a_second_invalid_answer_ends_in_the_fallback_after_exactly_two_calls
+tests/understand/test_corrective_retry_and_fallback.py::test_a_text_request_falls_back_to_one_item_with_the_cleaned_words
+tests/understand/test_input_type.py::test_validation_ignores_the_models_label_whatever_it_says[black blazer-False-1-text-outfit_photo]
+tests/understand/test_validation.py::test_a_budget_is_dropped_when_the_typed_text_states_no_number[cheap black bomber jacket for men]
+tests/understand/test_validation.py::test_a_budget_is_kept_when_the_typed_text_states_a_number[black blazer under 400 AED-400]
+tests/understand/test_validation.py::test_a_photo_without_text_cannot_state_a_budget
+tests/understand/test_golden.py::test_an_arabic_request_comes_back_with_english_keywords
+tests/understand/test_validation.py::test_arabic_text_can_state_the_gender
+
+# [10] Store data. A Shopify record becomes a product. A dinar price is parsed and the same
+# three-decimal price is refused by an AED store. A record whose variants differ in price is
+# dropped. Every shipped store file loads, and the shipped settings load, including the pinned
+# model rule (a dated snapshot or the one verified undated id, never an alias).
+tests/fetch/test_shopify.py::test_a_record_carries_the_six_fields_the_normaliser_needs
+tests/fetch/test_shopify.py::test_oh_polly_samples_give_valid_products_with_absolute_https_links_in_aed[ohpolly-suggest-black-blazer.json]
+tests/fetch/test_prices.py::test_real_dinar_price_strings_are_prices_for_a_dinar_store[260.000-260.0]
+tests/fetch/test_prices.py::test_the_same_strings_are_still_refused_for_a_dirham_store[AED-260.000-260.0]
+tests/fetch/test_shopify_price_spread.py::test_with_a_spread_of_one_only_products_whose_variants_cost_the_same_are_kept
+tests/fetch/test_shopify_price_spread.py::test_the_highest_price_is_not_substituted_for_the_dropped_records_price
+tests/fetch/test_registry.py::test_the_shipped_store_directory_loads_whatever_it_holds
+tests/stores/test_kuwaiti_stores.py::test_the_shipped_settings_search_the_home_market_and_kuwait
+tests/foundation/test_settings.py::TestShippedSettingsFile::test_loads_cleanly_with_no_environment
+tests/foundation/test_settings.py::TestShippedSettingsFile::test_openai_model_is_pinned_to_gpt_6_luna
+tests/foundation/test_settings.py::TestShippedSettingsFile::test_the_pinned_model_is_a_dated_snapshot_or_a_verified_undated_one
+tests/foundation/test_settings.py::TestOpenAiModel::test_alias_style_names_are_rejected_with_a_clear_message[latest]
+
+# [11] Ranking. The category filter (a dress is not returned for a shirt request and the reverse),
+# the children's-item rule, and a product without an image score does not outrank one that was
+# compared (nor does a compared product with a poor text match beat a better one).
+tests/rank_text/test_filters.py::test_a_request_for_any_other_category_drops_dress_like_products[tops-GIGI BURGUNDY ABAYA]
+tests/rank_text/test_filters.py::test_a_request_for_any_other_category_drops_dress_like_products[tops-Printed Dress - AS26-92]
+tests/rank_text/test_filters.py::test_a_request_for_dresses_drops_the_other_four_categories[Black Cotton Shirt]
+tests/rank_text/test_filters.py::test_a_childrens_title_is_dropped_when_the_shoppers_gender_is_explicit[men-Boys Crew Neck T-shirt - White]
+tests/rank_text/test_filters.py::test_a_childrens_title_is_kept_when_the_gender_is_only_inferred_absent_or_unisex[inferred men]
+tests/rank_text/test_ranking.py::test_a_compared_product_is_not_ranked_below_an_uncompared_one_for_being_compared
+tests/rank_text/test_ranking.py::test_a_better_text_match_is_not_lost_to_a_worse_one_that_was_compared
+tests/rank_text/test_category.py::test_the_labelled_set_is_big_enough_and_at_least_90_percent_correct
+
+# [12] Price ranges. The mix counts for 30 results, at most six per store, the budget rule, and a
+# list of mixed AED and KWD prices.
+tests/tiers/test_mix.py::test_presets_give_the_prd_counts[even_30]
+tests/tiers/test_shape.py::test_no_store_exceeds_the_cap_even_when_it_has_the_best_products
+tests/tiers/test_scenarios.py::test_scenario[exactly_30_results]
+tests/tiers/test_scenarios.py::test_scenario[prd_example_budget_300]
+tests/tiers/test_shape.py::test_a_product_at_exactly_the_budget_is_within_it
+tests/tiers/test_shape.py::test_budget_and_mid_range_never_hold_a_product_over_budget
+tests/tiers/test_currencies.py::test_walking_a_mixed_list_through_scoring_and_the_price_ranges
+tests/tiers/test_currencies.py::test_a_currency_with_no_rate_is_left_out_even_when_it_scores_best
+
+# [13] Pipeline. One text search end to end, an outfit, the deadline returns what arrived, a store
+# that fails does not stop the others, and a price-mix change makes no store request and no model
+# call.
+tests/pipeline/test_single_item.py::test_a_text_request_gives_a_full_response_with_a_timing_for_each_step
+tests/pipeline/test_single_item.py::test_the_four_price_ranges_are_filled_from_both_stores
+tests/pipeline/test_outfit.py::test_four_garments_give_four_groups_in_the_order_they_were_detected
+tests/pipeline/test_deadline.py::test_a_slow_store_cannot_keep_the_response_past_the_deadline
+tests/pipeline/test_deadline.py::test_what_the_other_stores_found_before_the_deadline_is_still_ranked_and_shown
+tests/pipeline/test_rerun.py::test_changing_only_the_mix_makes_no_store_request_no_thumbnail_fetch_no_model_call
+tests/pipeline/test_full_path.py::test_a_photo_and_text_search_then_a_mix_change_costs_one_model_call_in_all
+tests/pipeline/test_failures.py::test_one_failing_store_is_skipped_and_the_others_still_answer[403-blocked-did not allow the search]
+tests/pipeline/test_failures.py::test_when_the_model_fails_the_shoppers_own_words_are_searched_and_the_response_says_so
+
+# [14] The page. A search renders results, a second search shows its own detected values (not the
+# first search's), the photo is gone after a search, and a failed search shows the friendly
+# message.
+tests/ui/test_live_search.py::TestFirstSearch::test_it_shows_live_results_in_four_price_ranges_with_links_to_the_stores
+tests/ui/test_live_search.py::TestFirstSearch::test_a_second_search_from_the_boxes_is_a_new_search_that_asks_the_model_again
+tests/ui/test_chips_across_searches.py::TestANewSearchStartsWithCleanChips::test_the_chips_show_what_the_second_photo_detected_not_what_the_first_search_left
+tests/ui/test_chips_across_searches.py::TestANewSearchStartsWithCleanChips::test_a_search_typed_in_words_after_a_photo_search_starts_clean_too
+tests/ui/test_photo_lifetime.py::TestThePhotoIsSentOnceAndThenLetGo::test_after_the_search_nothing_the_page_remembers_holds_the_photo
+tests/ui/test_photo_lifetime.py::TestThePhotoIsSentOnceAndThenLetGo::test_after_the_search_the_uploader_is_empty_and_has_a_new_key
+tests/ui/test_photo_lifetime.py::TestWithTheRealPipeline::test_the_photo_reaches_the_model_once_and_the_page_holds_only_numbers_afterwards
+tests/ui/test_live_search.py::TestFriendlyErrors::test_a_plain_error_from_the_pipeline_shows_only_its_user_message[model failed]
+tests/ui/test_status_and_errors.py::TestErrorBoundary::test_a_vga_error_shows_its_own_user_message
+
+# [15] The acceptance harness: one mock run completes.
+tests/harness/test_cli.py::TestMock::test_a_mock_run_saves_ten_responses_a_report_and_a_blank_labelling_sheet
+
+# [own] The list's own checks. They are critical too: a list that silently stops matching is worse
+# than no list.
+tests/foundation/test_critical_suite.py
