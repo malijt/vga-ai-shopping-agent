@@ -149,6 +149,10 @@ def test_the_standard_library_parser_would_have_allowed_noons_search_on_this_pyt
         ("Allow: ?q=\nDisallow: /", "https://x.example/search?q=a", True),
         ("Disallow:", "https://x.example/anything", True),
         ("", "https://x.example/anything", True),
+        # An empty rule leaves the line below it alone: the next rule, group or comment.
+        ("Allow:\nDisallow: /cart", "https://x.example/cart", False),
+        ("Disallow:\r\n\r\nUser-agent: BadBot\r\nDisallow: /", "https://x.example/anything", True),
+        ("Disallow: # nothing blocked", "https://x.example/anything", True),
     ],
 )
 async def test_wildcards_and_rules_without_a_leading_slash(
@@ -159,6 +163,16 @@ async def test_wildcards_and_rules_without_a_leading_slash(
     )
 
     assert await robots.can_fetch(url, store_for("x.example")) is allowed
+
+
+async def test_an_empty_rule_does_not_pull_another_bots_ban_into_our_group(
+    robots: RobotsChecker, router: respx.MockRouter
+) -> None:
+    # The usual "everyone may read, one bot may not" file. Read wrongly, the store is lost.
+    body = "User-agent: *\nDisallow:\n\nUser-agent: BadBot\nDisallow: /\n"
+    router.get("https://x.example/robots.txt").mock(return_value=text_response(body))
+
+    assert await robots.can_fetch("https://x.example/search?q=a", store_for("x.example")) is True
 
 
 async def test_only_the_group_for_our_user_agent_applies(

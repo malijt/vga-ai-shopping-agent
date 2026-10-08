@@ -222,12 +222,15 @@ def _validate_budget(
     a digit (Western or Arabic-Indic) or a number word such as "four hundred" or "مئتين". With no
     typed text, or none of those in it, whatever the model reported is dropped unseen: nothing the
     shopper wrote is being ignored, so there is nothing to explain and nothing to ask the model to
-    redo. When the text does hold digits, one of them must be the model's amount.
+    redo. When the text holds digits and no number word, one of the digits must be the model's
+    amount. With a number word in it the amount cannot be checked (the words are not added up), and
+    a digit beside it ("size 38 under four hundred") is no reason to drop the budget.
     """
     if raw is None or text is None:
         return None  # a photo cannot state a budget; a price printed in it is data, not a limit
     written = numbers_in(text)
-    if not written and not names_a_number_in_words(text):
+    in_words = names_a_number_in_words(text)
+    if not written and not in_words:
         return None  # the shopper typed no number, so a price from elsewhere is not their limit
     currency = raw.currency.strip().upper() if isinstance(raw.currency, str) else None
     max_price = raw.max_price
@@ -246,7 +249,7 @@ def _validate_budget(
     except ValidationError:
         problems.append("budget: max_price must be above 0 and currency a 3-letter code or null")
         return None
-    if written and not any(abs(number - budget.max_price) < 0.005 for number in written):
+    if not in_words and not any(abs(number - budget.max_price) < 0.005 for number in written):
         # The model reported a price the shopper never wrote (for example one read from a sign in
         # the photo). A wrong limit hides good results; no limit hides nothing.
         warnings.append(UNMATCHED_BUDGET_WARNING)

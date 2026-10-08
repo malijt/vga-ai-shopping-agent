@@ -2,6 +2,7 @@
 pipeline once per process, calls it with one event loop per search, and says up front when live
 mode cannot work yet."""
 
+import asyncio
 import inspect
 
 import pytest
@@ -162,6 +163,27 @@ class TestTheRealPipelineIsBuiltOncePerProcess:
         runner.get_pipeline(Settings(ui_fixture=False))
 
         assert warmed == [True]
+
+    def test_the_connections_opened_at_start_up_are_closed_in_the_same_loop(
+        self, monkeypatch: pytest.MonkeyPatch, builds: list[SearchPipeline]
+    ) -> None:
+        # Start-up reads the stores' robots.txt files, and its event loop ends right after.
+        events: list[tuple[str, asyncio.AbstractEventLoop]] = []
+
+        async def warm_up(self: SearchPipeline) -> bool:
+            events.append(("warm_up", asyncio.get_running_loop()))
+            return True
+
+        async def aclose(self: SearchPipeline) -> None:
+            events.append(("aclose", asyncio.get_running_loop()))
+
+        monkeypatch.setattr(SearchPipeline, "warm_up", warm_up)
+        monkeypatch.setattr(SearchPipeline, "aclose", aclose)
+
+        runner.get_pipeline(Settings(ui_fixture=False))
+
+        assert [name for name, _ in events] == ["warm_up", "aclose"]
+        assert events[0][1] is events[1][1]
 
 
 class ClosingPipeline(FakePipeline):

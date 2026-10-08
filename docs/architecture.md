@@ -298,7 +298,7 @@ Instructions live in one place only: the system prompt. Everything else is data.
 |---|---|---|
 | The shopper's text | Length cap; control characters and any `<user_text>` tag removed; placed inside a labelled block of the user message. | It is never placed in the system message. Raw text is searched only in the fallback, after cleaning. |
 | The shopper's photo | Magic bytes, size, dimensions; redrawn from pixels. | Sent only to OpenAI (and embedded locally). Text printed in the photo cannot set a budget or an edit: those need the shopper's typed words. |
-| The model's answer | Strict schema, then `validate_reading`: categories and genders must be known values; free text is stripped of URLs, markup and control characters and capped; a run of six words copied from the prompt is refused; keywords lose price words and gender words; a gender counts as stated only if the typed text names it; a budget needs a number the shopper typed, and it must be that number; an edit needs the shopper's typed words. | Nothing it says is a link, a command or markup by the time it leaves. The kind of request is derived by code. |
+| The model's answer | Strict schema, then `validate_reading`: categories and genders must be known values; free text is stripped of URLs, markup and control characters and capped; a run of six words copied from the prompt is refused; keywords lose price words and gender words; a gender counts as stated only if the typed text names it; a budget needs a number the shopper typed, and when they typed it in digits only it must be that number; an edit needs the shopper's typed words. | Nothing it says is a link, a command or markup by the time it leaves. The kind of request is derived by code. |
 | A store's response | https, allow-listed host, size cap, JSON only. The Shopify reader maps fixed fields. Every record is validated. | No model ever reads store content. Titles are reduced to single-spaced text. A product link must be on the store's own site, never the shared image host. |
 | A store's headers and redirects | Each redirect is re-checked against the allow-list and the same registered domain; a login path is a block; `Retry-After` is capped at 24 hours. | They can only make the app wait longer or stop, never go somewhere new. |
 | robots.txt | Parsed by `protego` as rules only. | It is not instructions to the app beyond Allow and Disallow. Comments in it addressed to AI agents are recorded in the store notes as data and not acted on. |
@@ -359,7 +359,7 @@ There are two suites, and they answer different questions.
 - **The complete suite** (`uv run pytest`): about 8,450 tests, three to four minutes, no network and
   no key. It fakes only the outside world: store HTTP, the OpenAI client, the image-model weights
   and the clock. It is run **locally**, before a push or a merge.
-- **The critical suite** (`uv run pytest -m critical`): 143 of those tests, about 20 seconds. These
+- **The critical suite** (`uv run pytest -m critical`): 144 of those tests, about 20 seconds. These
   are the tests whose failure would mean a broken product rule or a broken demo. **This is what CI
   runs**, with `ruff` and `mypy`, on every pull request and on every push to `main`. The dependency
   audit (`pip-audit`) and the secret scan (`gitleaks`) run beside it.

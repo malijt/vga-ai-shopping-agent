@@ -29,7 +29,7 @@ FALLBACK_WARNING = (
 )
 FALLBACK_WARNING_WITH_PHOTO = (
     "We could not fully analyse your request, so we searched with your words as typed. "
-    "Your photo and any price limit you gave were not used."
+    "Your photo was only used to sort the results, and any price limit you gave was not applied."
 )
 
 _SENTENCES = re.compile(r"[\n.!?;:؟؛]+")

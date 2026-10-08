@@ -199,8 +199,9 @@ class Fetcher:
 
 # A rule value that starts with neither / nor * (the site's `Disallow: ?q=`) matches nothing under
 # RFC 9309, so a strict parser allows those URLs. The site plainly meant to block them: read as
-# `*?q=`.
-MALFORMED_RULE = re.compile(r"(?im)^(\s*(?:dis)?allow\s*:\s*)(?![/*\s]|$)")
+# `*?q=`. Only spaces and tabs are skipped, never a line break: an empty `Disallow:` must not reach
+# into the line below it. A value that is only a comment (`Disallow: # none`) is empty too.
+MALFORMED_RULE = re.compile(r"(?im)^([ \t]*(?:dis)?allow[ \t]*:[ \t]*)(?![/*\s#]|$)")
 
 
 class Robots:

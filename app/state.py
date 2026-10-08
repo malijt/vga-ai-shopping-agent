@@ -76,8 +76,9 @@ def request_search(chips: ChipEdits | None = None) -> None:
 
 def request_mix_change() -> None:
     """Called when the price-range mix changes. With results on the page, show the same results
-    in the new mix: a search again with no chip edits, which asks no store and no AI. With no
-    results yet there is nothing to change; the next search reads the mix."""
+    in the new mix: a search again with no chip edits, which asks no AI, and no store while the
+    earlier answers are still remembered (``store_cache_ttl_s``). With no results yet there is
+    nothing to change; the next search reads the mix."""
     if get_response() is None:
         return
     st.session_state[_ERROR] = None

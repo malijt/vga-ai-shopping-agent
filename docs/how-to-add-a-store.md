@@ -469,7 +469,7 @@ Write `docs/store-notes/<id>.md`: what a developer needs when the adapter breaks
 ## 5. Enable it, and check afterwards
 
 1. The live smoke test passed. Edit the store file: `enabled: true`, and put the date and test path in the comment on that line, as the others do (`# the live smoke test passed on <date> (tests/stores/example-boutique)`). Set **Status: enabled** in the note.
-2. Run everything. Do this locally: CI runs only the critical suite (143 tests), so this run is the only one that executes your new store's tests and the full guard suites.
+2. Run everything. Do this locally: CI runs only the critical suite (144 tests), so this run is the only one that executes your new store's tests and the full guard suites.
 
    ```bash
    uv run pytest
