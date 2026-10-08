@@ -49,6 +49,7 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 - Acceptance harness (Phase 11): runs the 10 frozen queries, checks the BRD pass rule, exports a labelling sheet, and can record a live run and replay it offline.
 
 **Fixed**
+- **The "Detected by AI" boxes start clean on every new search, and the gender box shows the shopper's answer** with the line "Gender: you chose this on the page." A browser keeps a box's value while its key is unchanged, so the boxes' keys now change with each new search. The UI tests now imitate that browser behaviour, which is why they had missed it. Checked on the real page with the same two photos that exposed it.
 - **The page was reachable from other devices on the same network.** Streamlit listens on every network interface unless told otherwise, so anyone on the same Wi-Fi who knew the address could have used the page and spent the OpenAI allowance. The page now listens on this computer only, and a test pins it. Found while writing the README.
 - The harness's link check failed with an error for any store whose robots.txt sets a crawl delay.
 - A card no longer says "Colour: not listed" under a title that names the colour; the line appears only when the store lists a colour.
@@ -83,6 +84,7 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 - `httpx2`, which the Understand tests import directly, is now a declared test dependency. `app` and `eval` imports sort as first-party.
 
 **Found**
+- **A slow start can switch stores off for the whole session, with a false message.** After a restart, six robots.txt reads timed out while the image model was loading. The app then skipped those six stores on every search and told the shopper each one "asks automated tools not to search it", which is untrue: our own request had timed out. The safe rule (no search without a readable robots.txt) is right; remembering a timeout for 24 hours and the wording are wrong. Being fixed.
 - **Manual proof run on the live page: fifteen real searches, ten photos from the internet and five typed statements, with a screenshot of each** (kept in the git-ignored `eval/results/manual-proof-2026-10-08/`, with an index). The model read all fifteen inputs correctly, including an Arabic request. Ten of the fifteen returned at least 20 results from at least 3 stores. No store refused a request under the new platform limit.
   - **Bug:** in one page session, a second search showed the first search's values in the "Detected by AI" boxes ("black / Women" where the search had found red and blue), and answering the gender question then started a long search for those stale values. Being fixed.
   - **Bug:** after answering Women or Men, the gender box still says "Not set". Same fix.
