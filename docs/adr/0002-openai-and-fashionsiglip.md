@@ -43,3 +43,29 @@ For image similarity:
 - FashionSigLIP on CPU may be too slow for 30-50 thumbnails (R4). Phase 3 measures it; the fallbacks are `mps`/`cuda`, fewer thumbnails, or `off`.
 - Any failure of the image ranker degrades to text-and-price ranking, logged at warn level with the request id.
 - **Revisit** with a GPT-vision ranker only if the Phase 3 spike shows SigLIP cannot score 40 thumbnails within 3 seconds on the demo machine (plan section 10).
+
+## Update (2026-10-08): what the build changed
+
+The decision stands. The details below changed or were settled. The text above is kept as written.
+
+- **The model is `gpt-6-luna`**, chosen by the user on 2026-10-08. It replaces the planned
+  `gpt-5-mini` snapshot, which never ran. OpenAI lists no dated snapshot for it, so the versioned
+  name is the pin. `src/vga/settings.py` allows that one id by name (`UNDATED_SNAPSHOT_IDS`) and
+  still rejects aliases such as `gpt-6-luna-latest`. This makes "pinned" weaker than the Decision
+  intended: OpenAI can change what the model does behind the name. It is a recorded limitation. The
+  Understand eval must be re-run from time to time, and before any change of prompt, model or effort.
+- **Call settings.** Responses API, strict JSON schema, reasoning effort `low`, at most 3,000 output
+  tokens, `store=false`, 15 seconds per call, at most 2 calls per request, a daily cap of 200 per
+  process.
+- **Prompt and eval.** The prompt is `understand-v2` (dresses became a fifth category). The live
+  eval passed 24 of 24 on 2026-10-08, with a typical answer of 1.9 seconds and a worst of 3.0
+  (`src/vga/understand/prompts/CHANGELOG.md`). One run labelled a single gown photo an outfit photo;
+  that led to ADR 0009. The eval does not judge keyword quality.
+- **FashionSigLIP.** Pinned to revision `c56244cc94f92419e8369fa71efdaf403b124ce8`. Because
+  `open_clip`'s `hf-hub:` scheme cannot take a revision, the weights are fetched with
+  `snapshot_download` and loaded from the local folder (`local-dir:`). The spike's verdict was GO as
+  a low-weight signal: 40 thumbnails in 0.59 seconds on the Apple GPU and 1.12 seconds on the CPU.
+  The image weight is 0.3. The model loads once, when the page opens.
+- **Where it runs.** Only for a product photo and a photo with text. An outfit photo is not compared
+  (ADR 0008).
+- **Not built.** The GPT-vision ranker. Its trigger (SigLIP too slow) was not met.

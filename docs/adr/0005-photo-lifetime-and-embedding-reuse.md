@@ -30,3 +30,28 @@ Yet editing a chip must re-run the search (PRD R3), and a re-run should not need
 - A new search with a different photo needs a new upload. The embedding of one photo cannot be used for another.
 - Faces in outfit photos are **not** redacted before sending (a deliberate deviation, plan 12.3). The shopper sees a notice that the photo is sent to OpenAI and is not stored by us. Legal review (UAE PDPL / GDPR) is required before real users, and enabling zero data retention at the OpenAI organisation level is left to whoever runs the demo.
 - The shopper sees these limits in plain words: what is AI-inferred, and that the photo goes to OpenAI.
+
+## Update (2026-10-08): what the build changed
+
+The decision stands and is now built and audited. The text above is kept as written.
+
+- **The photo is redrawn, not only stripped.** The audit found that a JPEG comment, or a PNG text
+  field named "comment", travelled to OpenAI with the picture. The outgoing JPEG is now built from
+  the pixels alone, so no hidden field can go with it. Faces are still not blurred.
+- **The page releases the photo.** After a search that used it, the uploader gets a new key and the
+  file is dropped. A failed search keeps the photo so the shopper can retry. What the page keeps is
+  the response, with the embedding and never the photo.
+- **An outfit photo has no embedding at all.** It is not compared (ADR 0008), so nothing derived
+  from it is kept. "Search again" with the embedding applies to a product photo and a photo with text.
+- **How long the embedding lives.** In the re-run cache, which keeps the latest 32 requests until
+  the process stops or a newer search pushes the oldest out. The 10-minute limit only decides whether
+  the stored store answers can be reused. It deletes nothing.
+- **A gender answer reuses what was fetched.** Answering "Who is this for?" filters the products
+  already found. It makes no store request, no OpenAI call and no thumbnail download (ADR 0011).
+- **Proof.** 135 tests run whole requests and look for the photo in files, logs, memory, outgoing
+  requests and the answer. 23 planted leaks prove the audit can fail. `docs/privacy.md` says what
+  leaves the machine.
+- **Not verified.** Whether this OpenAI account has zero data retention. Whether an embedding can be
+  turned back into a picture. What Streamlit keeps of an upload on a running page. The page's wording
+  ("is not stored by us") says nothing about OpenAI's side and should be reworded once the retention
+  question is decided (`docs/privacy.md`).
