@@ -83,6 +83,13 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 - `httpx2`, which the Understand tests import directly, is now a declared test dependency. `app` and `eval` imports sort as first-party.
 
 **Found**
+- **Manual proof run on the live page: fifteen real searches, ten photos from the internet and five typed statements, with a screenshot of each** (kept in the git-ignored `eval/results/manual-proof-2026-10-08/`, with an index). The model read all fifteen inputs correctly, including an Arabic request. Ten of the fifteen returned at least 20 results from at least 3 stores. No store refused a request under the new platform limit.
+  - **Bug:** in one page session, a second search showed the first search's values in the "Detected by AI" boxes ("black / Women" where the search had found red and blue), and answering the gender question then started a long search for those stale values. Being fixed.
+  - **Bug:** after answering Women or Men, the gender box still says "Not set". Same fix.
+  - A photo with four garments hit the 30 s limit and returned what it had, with the plain note.
+  - Thin results: black heels 16, white sneakers 10, "white sneakers for women under 300 AED" 4, and the men's blazer under 400 AED only 7, down from 15 before the change to one keyword variant per store.
+  - One store lists a dress at 4,425.000 KWD (about 52,750 AED), which stretches the Luxury range; whether the store means that price was not checked. Price-range spans can still overlap.
+  - Process notes: the browser tool cannot use a file dialog, so photos were put in the upload box by script; a sample-mode test server started by an agent took over the browser tab once.
 - **Licences needing the owner's decision:** sixteen NVIDIA CUDA packages that `torch` pulls in on Linux only (never installed on this Mac; 11 proprietary, 5 unknown), so the rule "no unreviewed unknown licence" is not yet met for a Linux GPU machine; OpenAI's terms for `gpt-6-luna` are unread; and Marqo-FashionSigLIP's Apache-2.0 licence is taken from its model card, which the local copy does not include.
 - `extruct` and `selectolax` are declared dependencies that nothing imports. The daily OpenAI call cap and the store cooldowns live in memory and reset when the program restarts.
 - **First real search under the platform limit:** "navy linen shirt for men" took 8.4 s (understanding 4.5 s, stores 3.8 s) and returned 23 results from 4 stores, with no refusal. Stores that sell only dresses or only women's clothing were not asked.
