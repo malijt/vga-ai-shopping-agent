@@ -531,6 +531,7 @@ _SIGN_PRICE = 1.0
     [
         ("black blazer under 400 AED", 400),
         ("black blazer for under four hundred dirhams", 400),
+        ("black dress size 38 under four hundred dirhams", 400),  # a digit that is not the price
         ("black blazer, four hundred and fifty dirhams at most", 450),
         ("black blazer under a thousand dirhams", 1000),
         ("قميص أبيض بأقل من مئتين درهم", 200),
