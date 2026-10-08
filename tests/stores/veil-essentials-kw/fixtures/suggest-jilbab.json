@@ -1,0 +1,260 @@
+{
+ "resources": {
+  "results": {
+   "products": [
+    {
+     "available": true,
+     "body": "<p>Product Name: Ayesha Jilbab</p>\n<p>Category/Type: Jilbab</p>\n<p> </p>\n<p>Overview:</p>\n<p>The Ayesha Jilbab is made from premium Nida fabric, known for its lightweight feel, smooth drape, and wrinkle-resistant properties. Breathable and eco-friendly, it is gentle on the skin and perfect for hot d",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Ayesha Jilbab",
+      "aspect_ratio": 1.0,
+      "height": 1600,
+      "url": "https://cdn.shopify.com/s/files/1/0800/1889/9238/files/WhatsAppImage2023-10-08at12.56.20PM_1.jpg?v=1697004473",
+      "width": 1600
+     },
+     "handle": "ayesha-jilbab",
+     "id": 8765308928294,
+     "image": "https://cdn.shopify.com/s/files/1/0800/1889/9238/files/WhatsAppImage2023-10-08at12.56.20PM_1.jpg?v=1697004473",
+     "price": "12.500",
+     "price_max": "12.500",
+     "price_min": "12.500",
+     "tags": [],
+     "title": "Ayesha Jilbab",
+     "type": "jilbab",
+     "url": "/products/ayesha-jilbab?_pos=1&_psq=jilbab&_psid=770477839&_ss=e",
+     "variants": [],
+     "vendor": "Veilessentials"
+    },
+    {
+     "available": true,
+     "body": "<p>Product Name: Fatima Jilbab</p>\n<p>Category/Type: Jilbab and Skirt Set</p>\n<p> </p>\n<p>Overview:</p>\n<p>The Fatima Jilbab is made from premium Korean Nida fabric, which is lightweight, breathable, and eco-friendly. It drapes beautifully, resists wrinkles, and keeps its shape, making it perfect fo",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Fathema Jilbab",
+      "aspect_ratio": 0.75,
+      "height": 5712,
+      "url": "https://cdn.shopify.com/s/files/1/0800/1889/9238/files/rn-image_picker_lib_temp_527c7452-aa8f-4458-8a68-6fdf9ca4b019.jpg?v=1758195131",
+      "width": 4284
+     },
+     "handle": "jilbab",
+     "id": 8758331801894,
+     "image": "https://cdn.shopify.com/s/files/1/0800/1889/9238/files/rn-image_picker_lib_temp_527c7452-aa8f-4458-8a68-6fdf9ca4b019.jpg?v=1758195131",
+     "price": "11.500",
+     "price_max": "11.500",
+     "price_min": "11.500",
+     "tags": [
+      "J1"
+     ],
+     "title": "Fathema Jilbab",
+     "type": "jilbab",
+     "url": "/products/jilbab?_pos=2&_psq=jilbab&_psid=770477839&_ss=e",
+     "variants": [],
+     "vendor": "Veilessentials"
+    },
+    {
+     "available": true,
+     "body": "<p>Product Name: Khadija Jilbab</p>\n<p>Category/Type: Jilbab</p>\n<p> </p>\n<p>Overview:</p>\n<p>The Khadija Jilbab is crafted from shining polyester (satin polyester), a soft and smooth fabric with a subtle sheen. Lightweight and gentle on the skin, it provides comfortable full coverage while maintain",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Khadija Jilbab",
+      "aspect_ratio": 0.563,
+      "height": 4032,
+      "url": "https://cdn.shopify.com/s/files/1/0800/1889/9238/files/rn-image_picker_lib_temp_738670e5-f3ee-4529-8f45-0000496e3d32.jpg?v=1758195303",
+      "width": 2268
+     },
+     "handle": "khadija-jilbab",
+     "id": 8775854915878,
+     "image": "https://cdn.shopify.com/s/files/1/0800/1889/9238/files/rn-image_picker_lib_temp_738670e5-f3ee-4529-8f45-0000496e3d32.jpg?v=1758195303",
+     "price": "12.500",
+     "price_max": "12.500",
+     "price_min": "12.500",
+     "tags": [],
+     "title": "Khadija Jilbab",
+     "type": "jilbab",
+     "url": "/products/khadija-jilbab?_pos=3&_psq=jilbab&_psid=770477839&_ss=e",
+     "variants": [],
+     "vendor": "Veilessentials"
+    },
+    {
+     "available": true,
+     "body": "<p>Product Name: Asma Jilbab</p>\n<p>Category/Type: Two-Piece Jilbab Set</p>\n<p> </p>\n<p>Overview:</p>\n<p>The Asma Jilbab is made from high-quality wrinkle polyester, a lightweight and durable fabric designed for all-day comfort. Its soft, breathable material retains its shape, dries quickly, and is ",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Asma Jilbab",
+      "aspect_ratio": 1.0,
+      "height": 960,
+      "url": "https://cdn.shopify.com/s/files/1/0800/1889/9238/files/IMG-20231018_111517_119.webp?v=1697620290",
+      "width": 960
+     },
+     "handle": "asma-jilbab",
+     "id": 8782854324518,
+     "image": "https://cdn.shopify.com/s/files/1/0800/1889/9238/files/IMG-20231018_111517_119.webp?v=1697620290",
+     "price": "10.000",
+     "price_max": "10.000",
+     "price_min": "10.000",
+     "tags": [],
+     "title": "Asma Jilbab",
+     "type": "jilbab",
+     "url": "/products/asma-jilbab?_pos=4&_psq=jilbab&_psid=770477839&_ss=e",
+     "variants": [],
+     "vendor": "Veilessentials"
+    },
+    {
+     "available": true,
+     "body": "<p>Product Name: Asiya Jilbab</p>\n<p>Category/Type: Jilbab</p>\n<p> </p>\n<p>Overview:</p>\n<p>The Asiya Jilbab is crafted from a velvet-satin fusion, combining the soft, plush feel of velvet with the smooth texture of premium satin polyester. Lightweight, breathable, and eco-friendly, it provides comf",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Asiya Jilbab",
+      "aspect_ratio": 1.0,
+      "height": 640,
+      "url": "https://cdn.shopify.com/s/files/1/0800/1889/9238/files/WhatsAppImage2023-10-08at3.18.17PM_1.jpg?v=1697305909",
+      "width": 640
+     },
+     "handle": "asiya-jilbab",
+     "id": 8775908229414,
+     "image": "https://cdn.shopify.com/s/files/1/0800/1889/9238/files/WhatsAppImage2023-10-08at3.18.17PM_1.jpg?v=1697305909",
+     "price": "12.600",
+     "price_max": "12.600",
+     "price_min": "12.600",
+     "tags": [],
+     "title": "Asiya Jilbab",
+     "type": "jilbab",
+     "url": "/products/asiya-jilbab?_pos=5&_psq=jilbab&_psid=770477839&_ss=e",
+     "variants": [],
+     "vendor": "Veilessentials"
+    },
+    {
+     "available": true,
+     "body": "<p>Product Name: Sara Jilbab</p>\n<p>Category/Type: Two-Piece Jilbab Set</p>\n<p> </p>\n<p>Overview:</p>\n<p>The Sara Jilbab is made from wrinkled polyester, a high-quality fabric known for its wrinkle-resistant properties. Lightweight and easy to wear, it stays smooth throughout the day, making it perf",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Sara Jilbab",
+      "aspect_ratio": 1.0,
+      "height": 750,
+      "url": "https://cdn.shopify.com/s/files/1/0800/1889/9238/files/WhatsAppImage2023-10-09at9.28.11PM.jpg?v=1697306429",
+      "width": 750
+     },
+     "handle": "sara-jilbab",
+     "id": 8775921238310,
+     "image": "https://cdn.shopify.com/s/files/1/0800/1889/9238/files/WhatsAppImage2023-10-09at9.28.11PM.jpg?v=1697306429",
+     "price": "10.000",
+     "price_max": "10.000",
+     "price_min": "10.000",
+     "tags": [],
+     "title": "Sara Jilbab",
+     "type": "jilbab",
+     "url": "/products/sara-jilbab?_pos=6&_psq=jilbab&_psid=770477839&_ss=e",
+     "variants": [],
+     "vendor": "Veilessentials"
+    },
+    {
+     "available": true,
+     "body": "<p>Product Name: Afra Jilbab</p>\n<p>Category/Type: Sports Jilbab Set</p>\n<p> </p>\n<p>Overview:</p>\n<p>The Afra Jilbab is crafted from premium Nida fabric, a high-quality Korean polyester that is lightweight, breathable, and wrinkle-resistant. Its soft, comfortable texture makes it perfect for hot da",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Afra Jilbab",
+      "aspect_ratio": 0.714,
+      "height": 4498,
+      "url": "https://cdn.shopify.com/s/files/1/0800/1889/9238/files/rn-image_picker_lib_temp_29375955-abe0-46f6-b507-9fa86cb8da05.jpg?v=1758711680",
+      "width": 3213
+     },
+     "handle": "afra-jilbab",
+     "id": 8775912227110,
+     "image": "https://cdn.shopify.com/s/files/1/0800/1889/9238/files/rn-image_picker_lib_temp_29375955-abe0-46f6-b507-9fa86cb8da05.jpg?v=1758711680",
+     "price": "12.900",
+     "price_max": "12.900",
+     "price_min": "12.900",
+     "tags": [],
+     "title": "Afra Jilbab",
+     "type": "jilbab",
+     "url": "/products/afra-jilbab?_pos=7&_psq=jilbab&_psid=770477839&_ss=e",
+     "variants": [],
+     "vendor": "Veilessentials"
+    },
+    {
+     "available": true,
+     "body": "<p>Product Name: Jilbab Luma</p>\n<p>Category/Type: Turkish Batwing Jilbab</p>\n<p> </p>\n<p>Overview:</p>\n<p>The Batwing Jilbab blends tradition with comfort. Made from premium Turkish polyester, it is lightweight, breathable, and perfect for all day wear. Its relaxed, free-size fit and graceful batwi",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "jilbab Luma",
+      "aspect_ratio": 0.75,
+      "height": 5712,
+      "url": "https://cdn.shopify.com/s/files/1/0800/1889/9238/files/rn-image_picker_lib_temp_0121f932-51c1-41e5-8032-e3c93600da27.jpg?v=1759244766",
+      "width": 4284
+     },
+     "handle": "batwing-jilbab",
+     "id": 10092877676838,
+     "image": "https://cdn.shopify.com/s/files/1/0800/1889/9238/files/rn-image_picker_lib_temp_0121f932-51c1-41e5-8032-e3c93600da27.jpg?v=1759244766",
+     "price": "13.000",
+     "price_max": "13.000",
+     "price_min": "13.000",
+     "tags": [],
+     "title": "jilbab Luma",
+     "type": "",
+     "url": "/products/batwing-jilbab?_pos=8&_psq=jilbab&_psid=770477839&_ss=e",
+     "variants": [],
+     "vendor": "Veilessentialskw"
+    },
+    {
+     "available": true,
+     "body": "<p>Product Name: Ahli Jilbab</p>\n<p>Category/Type: Two-Piece Jilbab &amp; Abaya Set</p>\n<p> </p>\n<p>Overview:</p>\n<p>The Ahli Jilbab is a two-piece set consisting of a flowing abaya inner and a jilbab, crafted from premium wrinkle polyester. Soft, lightweight, and breathable, this fabric ensures com",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Ahli Jilbab",
+      "aspect_ratio": 1.0,
+      "height": 1000,
+      "url": "https://cdn.shopify.com/s/files/1/0800/1889/9238/files/rn-image_picker_lib_temp_766a40a4-9752-49e9-9f6d-d1e204f013f0.jpg?v=1704214762",
+      "width": 1000
+     },
+     "handle": "ahli-jilbab",
+     "id": 8924907798822,
+     "image": "https://cdn.shopify.com/s/files/1/0800/1889/9238/files/rn-image_picker_lib_temp_766a40a4-9752-49e9-9f6d-d1e204f013f0.jpg?v=1704214762",
+     "price": "13.750",
+     "price_max": "13.750",
+     "price_min": "13.750",
+     "tags": [],
+     "title": "Ahli Jilbab",
+     "type": "",
+     "url": "/products/ahli-jilbab?_pos=9&_psq=jilbab&_psid=770477839&_ss=e",
+     "variants": [],
+     "vendor": "Veilessentialskw"
+    },
+    {
+     "available": true,
+     "body": "<p>Product Name: Jilbab tyour</p>\n<p>Category/Type: Jilbab and Skirt Set</p>\n<p> </p>\n<p>Overview:</p>\n<p>The Jilbabtyour is a beautiful addition to your modest wardrobe. Made from premium breathable Nida fabric, its butterfly-cut design offers elegance and comfort for everyday wear. Perfect for pra",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Jilbab tyour",
+      "aspect_ratio": 0.833,
+      "height": 1296,
+      "url": "https://cdn.shopify.com/s/files/1/0800/1889/9238/files/rn-image_picker_lib_temp_467e600c-278f-4ed3-a273-350ebf3fa8e8.jpg?v=1744729097",
+      "width": 1080
+     },
+     "handle": "jilbab-tyour",
+     "id": 10092832129318,
+     "image": "https://cdn.shopify.com/s/files/1/0800/1889/9238/files/rn-image_picker_lib_temp_467e600c-278f-4ed3-a273-350ebf3fa8e8.jpg?v=1744729097",
+     "price": "13.000",
+     "price_max": "13.000",
+     "price_min": "13.000",
+     "tags": [],
+     "title": "Jilbab tyour",
+     "type": "",
+     "url": "/products/jilbab-tyour?_pos=10&_psq=jilbab&_psid=770477839&_ss=e",
+     "variants": [],
+     "vendor": "Veilessentialskw"
+    }
+   ]
+  }
+ }
+}

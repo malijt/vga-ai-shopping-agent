@@ -1,0 +1,29 @@
+# Veil Essentials: a Kuwaiti modest-wear shop on Shopify (single brand): jilbabs, abayas, khimars and
+# khimar-and-abaya sets.
+# Prices are in Kuwaiti dinars with three decimals ("12.500"); the response has no currency, so
+# KWD is pinned here. The app shows the dinar price and an approximate dirham figure (ADR 0006).
+# Data path: Shopify's public predictive search, /search/suggest.json, which robots.txt leaves open.
+# Evidence: docs/store-qualification/veil-essentials-kw.md. Quirks and what would break this file:
+# docs/store-notes/veil-essentials-kw.md
+id: veil-essentials-kw
+name: Veil Essentials
+country: KW             # Kuwait is searched too through `extra_store_countries: [KW]` in config/settings.yaml
+currency: KWD           # the suggest response has no currency field; KWD is store-level (product page JSON-LD priceCurrency on 16 of 16 offers, Shopify.currency, Shopify.country KW)
+search_url_template: "https://veilessentialskw.com/search/suggest.json?q={query}&resources[type]=product&resources[limit]=10"
+allowed_hosts:
+  - veilessentialskw.com   # product links; the apex answered directly, no redirect
+  - cdn.shopify.com        # product images
+extraction:
+  strategies:
+    - name: shopify
+      # No options on purpose. All 30 records seen have one price (price, price_min and price_max are
+      # equal) and an empty `variants` list, so there is no cheaper add-on variant for `price` to pick
+      # up (the Hamsa trap), and max_price_spread would drop nothing. No field names a gender, so the
+      # default gender reading changes nothing either. If the store ever lists variants at different
+      # prices, the test that pins this fails: look at max_price_spread then (ADR 0012).
+genders:
+  - women               # jilbabs, abayas and khimars only: 30 of 30 records seen; no field names a gender, so this rests on the range and the brand
+categories:
+  - dresses             # jilbabs and abayas, plus khimars (head coverings) and khimar-and-abaya sets: no shoes, trousers, tops or jackets in the 30 records seen (docs/store-qualification/veil-essentials-kw.md). The ranker gives a khimar title no category, so it is kept (docs/store-notes/veil-essentials-kw.md)
+tier_hint: budget       # jilbabs and abayas KWD 10-26, about AED 119-310 (median KWD 12.9, about AED 154); khimars and sets KWD 7.55-33.5. Abayas here start near AED 142, under the AED 600 where Hanayen's start
+enabled: false          # not enabled yet: the live smoke test (tests/stores/veil-essentials-kw) has not been run
