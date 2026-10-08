@@ -257,3 +257,66 @@ async def test_warm_up_starts_the_model_load_only_after_every_robots_txt_was_rea
     await pipeline.warm_up()
 
     assert loader.robots_finished_at_start == 13
+
+
+# --------------------------------------------------------------------------------------------
+# Recovery: a robots.txt that failed at start-up is read again, and the store comes back
+# --------------------------------------------------------------------------------------------
+
+
+async def test_a_store_whose_robots_txt_timed_out_at_start_up_is_skipped_then_comes_back(
+    world: GuardWorld, build: GuardPipelines, settings: Settings, clock: FakeClock
+) -> None:
+    state = {"up": False}
+
+    def alpha_robots(request: httpx.Request) -> httpx.Response:
+        if not state["up"]:
+            raise httpx.ReadTimeout("no answer", request=request)
+        return text_response(ALLOW_ALL_ROBOTS)
+
+    world.add(store_for("alpha"), robots=alpha_robots)
+    world.add(store_for("beta"))
+    pipeline = build(understander=understanding(BLAZER))
+    await pipeline.warm_up()  # alpha's robots.txt times out here
+    request = make_search_request(text="black oversized blazer")
+
+    first = await pipeline.run(request, settings)
+
+    assert world.queries("alpha") == []  # nothing is sent without a readable robots.txt
+    [skipped] = first.stores_skipped
+    assert (skipped.store_id, skipped.status) == ("alpha", StoreStatus.ROBOTS_DENIED)
+    assert skipped.reason == (
+        "We could not check whether this store allows searching, so we skipped it."
+    )
+    assert "Alpha was skipped because we could not check whether it allows searching." in (
+        first.warnings
+    )
+    assert not any("asks automated tools" in text for text in first.warnings)
+    assert [report.store_id for report in first.stores_used] == ["beta"]
+
+    state["up"] = True  # the store is fine; only the short memory is in the way
+    clock.advance(settings.robots_unreadable_retry_s + 1)
+    robots_before = world.requests_to("alpha.example")
+
+    second = await pipeline.run(request, settings)
+
+    assert world.requests_to("alpha.example") == robots_before + 2  # robots.txt, then the search
+    assert world.queries("alpha") != []
+    assert [report.store_id for report in second.stores_used] == ["alpha", "beta"]
+    assert second.stores_skipped == []
+    assert world.stray == []
+
+
+async def test_a_burst_of_searches_within_the_short_memory_does_not_ask_robots_txt_again(
+    world: GuardWorld, build: GuardPipelines, settings: Settings, clock: FakeClock
+) -> None:
+    world.add(store_for("alpha"), robots=reply_status(503))
+    pipeline = build(understander=understanding(BLAZER))
+    await pipeline.warm_up()
+    request = make_search_request(text="black oversized blazer")
+
+    await pipeline.run(request, settings)
+    clock.advance(settings.robots_unreadable_retry_s / 2)
+    await pipeline.run(request, settings)
+
+    assert world.requests_to("alpha.example") == 1  # the one start-up read, nothing since
