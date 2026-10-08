@@ -6,6 +6,7 @@ trusted) and never repeat the shopper's words or anything a store sent. The shop
 a tier is "price range": the word "tier" appears nowhere below, and a test walks every message.
 """
 
+from vga.fetch.errors import ROBOTS_UNREADABLE_DETAIL
 from vga.models import Category, Gender, StoreConfig, StoreStatus
 
 # --- Request validation (plan 13.1.1) -------------------------------------------------------
@@ -83,6 +84,14 @@ STORE_REASONS: dict[StoreStatus, str] = {
 }
 """``StoreReport.reason`` for every status except ``ok``."""
 
+ROBOTS_UNREADABLE_REASON = (
+    "We could not check whether this store allows searching, so we skipped it."
+)
+"""A store whose robots.txt could not be read (our own timeout, a network error, a server error)
+said nothing at all; telling the shopper it "asks automated tools not to search it" would be false.
+It has the same status as a store that does forbid the search (``robots_denied``: no request is
+sent either way); only the words differ, chosen from ``StoreResult.detail`` by ``store_reason``."""
+
 _STORE_WARNINGS: dict[StoreStatus, str] = {
     StoreStatus.BLOCKED: "{store} was skipped because it did not allow the search.",
     StoreStatus.ROBOTS_DENIED: "{store} was skipped because it asks automated tools not to "
@@ -99,12 +108,21 @@ def store_partial_warning(store_name: str) -> str:
     return f"{store_name} could not be searched for every item, so some results may be missing."
 
 
-def store_reason(status: StoreStatus) -> str:
+def store_reason(status: StoreStatus, detail: str | None = None) -> str:
+    """The plain reason for a skipped store. ``detail`` (``StoreResult.detail``, never shown) only
+    matters for ``robots_denied``: it tells a robots.txt that forbids the search from one that
+    could not be read."""
+    if status is StoreStatus.ROBOTS_DENIED and detail and ROBOTS_UNREADABLE_DETAIL in detail:
+        return ROBOTS_UNREADABLE_REASON
     return STORE_REASONS[status]
 
 
-def store_warning(store_name: str, status: StoreStatus) -> str | None:
-    """The warning for a store that failed, or ``None`` for ``ok`` and ``empty``."""
+def store_warning(store_name: str, status: StoreStatus, reason: str | None = None) -> str | None:
+    """The warning for a store that failed, or ``None`` for ``ok`` and ``empty``. ``reason`` is
+    the store's ``StoreReport.reason``: it picks the "could not check" wording for a robots.txt
+    that could not be read."""
+    if status is StoreStatus.ROBOTS_DENIED and reason == ROBOTS_UNREADABLE_REASON:
+        return f"{store_name} was skipped because we could not check whether it allows searching."
     template = _STORE_WARNINGS.get(status)
     return template.format(store=store_name) if template else None
 

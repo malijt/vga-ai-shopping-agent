@@ -644,7 +644,7 @@ class SearchPipeline:
                 },
             )
             name = names.get(report.store_id, report.store_id)
-            warning = messages.store_warning(name, report.status)
+            warning = messages.store_warning(name, report.status, report.reason)
             if warning is not None:
                 state.warn(warning)
         if not state.timed_out:  # at the deadline, the deadline warning explains the gaps

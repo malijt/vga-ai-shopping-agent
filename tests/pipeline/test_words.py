@@ -8,6 +8,7 @@ import pytest
 from tests.factories import make_budget, make_search_request, make_store_config
 from tests.pipeline.conftest import PipelineMaker
 from tests.pipeline.world import StoreWorld, store_for
+from vga.fetch.errors import ROBOTS_UNREADABLE_DETAIL
 from vga.models import (
     Category,
     Gender,
@@ -34,6 +35,9 @@ def message_texts() -> Iterator[str]:
         if status is not StoreStatus.OK:
             yield messages.store_reason(status)
     yield messages.store_partial_warning("Some Store")
+    unreadable = messages.store_reason(StoreStatus.ROBOTS_DENIED, ROBOTS_UNREADABLE_DETAIL)
+    yield unreadable
+    yield messages.store_warning("Some Store", StoreStatus.ROBOTS_DENIED, unreadable) or ""
     yield messages.photo_too_large(8_000_000)
     yield messages.text_too_long(2000)
     yield messages.deadline_warning(30)
