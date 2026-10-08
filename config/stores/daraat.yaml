@@ -1,0 +1,30 @@
+# Daraat: a Kuwaiti online label of kaftans and summer dresses on Shopify (single brand, vendor "Daraat").
+# Prices are in Kuwaiti dinars with three decimals ("17.000"); the response has no currency, so
+# KWD is pinned here. The app shows the dinar price and an approximate dirham figure (ADR 0006).
+# Data path: Shopify's public predictive search, /search/suggest.json, which robots.txt leaves open.
+# Evidence: docs/store-qualification/daraat.md. Quirks and what would break this file:
+# docs/store-notes/daraat.md
+id: daraat
+name: Daraat
+country: KW             # Kuwait is searched too through `extra_store_countries: [KW]` in config/settings.yaml
+currency: KWD           # the suggest response has no currency field; KWD is store-level (product page JSON-LD priceCurrency, Shopify.currency)
+search_url_template: "https://www.daraat.com/search/suggest.json?q={query}&resources[type]=product&resources[limit]=10"
+allowed_hosts:
+  - www.daraat.com      # product links; the www host answered directly, no redirect (the apex daraat.com was never requested)
+  - cdn.shopify.com     # product images
+extraction:
+  strategies:
+    - name: shopify
+# No extractor option is set, and each absence rests on the 40 records seen (28 distinct products):
+# - max_price_spread: price_min equals price_max on 40 of 40 records (and `variants` is empty on all),
+#   so Shopify's `price` is the garment's price, as at Bazza Alzouman and unlike Hamsa. A test pins this
+#   on the recordings; if a later recording shows variants at different prices, add `max_price_spread: 1`
+#   (docs/store-notes/hamsa-kw.md explains the trap).
+# - gender_fields: `type` is "Dress" or "Kaftan" and no tag holds a gender word, so the default
+#   [type, tags] leaves every product's gender unknown (the store file's `genders` carries it).
+genders:
+  - women               # kaftans and dresses only: 28 of 28 distinct products seen; no field names a gender (title, type, tags, first 300 characters of the description), so this rests on the range and the brand
+categories:
+  - dresses             # `type` is "Dress" (27) or "Kaftan" (1) on all 28 products seen; 18 titles say kaftan, 8 say dress (one says both). One jumpsuit and one "Sherwal" are filed as Dress too; no tops, trousers, shoes or jackets as such (docs/store-qualification/daraat.md)
+tier_hint: budget       # KWD 8-29 seen, median 19, about AED 95-346 (median 226) at the fixed rate; 16 of 28 are marked down from KWD 20-69
+enabled: false          # off until the live smoke test passes (tests/stores/daraat); the orchestrator enables it afterwards
