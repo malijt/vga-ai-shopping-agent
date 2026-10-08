@@ -5,11 +5,14 @@
 1. skips it, with no request, if it is not ``enabled`` or is not in a country that is searched
    (the home country or one of ``Settings.extra_store_countries``);
 2. skips it, with no request, while it is in cooldown after a block;
-3. for each of the item's keyword variants (at most ``max_variants``), in order: answers from the
-   cache if it can, else checks robots.txt, fetches the search page and reads it through the
-   store's extraction chain; a redirect is followed only after the robots.txt of the page it leads
-   to (another host of the store, say) allows it; it stops at the first variant that is blocked,
-   refused, slow or broken, because asking again the same way would only repeat the failure;
+3. sends the item's first keyword variant: answers from the cache if it can, else checks
+   robots.txt, fetches the search page and reads it through the store's extraction chain; a
+   redirect is followed only after the robots.txt of the page it leads to (another host of the
+   store, say) allows it. A second variant follows only if the first gave fewer than
+   ``Settings.second_variant_below`` usable products (the store has little to show), never a
+   third, and never more than the store's ``max_variants``. It stops at the first variant that is
+   blocked, refused, slow or broken, because asking again the same way would only repeat the
+   failure;
 4. merges the variants into one ``StoreResult``.
 
 Every outcome is a ``StoreResult``; nothing a store does, and no bug in one store's code path, can
@@ -53,6 +56,15 @@ _FAILURE_PRIORITY = (
 )
 _KEEP_GOING = frozenset({StoreStatus.OK, StoreStatus.EMPTY})
 
+WARM_UP_QUERY = "dress"
+"""Any ordinary word: start-up only needs the host of a store's search address, to read the
+robots.txt there."""
+
+MAX_VARIANTS = 2
+"""The most keyword variants any store is sent for one garment. The first is the most specific; a
+second is a fallback for a store that had little to show for the first. Never a third: every extra
+request counts against the platform's limit (``vga.fetch.platform``)."""
+
 
 class StoreSearchEngine:
     """Searches stores for an item and fetches product thumbnails. Implements ``StoreSearcher``.
@@ -82,6 +94,24 @@ class StoreSearchEngine:
 
     async def aclose(self) -> None:
         await self.client.aclose()
+
+    async def warm_up(self) -> None:
+        """Read robots.txt of every store that will be searched, now, so the first search does not
+        pay for thirteen extra requests. The requests go through the same client as any other (one
+        queue per platform, cooldowns, no retry) and the verdicts are cached for the day, as ever.
+        Never raises: a robots.txt that cannot be read is handled as it is during a search
+        (everything disallowed until the cooldown ends), and one store's failure, or a bug in its
+        code path, touches no other store."""
+        stores = [
+            store for store in self.registry.active(self.settings) if not self._skip_reason(store)
+        ]
+        await asyncio.gather(*(self._warm_store(store) for store in stores))
+
+    async def _warm_store(self, store: StoreConfig) -> None:
+        try:
+            await self.robots.preload(build_search_url(store, WARM_UP_QUERY), store)
+        except Exception:  # complete isolation, as in a search
+            log.exception("robots.txt warm-up crashed", extra={"store": store.id})
 
     # ------------------------------------------------------------------------------------
     # StoreSearcher
@@ -134,13 +164,19 @@ class StoreSearchEngine:
             )
 
         variants = self._variants(item, store)
-        # One budget for robots.txt and one per variant: the requests run one after another.
+        # One budget for robots.txt and one per variant: the requests run one after another. Only
+        # the time spent working counts. A request that is waiting its turn in the rate limiter
+        # (the whole platform shares one queue) has not started, and the stage as a whole is held
+        # to the request deadline by the pipeline, which keeps what had arrived by then.
         timeout_s = (store.timeout_s or self.settings.timeout_s) * (len(variants) + 1)
         done: list[StoreResult] = []
         timed_out = False
         try:
             await run_with_deadline(
-                self.clock, timeout_s, self._search_variants(store, variants, done)
+                self.clock,
+                timeout_s,
+                self._search_variants(store, variants, done),
+                pausable=True,
             )
         except TimeoutError:
             timed_out = True
@@ -158,11 +194,13 @@ class StoreSearchEngine:
             done.append(result)
             if result.status not in _KEEP_GOING:
                 return  # asking again the same way would only repeat the failure
+            if len(result.products) >= self.settings.second_variant_below:
+                return  # the store had enough to show; another request would only cost
 
     async def _search_variant(self, store: StoreConfig, variant: str) -> StoreResult:
         """Search one store for one query variant. Always returns a result."""
         started = self.clock.monotonic()
-        remaining = self.client.cooldowns.remaining(store.id)
+        remaining = self.client.cooldown_remaining(store)  # its own, or its platform's
         if remaining > 0:
             log.warning(
                 "store in cooldown; no request made",
@@ -266,11 +304,12 @@ class StoreSearchEngine:
 
     @staticmethod
     def _variants(item: ItemIntent, store: StoreConfig) -> list[str]:
-        """The item's distinct keyword variants, in order, at most ``store.max_variants``."""
+        """The item's distinct keyword variants, in order: at most ``MAX_VARIANTS``, and at most
+        ``store.max_variants``. Which of them are really sent is ``_search_variants``' decision."""
         distinct: dict[str, str] = {}
         for keyword in item.search_keywords:
             distinct.setdefault(variant_key(keyword), keyword)
-        variants = list(distinct.values())
+        variants = list(distinct.values())[:MAX_VARIANTS]
         return variants[: store.max_variants] if store.max_variants else variants
 
     def _elapsed_ms(self, started: float) -> float:

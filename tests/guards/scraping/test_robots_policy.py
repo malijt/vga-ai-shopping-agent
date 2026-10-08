@@ -142,7 +142,7 @@ async def test_a_robots_txt_that_leaves_the_search_open_lets_it_through(
 
     response = await pipeline.run(make_search_request(text="black oversized blazer"), settings)
 
-    assert len(world.queries("alpha")) == 2  # both keyword variants
+    assert len(world.queries("alpha")) == 1  # the search went out (one variant is enough)
     assert {report.store_id for report in response.stores_used} == {"alpha", "beta"}
 
 
@@ -154,7 +154,7 @@ async def test_a_store_with_no_robots_txt_at_all_may_be_searched(
 
     response = await pipeline.run(make_search_request(text="black oversized blazer"), settings)
 
-    assert len(world.queries("alpha")) == 2
+    assert len(world.queries("alpha")) == 1  # the search went out (one variant is enough)
     assert {report.store_id for report in response.stores_used} == {"alpha", "beta"}
 
 

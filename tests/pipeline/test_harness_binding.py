@@ -532,10 +532,11 @@ class TestTheWiringFailsEarlyAndPlainly:
 # The shopper's answer to "Who is this for?": recorded and replayed
 # ============================================================================================
 #
-# A query that records the shopper's answer is searched twice: the first search, then the search
-# the page runs after the answer (the first understanding reused, the gender applied, no photo, no
-# model call). Both belong to one query, so one recording holds both, in order, and a replay serves
-# both offline.
+# A query that records the shopper's answer is run twice: the first search, then the re-run the
+# page makes after the answer (the first understanding reused, the gender applied, no photo, no
+# model call). The re-run reuses the products the first search found and applies the gender to
+# them, so it asks no store and fetches no thumbnail: the recording of the query holds the first
+# search alone, and a replay serves both runs offline from it.
 
 GUESSED_MEN_BLAZER = make_item_intent(
     search_keywords=["black oversized blazer", "oversized blazer"],
@@ -644,15 +645,17 @@ class TestTheAnswerIsAppliedByTheRealPipeline:
         assert run.gender is not None
         assert run.gender.asked is True
 
-    async def test_the_search_after_the_answer_asks_only_the_stores_that_sell_for_it(
+    async def test_the_answer_asks_no_store_at_all_it_is_applied_to_the_products_already_found(
         self, answered_world: AnsweredWorld
     ) -> None:
         await answered_world.record("women")
 
+        # The recording holds the first search alone: three stores, one search each. The answer
+        # (which leaves the men-only store out) cost no request, so there is nothing to record.
         searched = [call["stores"] for call in answered_world.recording()["search"]]
-        assert searched == [["alpha"], ["beta"], ["mens"], ["alpha"], ["beta"]]
+        assert searched == [["alpha"], ["beta"], ["mens"]]
 
-    async def test_a_garment_whose_gender_was_stated_is_not_searched_again_and_still_replays(
+    async def test_no_garment_is_searched_again_after_the_answer_and_the_run_still_replays(
         self, answered_world: AnsweredWorld
     ) -> None:
         tops = make_item_intent(
@@ -681,15 +684,16 @@ class TestTheAnswerIsAppliedByTheRealPipeline:
             (call["item"]["category"], call["stores"])
             for call in answered_world.recording()["search"]
         ]
-        assert searched == [  # the first search, then only the garment that was asked about
-            ("tops", ["alpha"]),
-            ("tops", ["beta"]),
-            ("tops", ["mens"]),
-            ("shoes", ["alpha"]),
-            ("shoes", ["beta"]),
-            ("tops", ["alpha"]),
-            ("tops", ["beta"]),
-        ]
+        assert (
+            searched
+            == [  # the first search alone: the garment asked about is not searched again
+                ("tops", ["alpha"]),
+                ("tops", ["beta"]),
+                ("tops", ["mens"]),
+                ("shoes", ["alpha"]),
+                ("shoes", ["beta"]),
+            ]
+        )
         assert recorded.response is not None
         assert [g.result_count > 0 for g in recorded.response.groups] == [True, True]
         replayed, session = await answered_world.replay("women")
@@ -705,15 +709,16 @@ class TestTheAnswerIsAppliedByTheRealPipeline:
         assert answered_world.understander.calls[0].rerun_of is None
         assert len(answered_world.recording()["understand"]) == 1
 
-    async def test_the_photo_reaches_the_model_once_and_the_ranker_scores_both_searches(
+    async def test_the_photo_reaches_the_model_once_and_the_ranker_scores_only_the_first_search(
         self, answered_world: AnsweredWorld
     ) -> None:
         await answered_world.record("women")
 
         assert [bool(call.image) for call in answered_world.understander.calls] == [True]
         scores = answered_world.recording()["image_scores"]
-        assert len(scores) == 2  # the first search, and the search after the answer
-        assert [entry["embedded"] for entry in scores] == [True, True]
+        # The first search's scores stand for the answer too: no thumbnail is fetched again.
+        assert len(scores) == 1
+        assert [entry["embedded"] for entry in scores] == [True]
 
     async def test_the_recording_never_holds_the_embedding_itself(
         self, answered_world: AnsweredWorld
@@ -760,7 +765,7 @@ class TestAnAnsweredRunReplaysOffline:
         assert len(answered_world.ranker.calls) == scoring_calls  # the model is not run again
         assert session.mismatches == []
 
-    async def test_every_recorded_call_is_used_in_order_including_the_second_image_scores(
+    async def test_every_recorded_call_is_used_in_order(
         self, answered_world: AnsweredWorld
     ) -> None:
         await answered_world.record("women")
@@ -794,16 +799,18 @@ class TestAnAnsweredRunReplaysOffline:
         assert replayed.gender is None
         assert session.final_notes() == []
 
-    async def test_asking_a_question_the_recording_never_asked_is_a_plain_mismatch(
+    async def test_an_answer_the_recording_never_recorded_needs_nothing_the_recording_lacks(
         self, answered_world: AnsweredWorld
     ) -> None:
         await answered_world.record(None)  # recorded without the answer
 
         replayed, session = await answered_world.replay("women")  # replayed with one
 
-        assert session.mismatches  # the extra search is not in the recording
-        assert "record again" in session.mismatches[0]
-        assert stores_of(replayed) == set()  # nothing was invented to fill the gap
+        # The answer is applied to the recorded products, so the recording holds all it needs:
+        # no request is asked for that it never saw, and the results are the answered ones.
+        assert session.mismatches == []
+        assert session.final_notes() == []
+        assert stores_of(replayed) == {"Alpha", "Beta"}
 
 
 class TestTheCommandLineKeepsBothSearches:
@@ -832,7 +839,7 @@ class TestTheCommandLineKeepsBothSearches:
         assert all(call.rerun_of is None for call in real_run.understander.calls)
         gown = json.loads((real_run.recording / "q01_product_gown.json").read_text("utf-8"))
         assert len(gown["understand"]) == 1
-        assert len(gown["search"]) > 2  # the first search and the search after the answer
+        assert len(gown["search"]) == 2  # the first search, one per store; the answer adds none
 
     def test_the_notes_and_the_times_are_in_the_report_and_run_json(
         self, real_run: RealRun

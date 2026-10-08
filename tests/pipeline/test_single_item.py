@@ -9,7 +9,7 @@ import pytest
 from tests.factories import make_item_intent, make_search_request, make_understand_result
 from tests.fakes import FakeImageRanker, FakeUnderstander
 from tests.pipeline.conftest import PipelineMaker
-from tests.pipeline.world import StoreWorld
+from tests.pipeline.world import StoreWorld, store_for
 from vga.models import (
     Category,
     GenderSource,
@@ -122,6 +122,21 @@ async def test_the_search_uses_the_keywords_the_understander_chose_and_nothing_e
     settings: Settings,
 ) -> None:
     item = make_item_intent(search_keywords=["black oversized blazer", "oversized blazer"])
+    pipeline = make_pipeline(understander=FakeUnderstander(make_understand_result(items=[item])))
+
+    await pipeline.run(make_search_request(text="black oversized blazer under 400 AED"), settings)
+
+    # Each store has plenty of blazers, so the most specific keywords are all it is sent.
+    assert world.queries("alpha") == ["black oversized blazer"]
+    assert world.queries("beta") == ["black oversized blazer"]
+
+
+async def test_a_store_with_little_to_show_is_also_sent_the_second_keywords_the_model_chose(
+    make_pipeline: PipelineMaker, world: StoreWorld, settings: Settings
+) -> None:
+    for key in ("alpha", "beta"):
+        world.add(store_for(key), prices={"blazer": (120, 180)})
+    item = make_item_intent(search_keywords=["black oversized blazer", "oversized blazer", "coat"])
     pipeline = make_pipeline(understander=FakeUnderstander(make_understand_result(items=[item])))
 
     await pipeline.run(make_search_request(text="black oversized blazer under 400 AED"), settings)

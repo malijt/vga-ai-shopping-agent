@@ -130,7 +130,17 @@ class Settings(VgaModel):
     # --- fetching -------------------------------------------------------------------------
     timeout_s: float = Field(default=6.0, gt=0, le=60)
     rps_per_store: float = Field(default=1.0, gt=0, le=5)
+    rps_per_platform: float = Field(default=2.0, gt=0, le=5)
+    """Requests per second to ALL the stores of one storefront platform together (the thirteen
+    shipped stores are all Shopify). Each shop is still held to ``rps_per_store``; the platform
+    in front of the shops counts per client, not per shop, so this is the limit that matters
+    (see ``vga.fetch.platform``). A store on no known platform is its own platform."""
     rps_images_per_host: float = Field(default=5.0, gt=0, le=20)
+    second_variant_below: int = Field(default=5, ge=0, le=50)
+    """A store is sent a garment's second keyword variant only when its first variant gave fewer
+    than this many usable products. ``0`` never sends a second one. No store is ever sent a
+    third: fewer requests, spread over more time, is how the stores' shared platform is kept
+    willing to answer."""
     store_cache_ttl_s: int = Field(default=600, ge=0)
     store_cooldown_s: int = Field(default=900, ge=0)
     max_response_bytes: int = Field(default=2_000_000, gt=0)

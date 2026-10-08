@@ -1,11 +1,14 @@
-"""Plan 14.1.2, request budget and rate (BRD Rule 2: about one request a second per store).
+"""Plan 14.1.2, request budget and rate (BRD Rule 2: about one request a second per store, and the
+stores of one platform together at most ``rps_per_platform`` a second).
 
 The real pipeline and the real store engine, counting what reaches the fake stores:
 
-- *Budget*: a store is sent robots.txt once plus one request per keyword variant, never more, for a
-  single garment and for an outfit of four.
+- *Budget*: a store is sent robots.txt once plus ONE search per garment. A store that had little to
+  show for it (fewer than ``second_variant_below`` products) is sent a second keyword variant, never
+  a third, and an outfit photo's garments are never sent a second.
 - *Rate*: the fake-clock time of every request to a store, robots.txt included, is at least one
-  second after the one before, however many garments and searches are running at once.
+  second after the one before, however many garments and searches are running at once; and the
+  requests to all the stores of one platform are at least ``1 / rps_per_platform`` apart.
 - *Cache*: the same search again inside the cache window sends nothing; robots.txt is read once.
 
 The rate tests fail when the rate limiter is bypassed, the cache tests fail when the result cache
@@ -20,6 +23,7 @@ import asyncio
 import gzip
 
 import httpx
+import pytest
 import yaml
 
 from tests.factories import make_item_intent, make_search_request
@@ -43,9 +47,23 @@ from vga.settings import DEFAULT_STORES_DIR, PROJECT_ROOT, Settings
 from vga.stores import StoreRegistry
 
 STORES = ("alpha", "beta")
+PLATFORM_STORES = tuple(f"shop{number:02d}" for number in range(13))
+"""As many stores as the app ships, all Shopify storefronts, so all on one platform."""
 THREE_VARIANTS = make_item_intent(
     search_keywords=["black blazer", "oversized blazer", "tailored jacket"]
 )
+THIN = dict.fromkeys(("blazer", "shirt", "jeans", "shoes"), (120, 180))
+"""Two products of every kind: fewer than ``second_variant_below``, so the store gets a second
+variant. The guards that need a longer run of requests to one store use it."""
+
+
+@pytest.fixture
+def thin_stores(world: GuardWorld) -> list[StoreConfig]:
+    """Alpha and Beta, each with little to show: a second keyword variant follows the first."""
+    stores = [store_for("alpha"), store_for("beta")]
+    for store in stores:
+        world.add(store, prices=THIN)
+    return stores
 
 
 def robots_requests(world: GuardWorld, host: str) -> int:
@@ -57,48 +75,74 @@ def robots_requests(world: GuardWorld, host: str) -> int:
 # --------------------------------------------------------------------------------------------
 
 
-async def test_one_garment_costs_each_store_robots_txt_plus_one_request_per_keyword_variant(
+async def test_one_garment_costs_a_store_with_enough_products_robots_txt_and_one_search(
     world: GuardWorld, two_stores: list[StoreConfig], build: GuardPipelines, settings: Settings
 ) -> None:
     pipeline = build(understander=understanding(THREE_VARIANTS))
 
     await pipeline.run(make_search_request(text="black blazer"), settings)
 
-    budget = 1 + len(THREE_VARIANTS.search_keywords)
     for store_id in STORES:
-        assert world.requests_to(f"{store_id}.example") <= budget
-        assert len(world.queries(store_id)) <= len(THREE_VARIANTS.search_keywords)
+        assert world.requests_to(f"{store_id}.example") == 2  # robots.txt and one search
+        assert world.queries(store_id) == ["black blazer"]  # not the other two variants
     assert world.stray == []
 
 
-async def test_robots_txt_is_fetched_once_per_store_however_many_variants_follow(
-    world: GuardWorld, two_stores: list[StoreConfig], build: GuardPipelines, settings: Settings
+async def test_a_store_with_little_to_show_is_sent_a_second_variant_and_never_a_third(
+    world: GuardWorld, thin_stores: list[StoreConfig], build: GuardPipelines, settings: Settings
 ) -> None:
     pipeline = build(understander=understanding(THREE_VARIANTS))
 
     await pipeline.run(make_search_request(text="black blazer"), settings)
 
     for store_id in STORES:
+        assert world.queries(store_id) == ["black blazer", "oversized blazer"]
+        assert world.requests_to(f"{store_id}.example") == 3  # robots.txt and two searches
+    assert world.stray == []
+
+
+async def test_the_second_variant_goes_only_to_the_store_that_needs_it(
+    world: GuardWorld, build: GuardPipelines, settings: Settings
+) -> None:
+    world.add(store_for("alpha"), prices=THIN)
+    world.add(store_for("beta"))
+    pipeline = build(understander=understanding(THREE_VARIANTS))
+
+    await pipeline.run(make_search_request(text="black blazer"), settings)
+
+    assert len(world.queries("alpha")) == 2
+    assert len(world.queries("beta")) == 1
+
+
+async def test_robots_txt_is_fetched_once_per_store_however_many_variants_follow(
+    world: GuardWorld, thin_stores: list[StoreConfig], build: GuardPipelines, settings: Settings
+) -> None:
+    pipeline = build(understander=understanding(THREE_VARIANTS))
+
+    await pipeline.run(make_search_request(text="black blazer"), settings)
+
+    for store_id in STORES:
+        assert len(world.queries(store_id)) == 2  # a variant did follow the first
         assert robots_requests(world, f"{store_id}.example") == 1
 
 
 async def test_a_store_limited_to_one_variant_is_sent_only_that_one(
     world: GuardWorld, build: GuardPipelines, settings: Settings
 ) -> None:
-    world.add(store_for("alpha", max_variants=1))
-    world.add(store_for("beta"))
+    world.add(store_for("alpha", max_variants=1), prices=THIN)
+    world.add(store_for("beta"), prices=THIN)
     pipeline = build(understander=understanding(THREE_VARIANTS))
 
     await pipeline.run(make_search_request(text="black blazer"), settings)
 
     assert len(world.queries("alpha")) == 1
     assert world.requests_to("alpha.example") <= 2
-    assert world.requests_to("beta.example") <= 4
+    assert world.requests_to("beta.example") <= 3
 
 
-async def test_an_outfit_costs_each_store_robots_txt_plus_two_variants_per_garment_at_most(
+async def test_an_outfit_costs_each_store_robots_txt_plus_one_search_per_garment_and_no_more(
     world: GuardWorld,
-    two_stores: list[StoreConfig],
+    thin_stores: list[StoreConfig],
     build: GuardPipelines,
     settings: Settings,
     photo: bytes,
@@ -107,10 +151,13 @@ async def test_an_outfit_costs_each_store_robots_txt_plus_two_variants_per_garme
 
     await pipeline.run(make_search_request(image=photo, text=None), settings)
 
+    # The stores have little to show for each garment, which would earn any other search a second
+    # variant; an outfit photo's garments never get one.
     budget = 1 + len(OUTFIT) * MAX_OUTFIT_KEYWORDS
+    assert MAX_OUTFIT_KEYWORDS == 1
     assert all(len(item.search_keywords) > MAX_OUTFIT_KEYWORDS for item in OUTFIT)
     for store_id in STORES:
-        assert world.requests_to(f"{store_id}.example") <= budget
+        assert world.requests_to(f"{store_id}.example") == budget
         assert robots_requests(world, f"{store_id}.example") == 1
     assert world.stray == []
 
@@ -137,7 +184,7 @@ async def test_at_most_ten_thumbnails_are_fetched_for_any_one_store(
 
 
 async def test_no_store_is_sent_requests_faster_than_one_a_second(
-    world: GuardWorld, two_stores: list[StoreConfig], build: GuardPipelines, settings: Settings
+    world: GuardWorld, thin_stores: list[StoreConfig], build: GuardPipelines, settings: Settings
 ) -> None:
     pipeline = build(understander=understanding(THREE_VARIANTS))
 
@@ -145,7 +192,7 @@ async def test_no_store_is_sent_requests_faster_than_one_a_second(
 
     for store_id in STORES:
         times = world.request_times(store_id)
-        assert len(times) == 4  # robots.txt and three variants: a real sequence to space
+        assert len(times) == 3  # robots.txt and two variants: a real sequence to space
         assert all(gap >= MIN_GAP_S for gap in gaps(times))
 
 
@@ -167,7 +214,7 @@ async def test_an_outfit_of_four_garments_still_keeps_one_second_between_request
 
 
 async def test_two_searches_running_at_the_same_time_share_one_second_spacing(
-    world: GuardWorld, two_stores: list[StoreConfig], build: GuardPipelines, settings: Settings
+    world: GuardWorld, thin_stores: list[StoreConfig], build: GuardPipelines, settings: Settings
 ) -> None:
     pipeline = build(understander=understanding_by_words({"blazer": BLAZER, "shirt": SHIRT}))
 
@@ -182,18 +229,33 @@ async def test_two_searches_running_at_the_same_time_share_one_second_spacing(
         assert all(gap >= MIN_GAP_S for gap in gaps(times))
 
 
+async def test_requests_to_all_the_stores_of_one_platform_are_never_closer_than_the_platform_rate(
+    world: GuardWorld, build: GuardPipelines, settings: Settings
+) -> None:
+    for store_id in PLATFORM_STORES:
+        world.add(store_for(store_id))
+    pipeline = build(understander=understanding(THREE_VARIANTS))
+
+    await pipeline.run(make_search_request(text="black blazer"), settings)
+
+    everything = sorted(t for store_id in PLATFORM_STORES for t in world.request_times(store_id))
+    assert len(everything) >= 2 * len(PLATFORM_STORES)  # robots.txt and a search for every store
+    assert all(gap >= 1 / settings.rps_per_platform - 1e-9 for gap in gaps(everything))
+    assert world.stray == []
+
+
 async def test_a_crawl_delay_in_robots_txt_slows_that_store_down_and_only_that_store(
     world: GuardWorld, build: GuardPipelines, settings: Settings
 ) -> None:
-    world.add(store_for("alpha"), robots="User-agent: *\nCrawl-delay: 5\nDisallow:\n")
-    world.add(store_for("beta"))
+    world.add(store_for("alpha"), robots="User-agent: *\nCrawl-delay: 5\nDisallow:\n", prices=THIN)
+    world.add(store_for("beta"), prices=THIN)
     pipeline = build(understander=understanding(THREE_VARIANTS))
 
     await pipeline.run(make_search_request(text="black blazer"), settings)
 
     alpha_searches = world.sites["alpha"].times
     beta_searches = world.sites["beta"].times
-    assert len(alpha_searches) == 3
+    assert len(alpha_searches) == len(beta_searches) == 2  # a second variant for each
     assert all(gap >= 5.0 - 1e-9 for gap in gaps(alpha_searches))
     assert all(gap < 5.0 for gap in gaps(beta_searches))
 
@@ -247,7 +309,7 @@ async def test_a_different_search_does_not_fetch_a_stores_robots_txt_again(
 
     for store_id in STORES:
         assert robots_requests(world, f"{store_id}.example") == 1
-        assert len(world.queries(store_id)) == 4  # two variants for each of the two garments
+        assert len(world.queries(store_id)) == 2  # one search for each of the two garments
 
 
 async def test_after_the_cache_expires_a_store_is_asked_again_but_robots_txt_is_not(
@@ -264,7 +326,7 @@ async def test_after_the_cache_expires_a_store_is_asked_again_but_robots_txt_is_
     await pipeline.run(make_search_request(text="black oversized blazer"), settings)
 
     for store_id in STORES:
-        assert len(world.queries(store_id)) == 4  # fresh answers, not stale ones for ever
+        assert len(world.queries(store_id)) == 2  # fresh answers, not stale ones for ever
         assert robots_requests(world, f"{store_id}.example") == 1  # its own 24 hour cache
 
 

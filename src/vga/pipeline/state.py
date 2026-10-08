@@ -44,7 +44,14 @@ class ItemRun:
     """Active stores that were left out because they do not sell the item's category or do not
     sell for its stated gender. No request is made to them for it."""
     cached: CachedItem | None = None
-    """The earlier search of this very item, when it can be reused (a mix or budget change)."""
+    """The earlier search of this very item, when it can be reused (a mix or budget change, or a
+    gender answer: then this is the earlier search narrowed to the answer)."""
+    cached_origin: CachedItem | None = None
+    """For a gender answer, the earlier search as it was searched, before it was narrowed: that is
+    what the next re-run starts from, so a different answer can still use all of it."""
+    images_frozen: bool = False
+    """True for a gender answer: the image scores already worked out are used as they are and no
+    thumbnail is fetched, even if the earlier comparison did not happen."""
 
     tasks: dict[str, asyncio.Task[list[StoreResult]]] = field(default_factory=dict)
     """One running search per store, by store id, in the order the stores are searched."""

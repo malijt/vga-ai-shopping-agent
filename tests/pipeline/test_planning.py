@@ -14,6 +14,7 @@ from vga.models import (
     Category,
     Gender,
     GenderSource,
+    InputType,
     MixPreset,
     RunOverrides,
     SettingsOverride,
@@ -147,19 +148,41 @@ def test_one_item_keeps_all_its_keywords() -> None:
     assert items_to_search(make_understand_result(items=[item])) == [item]
 
 
-def test_every_garment_of_an_outfit_keeps_two_keywords_at_most() -> None:
+def test_every_garment_of_an_outfit_photo_keeps_only_its_first_keyword() -> None:
     items = [make_item_intent(search_keywords=["a", "b", "c"]) for _ in range(4)]
 
-    searched = items_to_search(make_understand_result(items=items))
+    searched = items_to_search(
+        make_understand_result(input_type=InputType.OUTFIT_PHOTO, items=items)
+    )
 
-    assert [item.search_keywords for item in searched] == [["a", "b"]] * 4
-    assert MAX_OUTFIT_KEYWORDS == 2
+    assert [item.search_keywords for item in searched] == [["a"]] * 4
+    assert MAX_OUTFIT_KEYWORDS == 1
+
+
+def test_a_request_for_several_garments_in_words_keeps_what_the_model_gave() -> None:
+    items = [make_item_intent(search_keywords=["a", "b", "c"]) for _ in range(2)]
+
+    searched = items_to_search(make_understand_result(input_type=InputType.TEXT, items=items))
+
+    assert [item.search_keywords for item in searched] == [["a", "b", "c"]] * 2
+
+
+def test_a_product_photo_keeps_all_its_keywords() -> None:
+    item = make_item_intent(search_keywords=["a", "b", "c"])
+
+    searched = items_to_search(
+        make_understand_result(input_type=InputType.PRODUCT_PHOTO, items=[item])
+    )
+
+    assert searched == [item]
 
 
 def test_trimming_keywords_changes_nothing_else_about_the_item() -> None:
     items = [make_item_intent(colour="red", search_keywords=["a", "b", "c"]), make_item_intent()]
 
-    first = items_to_search(make_understand_result(items=items))[0]
+    first = items_to_search(make_understand_result(input_type=InputType.OUTFIT_PHOTO, items=items))[
+        0
+    ]
 
     assert first.colour == "red"
     assert first.category == items[0].category

@@ -166,8 +166,11 @@ async def test_stores_are_searched_in_parallel(
     results = await engine.search(item(), [shopify_store(), club_l_store()])
 
     assert [r.status for r in results] == [StoreStatus.OK, StoreStatus.OK]
-    # robots.txt, a 1 s rate-limit slot, then 3 s of waiting: the stores overlap (sequential: 8 s)
-    assert clock.monotonic() - started == pytest.approx(4, abs=0.01)
+    # Both stores are Shopify storefronts, so they share one queue at 2 requests a second. Oh Polly
+    # asks for robots.txt at 0 s and Club L at 0.5 s; each store then waits out its own 1 s, so Oh
+    # Polly searches at 1.0 s and Club L at 1.5 s, and the slower answer arrives 3 s later. The
+    # stores overlap (one after the other it would be 9 s).
+    assert clock.monotonic() - started == pytest.approx(4.5, abs=0.01)
 
 
 # --------------------------------------------------------------------------------------------
@@ -212,9 +215,13 @@ async def test_one_store_raises_one_times_out_one_succeeds_and_all_three_come_ba
         StoreStatus.OK,
     ]
     assert "RuntimeError" in (results[0].detail or "")
-    assert results[2].duration_ms < 2000  # the good store was not held up by the slow one
-    # the slow store gave up at its own timeout, not at the end of the world
-    assert clock.monotonic() - started == pytest.approx(settings.timeout_s, abs=1.1)
+    # The good store was not held up by the slow one. It is third in the shared queue (2 requests
+    # a second): its robots.txt goes at 1.0 s and its search at 2.0 s, nothing is waited for.
+    assert results[2].duration_ms == pytest.approx(2000)
+    # The slow store gave up at its own timeout, not at the end of the world. Its robots.txt went
+    # second in the shared queue (0.5 s) and its search a second after that (1.5 s); the 6 s
+    # timeout is for the request itself, so it ends at 7.5 s.
+    assert clock.monotonic() - started == pytest.approx(1.5 + settings.timeout_s, abs=0.01)
 
 
 async def test_a_bug_in_one_stores_extractor_does_not_touch_another_store(
@@ -304,19 +311,98 @@ async def test_a_slow_response_is_a_timeout_result_after_one_attempt(
     assert attempts == ["black blazer"]  # no retry, and the second variant is not tried
 
 
-async def test_a_store_timeout_keeps_the_products_found_before_it(
+async def test_a_store_that_works_past_its_budget_keeps_the_products_found_before_it(
     settings: Settings, clock: FakeClock, router: respx.MockRouter
 ) -> None:
-    """A rate limit slower than the store's budget: variant one lands, variant two would not."""
+    """The budget is 6 s for robots.txt and for each of two variants: 18 s of work. Everything the
+    store does takes 5 s, and the second variant is sent to a redirect, which takes a hop more."""
     engine = StoreSearchEngine(settings, clock=clock)
-    store = shopify_store(rps=0.1, timeout_s=6)  # one request every 10 s; budget 6 s x 3 = 18 s
+    elsewhere = f"{SUGGEST}?q=elsewhere"
+
+    async def slow_robots(request: httpx.Request) -> httpx.Response:
+        await clock.sleep(5)
+        return text_response(ALLOW_ALL_ROBOTS)
+
+    async def slow_search(request: httpx.Request) -> httpx.Response:
+        await clock.sleep(5)
+        query = request.url.params["q"]
+        if query == "oversized blazer":
+            return httpx.Response(302, headers={"location": elsewhere})
+        return json_response(suggest_body(shopify_product(1)))
+
+    router.get(OHPOLLY_ROBOTS_URL).mock(side_effect=slow_robots)
+    router.get(url__startswith=SUGGEST).mock(side_effect=slow_search)
+    started = clock.monotonic()
+
+    [result] = await engine.search(item("black blazer", "oversized blazer"), [shopify_store()])
+
+    assert result.status is StoreStatus.OK
+    assert [p.title for p in result.products] == ["Blazer 1"]  # variant one landed at 10 s
+    assert "did not finish all its searches in time" in (result.detail or "")
+    assert clock.monotonic() - started == pytest.approx(18.0, abs=0.01)  # 5 + 5 + 5 + 3 s of work
+
+
+async def test_waiting_for_a_slow_rate_limit_is_not_working_so_it_does_not_use_up_the_budget(
+    settings: Settings, clock: FakeClock, router: respx.MockRouter
+) -> None:
+    """One request every 10 s is slower than the 18 s budget of robots.txt and two variants, but
+    every request is quick: the time spent waiting for its slot is not time the store took."""
+    engine = StoreSearchEngine(settings, clock=clock)
+    store = shopify_store(rps=0.1, timeout_s=6)
     mock_oh_polly(router, suggest_body(shopify_product(1)))
+    started = clock.monotonic()
 
     [result] = await engine.search(item("black blazer", "oversized blazer"), [store])
 
     assert result.status is StoreStatus.OK
-    assert [p.title for p in result.products] == ["Blazer 1"]
-    assert "did not finish all its searches in time" in (result.detail or "")
+    assert result.detail is None  # not a word about running out of time
+    assert clock.monotonic() - started == pytest.approx(20.0, abs=0.01)  # robots, then 10 s, 10 s
+
+
+async def test_the_request_timeout_runs_from_when_the_request_starts_not_from_when_it_queued(
+    router: respx.MockRouter, clock: FakeClock
+) -> None:
+    """Behind the other stores of the platform a search waits tens of seconds for its turn; the 6 s
+    timeout is then for the request itself. An answer that takes 5 s is accepted, 7 s is not."""
+    engine = StoreSearchEngine(
+        make_settings(rps_per_platform=0.1, second_variant_below=0), clock=clock
+    )
+
+    def slow(seconds: float, key: str):
+        async def answer(request: httpx.Request) -> httpx.Response:
+            await clock.sleep(seconds)
+            return json_response(suggest_body(shopify_product(1)))
+
+        router.get(f"https://{key}.example/robots.txt").mock(
+            return_value=text_response(ALLOW_ALL_ROBOTS)
+        )
+        router.get(url__startswith=f"https://{key}.example/search/suggest.json").mock(
+            side_effect=answer
+        )
+
+    stores = [
+        shopify_store(
+            id=key,
+            name=key.title(),
+            search_url_template=f"https://{key}.example/search/suggest.json?q={{query}}",
+            allowed_hosts=[f"{key}.example", "cdn.shopify.com"],
+        )
+        for key in ("first", "quick", "late")
+    ]
+    slow(0.0, "first")
+    slow(5.0, "quick")
+    slow(7.0, "late")
+
+    results = await engine.search(item("black blazer"), stores)
+
+    # The platform allows one request every ten seconds, so "late" is the sixth in line (robots.txt
+    # and a search for each store) and starts at about 50 s.
+    assert [(r.store_id, r.status) for r in results] == [
+        ("first", StoreStatus.OK),
+        ("quick", StoreStatus.OK),
+        ("late", StoreStatus.TIMEOUT),
+    ]
+    assert clock.monotonic() > 50
 
 
 # --------------------------------------------------------------------------------------------
@@ -421,7 +507,7 @@ async def test_a_skipped_store_does_not_disturb_the_others(
 # --------------------------------------------------------------------------------------------
 
 
-async def test_every_variant_is_searched_and_the_products_merged(
+async def test_a_store_with_little_to_show_is_sent_the_second_variant_and_the_products_merge(
     engine: StoreSearchEngine, router: respx.MockRouter
 ) -> None:
     router.get(OHPOLLY_ROBOTS_URL).mock(return_value=text_response(ALLOW_ALL_ROBOTS))
@@ -435,8 +521,104 @@ async def test_every_variant_is_searched_and_the_products_merged(
 
     [result] = await engine.search(item("a one", "b two", "c three"), [shopify_store()])
 
-    assert queries(search_route) == ["a one", "b two", "c three"]
-    assert [p.title for p in result.products] == ["Blazer 1", "Blazer 2", "Blazer 3", "Blazer 4"]
+    assert queries(search_route) == ["a one", "b two"]  # the third is never sent
+    assert [p.title for p in result.products] == ["Blazer 1", "Blazer 2", "Blazer 3"]
+
+
+def products_of(count: int) -> str:
+    return suggest_body(*(shopify_product(number) for number in range(1, count + 1)))
+
+
+async def test_a_store_with_enough_products_for_the_first_variant_is_sent_only_that_one(
+    engine: StoreSearchEngine, router: respx.MockRouter, settings: Settings
+) -> None:
+    enough = products_of(settings.second_variant_below)
+    router.get(OHPOLLY_ROBOTS_URL).mock(return_value=text_response(ALLOW_ALL_ROBOTS))
+    search_route = router.get(url__startswith=SUGGEST).mock(return_value=json_response(enough))
+
+    [result] = await engine.search(item("a one", "b two"), [shopify_store()])
+
+    assert queries(search_route) == ["a one"]
+    assert len(result.products) == settings.second_variant_below
+
+
+async def test_one_product_short_of_the_threshold_gets_the_second_variant(
+    engine: StoreSearchEngine, router: respx.MockRouter, settings: Settings
+) -> None:
+    short = products_of(settings.second_variant_below - 1)
+    router.get(OHPOLLY_ROBOTS_URL).mock(return_value=text_response(ALLOW_ALL_ROBOTS))
+    search_route = router.get(url__startswith=SUGGEST).mock(return_value=json_response(short))
+
+    await engine.search(item("a one", "b two"), [shopify_store()])
+
+    assert queries(search_route) == ["a one", "b two"]
+
+
+async def test_a_first_variant_that_found_nothing_gets_the_second(
+    engine: StoreSearchEngine, router: respx.MockRouter
+) -> None:
+    router.get(OHPOLLY_ROBOTS_URL).mock(return_value=text_response(ALLOW_ALL_ROBOTS))
+    search_route = router.get(url__startswith=SUGGEST).mock(
+        side_effect=[json_response(suggest_body()), json_response(suggest_body(shopify_product(1)))]
+    )
+
+    [result] = await engine.search(item("a one", "b two"), [shopify_store()])
+
+    assert queries(search_route) == ["a one", "b two"]
+    assert [p.title for p in result.products] == ["Blazer 1"]
+
+
+async def test_no_store_is_ever_sent_a_third_variant(
+    router: respx.MockRouter, clock: FakeClock
+) -> None:
+    engine = StoreSearchEngine(make_settings(second_variant_below=50), clock=clock)
+    router.get(OHPOLLY_ROBOTS_URL).mock(return_value=text_response(ALLOW_ALL_ROBOTS))
+    search_route = router.get(url__startswith=SUGGEST).mock(
+        return_value=json_response(products_of(3))  # always thin, and a threshold nobody reaches
+    )
+
+    await engine.search(item("a one", "b two", "c three"), [shopify_store()])
+
+    assert queries(search_route) == ["a one", "b two"]
+
+
+async def test_a_threshold_of_zero_never_sends_a_second_variant(
+    router: respx.MockRouter, clock: FakeClock
+) -> None:
+    engine = StoreSearchEngine(make_settings(second_variant_below=0), clock=clock)
+    router.get(OHPOLLY_ROBOTS_URL).mock(return_value=text_response(ALLOW_ALL_ROBOTS))
+    search_route = router.get(url__startswith=SUGGEST).mock(
+        return_value=json_response(suggest_body())  # nothing found at all
+    )
+
+    await engine.search(item("a one", "b two"), [shopify_store()])
+
+    assert queries(search_route) == ["a one"]
+
+
+async def test_a_thin_first_variant_does_not_override_the_stores_own_cap(
+    engine: StoreSearchEngine, router: respx.MockRouter
+) -> None:
+    router.get(OHPOLLY_ROBOTS_URL).mock(return_value=text_response(ALLOW_ALL_ROBOTS))
+    search_route = router.get(url__startswith=SUGGEST).mock(
+        return_value=json_response(products_of(1))
+    )
+
+    await engine.search(item("a one", "b two"), [shopify_store(max_variants=1)])
+
+    assert queries(search_route) == ["a one"]
+
+
+async def test_a_blocked_first_variant_is_not_followed_by_a_second(
+    engine: StoreSearchEngine, router: respx.MockRouter
+) -> None:
+    router.get(OHPOLLY_ROBOTS_URL).mock(return_value=text_response(ALLOW_ALL_ROBOTS))
+    search_route = router.get(url__startswith=SUGGEST).mock(return_value=httpx.Response(403))
+
+    [result] = await engine.search(item("a one", "b two"), [shopify_store()])
+
+    assert result.status is StoreStatus.BLOCKED
+    assert queries(search_route) == ["a one"]
 
 
 async def test_variants_overlapping_each_other_are_deduplicated(
@@ -483,13 +665,13 @@ async def test_variants_that_differ_only_in_case_or_spacing_are_searched_once(
 async def test_the_variant_requests_to_one_store_are_spaced_by_its_rate(
     engine: StoreSearchEngine, router: respx.MockRouter, clock: FakeClock
 ) -> None:
-    mock_oh_polly(router)
+    mock_oh_polly(router, products_of(2))  # thin, so that the second variant is sent
     started = clock.monotonic()
 
     await engine.search(item("a one", "b two", "c three"), [shopify_store()])
 
-    # robots.txt, then three searches, on one host at 1 request per second
-    assert clock.monotonic() - started == pytest.approx(3.0, abs=0.01)
+    # robots.txt, then two searches, on one host at 1 request per second
+    assert clock.monotonic() - started == pytest.approx(2.0, abs=0.01)
 
 
 async def test_a_failing_variant_stops_the_rest(
@@ -1136,3 +1318,98 @@ def test_two_separate_event_loops_can_use_one_engine(
     second = asyncio.run(engine.search(item("b two"), [shopify_store()]))
 
     assert [first[0].status, second[0].status] == [StoreStatus.OK, StoreStatus.OK]
+
+
+# --------------------------------------------------------------------------------------------
+# warm_up: robots.txt at start-up
+# --------------------------------------------------------------------------------------------
+
+
+def two_stores_in_a_registry(settings: Settings, clock: FakeClock) -> StoreSearchEngine:
+    return StoreSearchEngine(
+        settings, StoreRegistry([shopify_store(), club_l_store()]), clock=clock
+    )
+
+
+async def test_warm_up_reads_the_robots_txt_of_every_active_store_through_the_queue(
+    settings: Settings, clock: FakeClock, router: respx.MockRouter
+) -> None:
+    engine = two_stores_in_a_registry(settings, clock)
+    arrivals: list[float] = []
+
+    def stamped(_request: httpx.Request) -> httpx.Response:
+        arrivals.append(clock.monotonic())
+        return text_response(ALLOW_ALL_ROBOTS)
+
+    router.get(OHPOLLY_ROBOTS_URL).mock(side_effect=stamped)
+    router.get(CLUBL_ROBOTS_URL).mock(side_effect=stamped)
+    started = clock.monotonic()
+
+    await engine.warm_up()
+
+    assert [t - started for t in arrivals] == pytest.approx([0.0, 0.5])  # one platform, one queue
+    assert router.calls.call_count == 2  # nothing but the two robots.txt files
+
+
+async def test_a_search_after_warm_up_does_not_ask_for_robots_txt_again(
+    settings: Settings, clock: FakeClock, router: respx.MockRouter
+) -> None:
+    engine = two_stores_in_a_registry(settings, clock)
+    robots_route, search_route = mock_oh_polly(router)
+    await engine.warm_up()
+    clock.advance(30)
+
+    [result] = await engine.search(item("black blazer"), [shopify_store()])
+
+    assert result.status is StoreStatus.OK
+    assert robots_route.call_count == 1  # the one at start-up
+    assert search_route.call_count == 1
+
+
+async def test_warm_up_skips_the_stores_a_search_would_skip(
+    settings: Settings, clock: FakeClock, router: respx.MockRouter
+) -> None:
+    kuwait = shopify_store(
+        id="kw",
+        country="KW",
+        search_url_template="https://kw.example/s?q={query}",
+        allowed_hosts=["kw.example", "cdn.shopify.com"],
+    )
+    off = shopify_store(
+        id="off",
+        enabled=False,
+        search_url_template="https://off.example/s?q={query}",
+        allowed_hosts=["off.example", "cdn.shopify.com"],
+    )
+    engine = StoreSearchEngine(settings, StoreRegistry([shopify_store(), kuwait, off]), clock=clock)
+    robots_route = router.get(OHPOLLY_ROBOTS_URL).mock(return_value=text_response(ALLOW_ALL_ROBOTS))
+
+    await engine.warm_up()  # Kuwait is not among the countries searched, "off" is not enabled
+
+    assert robots_route.call_count == 1
+    assert router.calls.call_count == 1
+
+
+async def test_warm_up_never_raises_whatever_a_store_does(
+    settings: Settings, clock: FakeClock, router: respx.MockRouter
+) -> None:
+    engine = two_stores_in_a_registry(settings, clock)
+    router.get(OHPOLLY_ROBOTS_URL).mock(side_effect=RuntimeError("bug in a handler"))
+    club_l = router.get(CLUBL_ROBOTS_URL).mock(return_value=text_response(ALLOW_ALL_ROBOTS))
+
+    await engine.warm_up()
+
+    assert club_l.call_count == 1  # the other store was still read
+    # The failure was not turned into a verdict: a search meets it as it would have without the
+    # warm-up, and one store's bug still touches no other store.
+    [result] = await engine.search(item("black blazer"), [shopify_store()])
+    assert result.status is StoreStatus.ERROR
+    assert "RuntimeError" in (result.detail or "")
+
+
+async def test_warm_up_with_no_stores_does_nothing(
+    settings: Settings, clock: FakeClock, router: respx.MockRouter
+) -> None:
+    await StoreSearchEngine(settings, StoreRegistry([]), clock=clock).warm_up()
+
+    assert router.calls.call_count == 0

@@ -531,14 +531,15 @@ async def test_requests_to_one_store_are_spaced_by_its_rate(
     assert clock.monotonic() - started >= 3.0 - 1e-9
 
 
-async def test_a_store_can_set_its_own_rate(
-    client: PoliteClient, router: respx.MockRouter, clock: FakeClock
-) -> None:
+async def test_a_store_can_set_its_own_rate(router: respx.MockRouter, clock: FakeClock) -> None:
+    # The platform limit is raised out of the way so that it is the store's own rate that is
+    # measured; test_a_store_alone_on_its_platform_is_still_held_to_the_platform_rate is its twin.
+    polite = PoliteClient(make_settings(rps_per_platform=5), clock=clock)
     quick = make_store_config(rps=4)
     router.get(url__startswith=f"https://{HOST}/").mock(return_value=text_response("ok"))
     started = clock.monotonic()
 
-    await asyncio.gather(*(fetch(client, quick, f"https://{HOST}/p{i}") for i in range(5)))
+    await asyncio.gather(*(fetch(polite, quick, f"https://{HOST}/p{i}") for i in range(5)))
 
     assert clock.monotonic() - started == pytest.approx(1.0)
 

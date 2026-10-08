@@ -25,7 +25,8 @@ from vga.fetch.errors import (
     TooManyRedirectsError,
     UrlNotAllowedError,
 )
-from vga.fetch.ratelimit import Cooldowns, RateLimiter
+from vga.fetch.platform import platform_of
+from vga.fetch.ratelimit import Cooldowns, RateLimiter, SharedLimit
 from vga.fetch.robots import RobotsChecker
 
 __all__ = [
@@ -43,10 +44,12 @@ __all__ = [
     "ResponseTooLargeError",
     "RobotsChecker",
     "RobotsDeniedError",
+    "SharedLimit",
     "TooManyRedirectsError",
     "UrlNotAllowedError",
     "belongs_to_store_site",
     "check_url",
     "is_allowed",
+    "platform_of",
     "registered_domain",
 ]

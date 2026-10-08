@@ -412,8 +412,10 @@ async def test_products_age_from_when_their_store_answered_not_from_when_it_was_
     photo: bytes,
     clock: FakeClock,
 ) -> None:
-    # The first garment is slow (about ten seconds); the second comes back in about a second but
-    # is only collected after the first, because garments are collected in order.
+    # The first garment is slow (its answer takes five seconds, so it arrives at about six); the
+    # second comes back at about two but is only collected after the first, because garments are
+    # collected in order. (One search per garment: the five seconds are not repeated for a second
+    # variant, and a request is not given more than the 6 s timeout.)
     world.add(store_for("alpha"), delay=lambda query: 5.0 if "blazer" in query else 0.0)
     pipeline = make_pipeline(understander=photo_search([BLAZER, SHIRT], InputType.OUTFIT_PHOTO))
     started = clock.monotonic()
@@ -425,8 +427,8 @@ async def test_products_age_from_when_their_store_answered_not_from_when_it_was_
     blazers, shirts = cached.items[0], cached.items[1]
     ttl = settings.store_cache_ttl_s
     assert shirts.expires_at - ttl < started + 5  # stamped when the shirts came back
-    assert blazers.expires_at - shirts.expires_at > 5  # the slow blazers are younger
-    assert response.duration_ms > 10_000
+    assert blazers.expires_at - shirts.expires_at > 3  # the slow blazers are younger
+    assert response.duration_ms > 5_000
 
 
 async def test_a_rerun_of_a_request_the_process_never_saw_searches_normally(

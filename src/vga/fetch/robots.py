@@ -32,6 +32,7 @@ from protego import Protego
 from vga.fetch.allowlist import check_url
 from vga.fetch.blocking import looks_like_html
 from vga.fetch.client import PoliteClient
+from vga.fetch.deadline import waiting_in_queue
 from vga.fetch.errors import BlockedError, CooldownError, FetchError, RobotsDeniedError
 from vga.log import get_logger
 from vga.models import StoreConfig
@@ -83,6 +84,22 @@ class RobotsChecker:
             )
             raise RobotsDeniedError(detail=f"robots.txt disallows {url[:200]}")
 
+    async def preload(self, url: str, store: StoreConfig) -> None:
+        """Read the robots.txt of ``url``'s host now and remember the verdict, so the first search
+        does not have to. It is the very fetch ``ensure_allowed`` would make, through the same
+        client (rate limits, platform queue, cooldowns), and the verdict is cached the same way,
+        including "unreadable means disallowed". It never raises for a robots.txt that cannot be
+        read; a block (HTTP 429 and the rest) starts its cooldown as it always does and is
+        logged."""
+        host = check_url(url, store.allowed_hosts)
+        try:
+            await self._verdict(host, store)
+        except FetchError as exc:
+            log.warning(
+                "robots.txt not read at start-up",
+                extra={"store": store.id, "host": host, "reason": exc.code},
+            )
+
     async def can_fetch(self, url: str, store: StoreConfig) -> bool:
         """``ensure_allowed`` as a yes/no question (a block still raises)."""
         try:
@@ -101,9 +118,11 @@ class RobotsChecker:
             pending = self._in_flight.get(host)
             if pending is None:
                 break
-            # Another search is already asking this host for robots.txt: share its answer.
+            # Another search is already asking this host for robots.txt: share its answer. This
+            # one is waiting for that fetch (and its place in the queue), not working.
             try:
-                return await asyncio.shield(pending)
+                with waiting_in_queue():
+                    return await asyncio.shield(pending)
             except asyncio.CancelledError:
                 if not pending.cancelled():
                     raise  # this task was cancelled, not the one doing the fetch

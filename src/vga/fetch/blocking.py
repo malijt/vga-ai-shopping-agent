@@ -7,10 +7,22 @@ block.
 """
 
 import re
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 
 BLOCKING_STATUSES = frozenset({401, 403, 429})
 """401 means the page needs a login, which we never use; 403 and 429 are a refusal or a rate
 limit. None of them is retried."""
+
+RATE_LIMITED_STATUS = 429
+"""HTTP "too many requests". On a platform shared by many shops it is the platform's answer, not
+the shop's, so it stops every store of the platform (``PoliteClient``), not only the one that got
+it."""
+
+MAX_RETRY_AFTER_S = 24 * 3600
+"""The longest ``Retry-After`` we honour. A server (or whatever sits in front of it) that asks for
+more is read as asking for a day: the answer is untrusted input and must not be able to switch a
+store off for ever."""
 
 REDIRECT_STATUSES = frozenset({301, 302, 303, 307, 308})
 
@@ -55,3 +67,30 @@ def find_challenge_marker(body: bytes, content_type: str) -> str | None:
         return None
     head = body[:CHALLENGE_SCAN_BYTES].decode("utf-8", errors="replace").lower()
     return next((marker for marker in CHALLENGE_MARKERS if marker in head), None)
+
+
+def parse_retry_after(value: str | None, now: datetime) -> float | None:
+    """Seconds a server asked us to wait, from its ``Retry-After`` header, else ``None``.
+
+    The header is either a number of seconds or an HTTP date (RFC 9110 section 10.2.3); ``now`` is
+    the current wall-clock time, for a date. Anything else, a time already past and zero all mean
+    "no wait was asked for" (``None``). The result is at most ``MAX_RETRY_AFTER_S``.
+    """
+    if value is None:
+        return None
+    text = value.strip()
+    if not text:
+        return None
+    if text.isascii() and text.isdigit():
+        seconds = float(text)
+    else:
+        try:
+            when = parsedate_to_datetime(text)
+        except (TypeError, ValueError, IndexError):
+            return None
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=UTC)
+        seconds = (when - now).total_seconds()
+    if seconds <= 0:
+        return None
+    return min(seconds, MAX_RETRY_AFTER_S)
