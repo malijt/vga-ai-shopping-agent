@@ -91,9 +91,18 @@ def _live_pipeline(_settings: Settings) -> SearchPipeline:
     # image similarity is unavailable here: not an error, the pipeline then ranks by text and
     # price and says so in the warnings of a photo search. Never called again: this function
     # runs once per process.
-    ready = asyncio.run(pipeline.warm_up())
+    ready = asyncio.run(_warm_up(pipeline))
     log.info("search pipeline ready", extra={"image_model_ready": ready})
     return pipeline
+
+
+async def _warm_up(pipeline: SearchPipeline) -> bool:
+    try:
+        return await pipeline.warm_up()
+    finally:
+        # Warming up reads the stores' robots.txt files, and this loop ends with it: close the
+        # HTTP client here, as `_run` does after a search.
+        await pipeline.aclose()
 
 
 def get_pipeline(settings: Settings) -> Pipeline:
