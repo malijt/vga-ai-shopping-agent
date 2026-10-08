@@ -1,0 +1,43 @@
+# Al Jazeera Clothing: a Kuwaiti label of traditional menswear on Shopify (single brand; no relation
+# to the news network). Dishdashas for men, youths, boys and newborns, plus underwear, nightwear
+# and ghutras. Prices are in Kuwaiti dinars with three decimals ("9.000"); the response has no
+# currency, so KWD is pinned here. The app shows the dinar price and an approximate dirham figure
+# (ADR 0006).
+# Data path: Shopify's public predictive search, which robots.txt leaves open. THE ADDRESS HAS
+# /en/ IN IT, ON PURPOSE: the store's default language is Arabic, and Shopify's predictive search
+# does not serve that locale (the plain /search/suggest.json answered HTTP 417 "Unsupported buyer
+# locale" three times). The English storefront under /en/ answers normally, and its product links
+# are /en/products/<handle>. Drop the /en/ and the store returns an error on every search.
+# Evidence: docs/store-qualification/al-jazeera-clothing.md. Quirks and what would break this file:
+# docs/store-notes/al-jazeera-clothing.md
+id: al-jazeera-clothing
+name: Al Jazeera Clothing
+country: KW             # Kuwait is searched too through `extra_store_countries: [KW]` in config/settings.yaml
+currency: KWD           # the suggest response has no currency field; KWD is store-level (Shopify.currency and shop.paymentSettings.currencyCode on the home page; no product page was read, so no JSON-LD priceCurrency)
+search_url_template: "https://aljazeera-clothing.com/en/search/suggest.json?q={query}&resources[type]=product&resources[limit]=10"
+allowed_hosts:
+  - aljazeera-clothing.com   # product links and the search address; the apex answered with no redirect
+  - cdn.shopify.com          # product images
+extraction:
+  strategies:
+    - name: shopify
+      options:
+        # Who a product is for: `type` is "Apparel for men" on all 12 men's records and "Apparel for
+        # kids" on all 18 children's, and `tags` agree ("men" on the men's, "boys" and "kids" on the
+        # children's). "Apparel for men" names men; "Apparel for kids" and the kids' tags name no
+        # gender word, so the children's records stay unknown and the ranker reads their titles.
+        gender_fields: [type, tags]
+        # Children's sizes: 8 of the 18 children's records have a lowest price below their highest
+        # (KWD 12 to 14, 6 to 7, 5 to 6, 2 to 2.25; the one record that lists a variant shows a
+        # "6 Months (18 Inch)" size), and so does one men's underwear pack (6.6 to 9). The search
+        # response's `price` is the cheapest variant, so on these records it is the smallest size's
+        # price and not one the shopper can count on. The three adult dishdashas all have one price.
+        # A record is kept only when its variants all cost the same (ADR 0012); the others are
+        # dropped, never corrected. The cost: 9 of 30 records seen.
+        max_price_spread: 1
+genders:
+  - men                 # the adult range is men's (12 of 30 records); the other 18 are boys', youths', kids' and newborns' (not a gender in the contract); no women's record was seen (docs/store-notes/al-jazeera-clothing.md)
+categories:
+  - dresses             # the category that holds thobes, dishdashas and kanduras. The 3 adult dishdashas of the 12 men's records are the only adult outer garments seen; the other 9 are underwear and nightwear, which are not returned. A shirt or trousers search is not sent here (docs/store-notes/al-jazeera-clothing.md)
+tier_hint: budget       # a men's dishdasha is KWD 9, about AED 107; everything seen is KWD 2 to 18, about AED 24 to 215
+enabled: false          # the live smoke test has not run yet; the orchestrator enables it after it passes
