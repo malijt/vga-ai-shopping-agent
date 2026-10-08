@@ -115,7 +115,7 @@ Two things to know:
 | What | Where | How long | Status |
 |---|---|---|---|
 | The photo, during a search | The search program's memory | Until the search ends. Nothing in the search program refers to it afterwards | Checked |
-| The photo, in the upload box of the page | The page's server memory, kept by Streamlit (not on disk) | For the browser session: Streamlit drops a session's uploads when the session is removed. The page does not release the photo earlier yet (plan item 15.1.2) | Read in Streamlit 1.65.0's source. Not verified on the running page: the page is not connected to the real search yet |
+| The photo, in the upload box of the page | The page's server memory, kept by Streamlit (not on disk) | Until the search that used it ends: the page then resets the upload box, so its own state holds no photo (plan item 15.1.2, built 2026-10-08). Streamlit's own store drops a session's uploads when the session is removed | The page's state is checked by tests. When Streamlit's own store lets go of the file after the box is reset is read from Streamlit 1.65.0's source, not verified on a running page |
 | The photo's **embedding**: a list of numbers that describes how the photo looks | The search program's memory (the "search again" cache), and the page's session | The cache keeps the latest 32 searches until the program stops, or a newer search pushes the oldest out. The 10-minute limit only decides whether the stored store results can be re-used; it does not delete anything | Checked (it is numbers only); lifetime read in `src/vga/pipeline/rerun.py` |
 | What the AI read in the photo (colour, style, search words) | The same places, and in the answer shown on the page | The same | Checked that it holds no image |
 | The stores' answers | The search program's memory | 10 minutes for re-use | Read in the code |
@@ -216,9 +216,10 @@ What it **cannot** see:
 - A file written by code that does not go through Python's file functions (a C library that opens a
   file itself). The before-and-after look at the folders catches that only for the folders it
   watches, and not if the file is deleted again.
-- The real image model's inner workings (read, not run), and a running Streamlit page: the page is
-  not connected to the real search yet, so the audit covers the search pipeline and the command line
-  (`python -m vga.search --image ...`).
+- The real image model's inner workings (read, not run), and a running Streamlit page: the audit
+  covers the search pipeline and the command line (`python -m vga.search --image ...`). The page
+  has run the real search since 2026-10-08, and its own tests check that it holds no photo after a
+  search, but the audit's five-channel watch has not been run against a live page.
 - What the browser keeps of an uploaded file, a terminal's scrollback if log lines are shown there,
   and OpenAI's side of the connection.
 - A search more than a few minutes after the first, or a program that has run for days.
@@ -251,8 +252,8 @@ None of this is decided here. A person who can give legal advice should look at:
 - Whether this OpenAI account has zero data retention, and the exact steps to request it.
 - Whether the embedding of a photo can be turned back into a picture.
 - That the real image model keeps nothing of its input (code read, model not run).
-- That the page's upload box releases the photo as the plan intends (not built yet), and Streamlit's
-  upload handling on a running page.
+- Streamlit's own upload handling on a running page, after the page has reset its upload box
+  (built and tested on the page's side).
 - Where OpenAI processes and stores the photo, and the legal position under the UAE law and GDPR.
 - That Streamlit really sends no usage statistics (the setting is in the file), and exactly when it
   drops an uploaded file from memory.

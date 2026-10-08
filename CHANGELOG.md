@@ -23,6 +23,7 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 - This changelog is maintained from now on (user request).
 
 **Added**
+- **Final documents (Phase 16.2):** the README rewritten for a fresh clone, with a settings reference, how to behave towards the stores, and the known limits of the AI features; `docs/how-to-add-a-store.md`; `docs/architecture.md` with a diagram checked against the code; eight new decision records (ADR 0007 to 0014) and a dated update on each of the first six; `docs/store-notes/SUMMARY.md` with every store's fragility and a terms-of-use checklist on which nothing is marked as checked; and the licence audit re-run on 145 locked packages (no strong copyleft).
 - **The acceptance harness paces a live run and tells the truth about a throttled one.** It waits 30 s between queries (`--pause`) and sends at most one link check every 2 s (`--link-interval`). A query that every store turned away is "not run", not "failed"; the run stops there, the verdict reads INCOMPLETE, and the report lists what to repeat. `--only` finishes a stopped run later without sending the finished queries again. Each query is now saved and link-checked before the next starts, so an interrupted run can be finished. A full ten-query run takes about 19 minutes.
 - **The acceptance harness answers "Who is this for?" the way the page does.** A photo query can record the shopper's answer (`shopper_gender`); after the first search the harness gives it, with no photo and no OpenAI call, and scores the results shown after the answer. The 30 s limit is applied to the first search, the wait before the shopper sees anything; the report shows the first search, the search after the answer and their sum. A query with no recorded answer runs as before. A recording replays offline with the extra search included.
 - **"Who is this for?" on the page.** When a garment's gender was guessed or not given, the page asks above the results, with Women, Men and Show both. Women or Men searches again with that gender and no OpenAI call; Show both closes the question and changes nothing. It is not asked when the shopper typed the gender.
@@ -48,6 +49,7 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 - Acceptance harness (Phase 11): runs the 10 frozen queries, checks the BRD pass rule, exports a labelling sheet, and can record a live run and replay it offline.
 
 **Fixed**
+- **The page was reachable from other devices on the same network.** Streamlit listens on every network interface unless told otherwise, so anyone on the same Wi-Fi who knew the address could have used the page and spent the OpenAI allowance. The page now listens on this computer only, and a test pins it. Found while writing the README.
 - The harness's link check failed with an error for any store whose robots.txt sets a crawl delay.
 - A card no longer says "Colour: not listed" under a title that names the colour; the line appears only when the store lists a colour.
 - **The kind of request is decided by the code, not by the model's label.** A photo with one garment is a product photo; with two or more, an outfit photo; with typed text, photo + text. Live eval after the fix: 24 of 24 passed, typical answer 1.9 s, worst 3.0 s.
@@ -81,6 +83,8 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 - `httpx2`, which the Understand tests import directly, is now a declared test dependency. `app` and `eval` imports sort as first-party.
 
 **Found**
+- **Licences needing the owner's decision:** sixteen NVIDIA CUDA packages that `torch` pulls in on Linux only (never installed on this Mac; 11 proprietary, 5 unknown), so the rule "no unreviewed unknown licence" is not yet met for a Linux GPU machine; OpenAI's terms for `gpt-6-luna` are unread; and Marqo-FashionSigLIP's Apache-2.0 licence is taken from its model card, which the local copy does not include.
+- `extruct` and `selectolax` are declared dependencies that nothing imports. The daily OpenAI call cap and the store cooldowns live in memory and reset when the program restarts.
 - **First real search under the platform limit:** "navy linen shirt for men" took 8.4 s (understanding 4.5 s, stores 3.8 s) and returned 23 results from 4 stores, with no refusal. Stores that sell only dresses or only women's clothing were not asked.
 - The agent building the limit appeared to stall twice. The cause was the laptop asleep with its lid closed for several hours, not the code. Four test processes left hanging by an earlier agent were stopped.
 - Not known: whether 2 requests a second is under Shopify's allowance (it must not be probed), and whether one variant per store gives enough results on every query.

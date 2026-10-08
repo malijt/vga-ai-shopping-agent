@@ -63,6 +63,11 @@ class TestTheme:
     def test_the_server_upload_limit_matches_the_uploader(self) -> None:
         assert CONFIG["server"]["maxUploadSize"] == MAX_PHOTO_MB
 
+    def test_the_page_is_served_to_this_computer_only(self) -> None:
+        # Streamlit's default is every network interface: anyone on the same network could open
+        # the page and spend the owner's OpenAI allowance.
+        assert CONFIG["server"]["address"] == "localhost"
+
     def test_usage_statistics_are_off(self) -> None:
         assert CONFIG["browser"]["gatherUsageStats"] is False
 

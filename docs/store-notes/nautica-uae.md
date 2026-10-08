@@ -1,5 +1,9 @@
 # Nautica UAE: store notes (plan 12.2.4)
 
+> **Update 2026-10-08:** where this note says a product has no gender field or that the reader
+> ignores `type` and `tags`, that is no longer true. The Shopify reader now sets a product's gender
+> from those fields, `type` first (ADR 0014).
+
 Store id `nautica-uae`, storefront `https://nautica-ae.com/`, a Shopify store of one brand
 (vendor "Nautica", all 40 records seen on 2026-10-08). Config: `config/stores/nautica-uae.yaml`
 (`enabled: true`, mid_range, `genders` unset). Qualification report (2026-10-07):

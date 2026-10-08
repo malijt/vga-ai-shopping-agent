@@ -25,7 +25,8 @@ file as the always-on summary and open the matching doc when you need full depth
   Giordano UAE, Nautica UAE, Sacoor Brothers UAE, Oh Polly UAE, Club L London UAE, Maison D'Vie and,
   since the user raised the limit from six on 2026-10-08 to cover dresses and modest wear, Hanayen,
   Maison Arabelle, Nishat Linen UAE and Signature Studio. A store is enabled only after a live smoke
-  test through the project's own engine. Three more readable stores are in reserve.
+  test through the project's own engine. Four more readable stores are in reserve
+  (`docs/store-notes/SUMMARY.md`).
 - **Second currency (decided by the user 2026-10-08, ADR 0006):** three Kuwaiti designer stores
   (Bazza Alzouman, Hamsa, Manal Smaoui) are enabled too. They price in KWD. A result shows the store's own price plus
   an approximate AED figure from a fixed rate in `config/settings.yaml`; price ranges and budgets use

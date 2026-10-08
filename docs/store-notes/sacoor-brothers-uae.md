@@ -1,5 +1,9 @@
 # Sacoor Brothers UAE: store notes (plan 12.3.4)
 
+> **Update 2026-10-08:** where this note says a product has no gender field or that the reader
+> ignores `type` and `tags`, that is no longer true. The Shopify reader now sets a product's gender
+> from those fields, `type` first (ADR 0014).
+
 Store id `sacoor-brothers-uae`, storefront `https://ae.sacoorbrothers.com/`. Config:
 `config/stores/sacoor-brothers-uae.yaml`. Tests: `tests/stores/sacoor-brothers-uae/` (offline fixture
 tests; a `live` smoke test). Qualification: `docs/store-qualification/sacoor-brothers-uae.md`.

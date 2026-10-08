@@ -20,6 +20,9 @@ showErrorDetails = "none"
 toolbarMode = "viewer"
 
 [server]
+# Listen on this computer only. Streamlit's default is every network interface, which would let
+# anyone on the same network open the page and spend the owner's OpenAI allowance.
+address = "localhost"
 # Largest upload in megabytes. Must equal app.components.input_panel.MAX_PHOTO_MB, which tests check.
 maxUploadSize = 8
 
