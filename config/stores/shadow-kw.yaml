@@ -1,0 +1,31 @@
+# Shadow: a Kuwaiti abaya label on Shopify (single brand).
+# Prices are in Kuwaiti dinars with three decimals ("69.000"); the response has no currency, so
+# KWD is pinned here. The app shows the dinar price and an approximate dirham figure (ADR 0006).
+# Data path: Shopify's public predictive search, /search/suggest.json, which robots.txt leaves open.
+# Evidence: docs/store-qualification/shadow-kw.md. Quirks and what would break this file:
+# docs/store-notes/shadow-kw.md
+id: shadow-kw
+name: Shadow
+country: KW             # Kuwait is searched too through `extra_store_countries: [KW]` in config/settings.yaml
+currency: KWD           # the suggest response has no currency field; KWD is store-level (product page JSON-LD priceCurrency on all 54 offers, Shopify.currency)
+search_url_template: "https://shadow.com.kw/search/suggest.json?q={query}&resources[type]=product&resources[limit]=10"
+allowed_hosts:
+  - shadow.com.kw       # product links; the apex answered directly, no redirect
+  - cdn.shopify.com     # product images (26 of 26 records seen)
+extraction:
+  strategies:
+    - name: shopify
+      # No `max_price_spread` on purpose: price_min equals price_max on all 34 records seen (26
+      # distinct products), so `price` is the price of every variant, unlike Hamsa. The `variants`
+      # list in the answer is empty, so this rests on those two fields and on one product page
+      # (54 variant offers, all KWD 69). If a record ever shows two prices, add the option
+      # (docs/how-to-add-a-store.md, 6c). A test pins that no saved record has a spread.
+      #
+      # No `gender_fields` either: `type` ("ABAYA SET", "SHEILA", "ACCESSORIES") and `tags` name no
+      # gender on any record, so the default reading leaves every product's gender unknown.
+genders:
+  - women               # abayas, sheilas and caps only: 26 of 26 distinct records seen; no field names a gender, so this rests on the range and the brand
+categories:
+  - dresses             # 20 of the 26 distinct records are abayas (type "ABAYA SET"); the other 6 are sheilas and taqiyah caps (accessories). No shoes, trousers, tops or jackets seen; "kaftan" and "dress" returned no kaftan or dress (docs/store-qualification/shadow-kw.md)
+tier_hint: mid_range    # abayas KWD 39-180, median 59, about AED 465-2,146, median 703; 6 of 20 abayas are under AED 600, the thin spot the README names
+enabled: false          # the live smoke test has not run yet (tests/stores/shadow-kw); the orchestrator enables it after the test passes
