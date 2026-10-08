@@ -1,0 +1,4 @@
+# Quoted in full in docs/store-qualification/luxury-for-you.md (the Sitemap lines are omitted).
+User-Agent: *
+Allow: /
+Disallow: /account/

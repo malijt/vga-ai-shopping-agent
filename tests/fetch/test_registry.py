@@ -1,0 +1,435 @@
+"""Store registry (plan 6.3.1): ``config/stores/*.yaml`` into ``StoreConfig`` (temporary files)."""
+
+from pathlib import Path
+
+import pytest
+import yaml
+
+from tests.factories import make_settings
+from vga.errors import ConfigError
+from vga.settings import DEFAULT_STORES_DIR
+from vga.stores.extractors import ExtractorRegistry, ShopifyExtractor
+from vga.stores.extractors.shopify import OPTIONS as SHOPIFY_OPTIONS
+from vga.stores.registry import StoreRegistry, load_store_configs
+
+OH_POLLY = {
+    "id": "oh-polly",
+    "name": "Oh Polly",
+    "country": "AE",
+    "currency": "AED",
+    "search_url_template": (
+        "https://ohpolly.ae/search/suggest.json?q={query}"
+        "&resources[type]=product&resources[limit]=10"
+    ),
+    "allowed_hosts": ["ohpolly.ae", "www.ohpolly.ae", "cdn.shopify.com"],
+    "extraction": {"strategies": [{"name": "shopify"}]},
+    "tier_hint": "mid_range",
+    "enabled": True,
+}
+
+CLUB_L = {
+    **OH_POLLY,
+    "id": "club-l-london",
+    "name": "Club L London",
+    "search_url_template": (
+        "https://www.clubllondon.ae/search/suggest.json?q={query}"
+        "&resources[type]=product&resources[limit]=10"
+    ),
+    "allowed_hosts": ["www.clubllondon.ae", "cdn.shopify.com"],
+    "tier_hint": "premium",
+}
+
+
+def write(folder: Path, name: str, data: object) -> Path:
+    path = folder / name
+    path.write_text(data if isinstance(data, str) else yaml.safe_dump(data), encoding="utf-8")
+    return path
+
+
+HAND_WRITTEN_SHOPIFY_FILE = """\
+# config/stores/the-bear-house.yaml - the shape Phase 12 writes for a Shopify store
+id: the-bear-house
+name: The Bear House
+country: AE
+currency: AED          # the suggest response has no currency; this is the one used
+search_url_template: "https://thebearhouse.ae/search/suggest.json?q={query}&resources[type]=product&resources[limit]=10"
+allowed_hosts:
+  - thebearhouse.ae
+  - cdn.shopify.com
+extraction:
+  strategies:
+    - name: shopify
+      options:               # every option the shopify strategy has; all are optional
+        name_field: vendor   # "title" (default) or "vendor" (name kept in `vendor`)
+        image_width: 400     # default 400; a positive whole number, or null to keep the URL
+        gender_fields: [type, tags]   # default; which fields say who a product is for, first
+                                      # one that names a gender wins; [] turns the reading off
+        max_price_spread: 1.5   # default off; drop a record whose highest variant price is more
+                                # than this many times its lowest (price is the lowest variant)
+rps: 1                  # optional overrides: rps, timeout_s, max_response_bytes, max_variants
+tier_hint: mid_range
+enabled: false           # true only after the live smoke test passes
+"""
+
+
+def test_a_hand_written_shopify_store_file_loads_as_documented(tmp_path: Path) -> None:
+    write(tmp_path, "the-bear-house.yaml", HAND_WRITTEN_SHOPIFY_FILE)
+
+    [store] = load_store_configs(tmp_path)
+
+    assert store.id == "the-bear-house"
+    assert store.extraction.strategies[0].options == {
+        "name_field": "vendor",
+        "image_width": 400,
+        "gender_fields": ["type", "tags"],
+        "max_price_spread": 1.5,
+    }
+    assert store.enabled is False
+    assert "resources[type]=product" in store.search_url_template
+
+
+def test_the_documented_example_names_every_option_the_shopify_strategy_accepts() -> None:
+    example = yaml.safe_load(HAND_WRITTEN_SHOPIFY_FILE)
+    documented = set(example["extraction"]["strategies"][0]["options"])
+
+    assert documented == set(SHOPIFY_OPTIONS)
+
+
+def test_image_width_null_in_a_store_file_is_accepted(tmp_path: Path) -> None:
+    text = HAND_WRITTEN_SHOPIFY_FILE.replace("image_width: 400 ", "image_width: null")
+    write(tmp_path, "the-bear-house.yaml", text)
+
+    [store] = load_store_configs(tmp_path)
+
+    assert store.extraction.strategies[0].options["image_width"] is None
+
+
+def test_gender_fields_empty_in_a_store_file_is_accepted(tmp_path: Path) -> None:
+    text = HAND_WRITTEN_SHOPIFY_FILE.replace("[type, tags]  ", "[]            ")
+    write(tmp_path, "the-bear-house.yaml", text)
+
+    [store] = load_store_configs(tmp_path)
+
+    assert store.extraction.strategies[0].options["gender_fields"] == []
+
+
+@pytest.mark.parametrize(
+    "value", ["type", "[title]", "[type, type]", "null", "[Tags]", "[type, tags, vendor]"]
+)
+def test_a_bad_gender_fields_in_a_store_file_names_the_file_and_the_option(
+    tmp_path: Path, value: str
+) -> None:
+    text = HAND_WRITTEN_SHOPIFY_FILE.replace("[type, tags]  ", f"{value}  ")
+    write(tmp_path, "the-bear-house.yaml", text)
+
+    detail = load_error(tmp_path).detail or ""
+
+    assert "the-bear-house.yaml: extraction.strategies.0 (shopify)" in detail
+    assert "options.gender_fields" in detail
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "400.5", "'wide'", "true"])
+def test_a_bad_image_width_in_a_store_file_names_the_file_and_the_option(
+    tmp_path: Path, value: str
+) -> None:
+    text = HAND_WRITTEN_SHOPIFY_FILE.replace("image_width: 400 ", f"image_width: {value}")
+    write(tmp_path, "the-bear-house.yaml", text)
+
+    detail = load_error(tmp_path).detail or ""
+
+    assert "the-bear-house.yaml: extraction.strategies.0 (shopify)" in detail
+    assert "options.image_width must be a positive whole number or null" in detail
+
+
+def test_a_missing_directory_gives_no_stores(tmp_path: Path) -> None:
+    assert load_store_configs(tmp_path / "does-not-exist") == []
+
+
+def test_an_empty_directory_gives_no_stores(tmp_path: Path) -> None:
+    assert load_store_configs(tmp_path) == []
+    assert StoreRegistry.from_directory(tmp_path).stores == []
+
+
+def test_the_shipped_store_directory_loads_whatever_it_holds() -> None:
+    """The directory is empty until the store-adapter phase; it must load either way."""
+    stores = StoreRegistry.from_directory(DEFAULT_STORES_DIR).stores
+
+    assert all(store.id for store in stores)
+
+
+def test_valid_files_load_in_file_name_order(tmp_path: Path) -> None:
+    write(tmp_path, "oh-polly.yaml", OH_POLLY)
+    write(tmp_path, "club-l-london.yaml", CLUB_L)
+    (tmp_path / "notes.txt").write_text("not a store", encoding="utf-8")
+
+    stores = load_store_configs(tmp_path)
+
+    assert [store.id for store in stores] == ["club-l-london", "oh-polly"]
+    assert stores[1].currency == "AED"
+    assert stores[1].extraction.strategies[0].name == "shopify"
+
+
+def test_a_store_file_without_enabled_true_is_disabled_by_default(tmp_path: Path) -> None:
+    write(tmp_path, "oh-polly.yaml", {k: v for k, v in OH_POLLY.items() if k != "enabled"})
+
+    [store] = load_store_configs(tmp_path)
+
+    assert store.enabled is False
+
+
+# --------------------------------------------------------------------------------------------
+# Invalid files name the file and the field
+# --------------------------------------------------------------------------------------------
+
+
+def load_error(folder: Path) -> ConfigError:
+    with pytest.raises(ConfigError) as excinfo:
+        load_store_configs(folder)
+    return excinfo.value
+
+
+def test_an_invalid_field_is_reported_with_the_file_and_the_field(tmp_path: Path) -> None:
+    write(tmp_path, "oh-polly.yaml", {**OH_POLLY, "currency": "dirham"})
+
+    error = load_error(tmp_path)
+
+    assert "oh-polly.yaml" in str(error)
+    assert "currency" in str(error)
+    assert "oh-polly.yaml: currency" in (error.detail or "")
+
+
+def test_a_template_without_the_query_placeholder_is_reported(tmp_path: Path) -> None:
+    write(tmp_path, "oh-polly.yaml", {**OH_POLLY, "search_url_template": "https://ohpolly.ae/s"})
+
+    error = load_error(tmp_path)
+
+    assert "oh-polly.yaml" in str(error)
+    assert "{query}" in str(error)
+
+
+def test_a_host_that_is_not_listed_for_the_template_is_reported(tmp_path: Path) -> None:
+    write(tmp_path, "oh-polly.yaml", {**OH_POLLY, "allowed_hosts": ["cdn.shopify.com"]})
+
+    assert "allowed_hosts" in str(load_error(tmp_path))
+
+
+def test_an_unknown_field_is_reported(tmp_path: Path) -> None:
+    write(tmp_path, "oh-polly.yaml", {**OH_POLLY, "rps_limit": 2})
+
+    error = load_error(tmp_path)
+
+    assert "oh-polly.yaml: rps_limit" in (error.detail or "")
+
+
+def test_a_missing_field_is_reported(tmp_path: Path) -> None:
+    broken = {k: v for k, v in OH_POLLY.items() if k != "extraction"}
+    write(tmp_path, "oh-polly.yaml", broken)
+
+    assert "oh-polly.yaml: extraction" in (load_error(tmp_path).detail or "")
+
+
+def test_a_file_whose_name_does_not_match_its_id_is_reported(tmp_path: Path) -> None:
+    write(tmp_path, "ohpolly.yaml", OH_POLLY)
+
+    assert "must be named oh-polly.yaml" in (load_error(tmp_path).detail or "")
+
+
+@pytest.mark.parametrize("content", ["", "- just\n- a list\n", "plain text", "id: [unclosed"])
+def test_a_file_that_is_not_a_mapping_of_settings_is_reported(tmp_path: Path, content: str) -> None:
+    write(tmp_path, "oh-polly.yaml", content)
+
+    assert "oh-polly.yaml" in str(load_error(tmp_path))
+
+
+def test_an_unknown_extraction_strategy_is_reported_with_the_built_ones(tmp_path: Path) -> None:
+    write(
+        tmp_path,
+        "oh-polly.yaml",
+        {**OH_POLLY, "extraction": {"strategies": [{"name": "store_json", "fields": {}}]}},
+    )
+
+    detail = load_error(tmp_path).detail or ""
+
+    assert "oh-polly.yaml: extraction.strategies.0 (store_json)" in detail
+    assert "unknown extraction strategy" in detail
+    assert "['shopify']" in detail
+
+
+def test_bad_strategy_options_are_reported_with_the_option_named(tmp_path: Path) -> None:
+    write(
+        tmp_path,
+        "oh-polly.yaml",
+        {
+            **OH_POLLY,
+            "extraction": {"strategies": [{"name": "shopify", "options": {"name_field": "sku"}}]},
+        },
+    )
+
+    assert "name_field" in (load_error(tmp_path).detail or "")
+
+
+def test_every_problem_in_every_file_is_reported_together(tmp_path: Path) -> None:
+    write(tmp_path, "oh-polly.yaml", {**OH_POLLY, "currency": "dirham"})
+    write(tmp_path, "club-l-london.yaml", {**CLUB_L, "country": "UAE"})
+    write(tmp_path, "good.yaml", {**OH_POLLY, "id": "good", "name": "Good"})
+
+    detail = load_error(tmp_path).detail or ""
+
+    assert "oh-polly.yaml: currency" in detail
+    assert "club-l-london.yaml: country" in detail
+    assert "good.yaml" not in detail
+
+
+def test_two_enabled_stores_may_not_share_a_display_name(tmp_path: Path) -> None:
+    write(tmp_path, "oh-polly.yaml", OH_POLLY)
+    write(tmp_path, "club-l-london.yaml", {**CLUB_L, "name": "Oh Polly"})
+
+    detail = load_error(tmp_path).detail or ""
+
+    assert "oh-polly.yaml" in detail
+    assert "'Oh Polly' is already used" in detail
+
+
+def test_a_disabled_store_may_share_a_display_name(tmp_path: Path) -> None:
+    write(tmp_path, "oh-polly.yaml", OH_POLLY)
+    write(tmp_path, "club-l-london.yaml", {**CLUB_L, "name": "Oh Polly", "enabled": False})
+
+    assert len(load_store_configs(tmp_path)) == 2
+
+
+def test_the_user_message_is_plain_language_and_the_cause_is_in_the_detail(
+    tmp_path: Path,
+) -> None:
+    write(tmp_path, "oh-polly.yaml", {**OH_POLLY, "currency": "dirham"})
+
+    error = load_error(tmp_path)
+
+    assert error.code == "config"
+    assert "config/stores" in error.user_message
+    assert "Traceback" not in error.user_message
+
+
+def test_strategies_are_checked_against_the_given_registry(tmp_path: Path) -> None:
+    write(
+        tmp_path,
+        "oh-polly.yaml",
+        {**OH_POLLY, "extraction": {"strategies": [{"name": "shopify"}]}},
+    )
+
+    with pytest.raises(ConfigError, match="unknown extraction strategy"):
+        load_store_configs(tmp_path, ExtractorRegistry([]))
+    assert load_store_configs(tmp_path, ExtractorRegistry([ShopifyExtractor()]))
+
+
+# --------------------------------------------------------------------------------------------
+# Which stores are used
+# --------------------------------------------------------------------------------------------
+
+
+def registry_of(tmp_path: Path, *stores: dict[str, object]) -> StoreRegistry:
+    for store in stores:
+        write(tmp_path, f"{store['id']}.yaml", store)
+    return StoreRegistry.from_directory(tmp_path)
+
+
+def test_only_enabled_stores_in_the_configured_country_are_active(tmp_path: Path) -> None:
+    registry = registry_of(
+        tmp_path,
+        OH_POLLY,
+        {**CLUB_L, "enabled": False},
+        {**OH_POLLY, "id": "saudi-shop", "name": "Saudi Shop", "country": "SA"},
+    )
+
+    active = registry.active(make_settings(country="AE"))
+
+    assert [store.id for store in active] == ["oh-polly"]
+    assert [store.id for store in registry.active(make_settings(country="SA"))] == ["saudi-shop"]
+
+
+KUWAITI_STORE = {
+    **OH_POLLY,
+    "id": "hamsa-kw",
+    "name": "Hamsa",
+    "country": "KW",
+    "currency": "KWD",
+    "search_url_template": (
+        "https://hamsakw.com/search/suggest.json?q={query}"
+        "&resources[type]=product&resources[limit]=10"
+    ),
+    "allowed_hosts": ["hamsakw.com", "cdn.shopify.com"],
+}
+
+
+def test_a_store_in_an_extra_country_is_active_next_to_the_home_market_stores(
+    tmp_path: Path,
+) -> None:
+    registry = registry_of(tmp_path, OH_POLLY, KUWAITI_STORE)
+
+    active = registry.active(make_settings(country="AE", extra_store_countries=["KW"]))
+
+    assert [store.id for store in active] == ["hamsa-kw", "oh-polly"]
+
+
+def test_a_store_in_a_country_that_is_not_listed_stays_unused(tmp_path: Path) -> None:
+    registry = registry_of(tmp_path, OH_POLLY, KUWAITI_STORE)
+
+    assert [store.id for store in registry.active(make_settings())] == ["oh-polly"]
+    assert [store.id for store in registry.active(make_settings(extra_store_countries=["SA"]))] == [
+        "oh-polly"
+    ]
+
+
+def test_a_listed_country_never_enables_a_store_that_is_not_enabled(tmp_path: Path) -> None:
+    registry = registry_of(tmp_path, {**KUWAITI_STORE, "enabled": False})
+
+    assert registry.active(make_settings(extra_store_countries=["KW"])) == []
+
+
+def test_settings_stores_still_narrows_across_countries(tmp_path: Path) -> None:
+    registry = registry_of(tmp_path, OH_POLLY, KUWAITI_STORE)
+
+    chosen = registry.active(make_settings(extra_store_countries=["KW"], stores=["hamsa-kw"]))
+
+    assert [store.id for store in chosen] == ["hamsa-kw"]
+
+
+def test_a_store_without_enabled_true_is_never_active(tmp_path: Path) -> None:
+    registry = registry_of(tmp_path, {k: v for k, v in OH_POLLY.items() if k != "enabled"})
+
+    assert registry.active(make_settings()) == []
+
+
+def test_settings_stores_narrows_the_active_list(tmp_path: Path) -> None:
+    registry = registry_of(tmp_path, OH_POLLY, CLUB_L)
+
+    chosen = registry.active(make_settings(stores=["club-l-london"]))
+
+    assert [store.id for store in chosen] == ["club-l-london"]
+
+
+def test_settings_stores_may_not_enable_a_disabled_store(tmp_path: Path) -> None:
+    registry = registry_of(tmp_path, {**OH_POLLY, "enabled": False})
+
+    assert registry.active(make_settings(stores=["oh-polly"])) == []
+
+
+def test_lookup_by_id_and_by_display_name(tmp_path: Path) -> None:
+    registry = registry_of(tmp_path, OH_POLLY, CLUB_L)
+
+    assert registry.get("oh-polly") is not None
+    assert registry.get("nope") is None
+    club = registry.by_display_name("Club L London")
+    assert club is not None
+    assert club.id == "club-l-london"
+    assert registry.by_display_name("Unknown") is None
+
+
+def test_adding_a_store_with_a_known_id_replaces_it(tmp_path: Path) -> None:
+    registry = registry_of(tmp_path, OH_POLLY)
+    renamed = registry.stores[0].model_copy(update={"name": "Oh Polly UAE"})
+
+    registry.add(renamed)
+
+    assert len(registry.stores) == 1
+    assert registry.by_display_name("Oh Polly UAE") is not None
+    assert registry.by_display_name("Oh Polly") is None

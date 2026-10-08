@@ -1,0 +1,85 @@
+# VGA AI Shopping Agent: settings. Validated by src/vga/settings.py; a bad value stops start-up
+# with a message naming the field. Environment variables override these values (see .env.example).
+# Only decided numbers live here; the weights and thresholds are tuned in Phase 16 against the
+# recorded acceptance run, not per query.
+
+# --- Search -------------------------------------------------------------------------------
+country: AE                     # ISO country code of the home market (UAE first). Enabled stores in it are used.
+extra_store_countries: [KW]     # Also use the enabled stores of these countries (Kuwait: Bazza Alzouman, Hamsa, Manal Smaoui, Daraat, Shadow, Her Highness Q8, Veil Essentials, Al Jazeera Clothing).
+stores: []                      # Store ids to use. Empty = every enabled store in `country` and `extra_store_countries`.
+results: 30                     # Results for a normal request (PRD R13).
+max_per_store: 6                # No store may supply more than this many results (PRD R9).
+outfit_results_per_garment: 12  # Results per garment for an outfit photo (assumption A2).
+request_deadline_s: 30          # Ceiling for one whole request; at the deadline we return what we have.
+max_image_bytes: 8000000        # Largest photo the app accepts, in bytes (the UI and the pipeline both check it).
+
+# --- Fetching (be polite: BRD Rule 2) -----------------------------------------------------
+timeout_s: 6                    # Per store request (PRD R5).
+rps_per_store: 1                # Requests per second per store (BRD Rule 2).
+rps_per_platform: 2             # Requests per second to all the stores of one platform together (all 19 are Shopify): the platform counts per client, not per shop.
+rps_images_per_host: 5          # Thumbnail downloads per second per image host (assumption A5).
+second_variant_below: 5         # A store gets a garment's second keyword variant only if its first returned fewer usable products than this. Never a third. 0 = never a second.
+store_cache_ttl_s: 600          # Identical store searches within this time are served from memory.
+store_cooldown_s: 900           # A store that blocked us is not contacted again for this long (errors and timeouts do not start it, ADR 0003).
+robots_unreadable_retry_s: 60   # A robots.txt that could not be read (timeout, network error, 5xx) means no search is sent, but only for this long; then it is read again. A real answer is kept for a day; a block starts store_cooldown_s.
+max_response_bytes: 2000000     # Size cap for one HTTP response; a store can override it (max_response_bytes in its file).
+
+# --- Currencies ---------------------------------------------------------------------------
+# Prices, budgets and price ranges are compared in the base currency. A store that prices in
+# another currency shows its own price plus an approximate figure in the base currency, and the
+# approximate figure is what ranges and budgets use (decided by the user on 2026-10-08).
+# A currency with no rate below is never converted: its products get no budget comparison and are
+# left out of the price ranges (the app does not guess a rate). There is no live rate call.
+base_currency: AED
+fx_rates:                       # 1 unit of the currency = this many units of base_currency.
+  # KWD: a FIXED, APPROXIMATE rate. It is not live and drifts as the dinar (pegged to an undisclosed
+  # basket) moves, so REFRESH IT BEFORE ANY REAL USE and update the lines below with the new source
+  # and date. Do not change the number without changing them.
+  # Source: Central Bank of Kuwait, "US Dollar Exchange Rate", 308.150 fils per unit on 2026-10-07
+  #   https://www.cbk.gov.kw/en/monetary-policy/market-operations/exchange-rates
+  # combined with the dirham's fixed peg of 3.6725 AED per USD (Central Bank of the UAE):
+  #   3.6725 / 0.30815 = 11.918, rounded to 11.92.
+  # Cross-check: Central Bank of the UAE's own table "Exchange Rates against UAE Dirham for VAT
+  #   related obligations", 01-Jun-2026: Kuwaiti Dinar 11.974242 (within 0.5%).
+  #   https://centralbank.ae/media/dlcdkjd2/fx_jun26_en.pdf
+  KWD: 11.92
+
+# --- Price ranges and ranking -------------------------------------------------------------
+tier_mix:                       # Percent of results per price range; must sum to 100 (PRD R14).
+  budget: 25
+  mid_range: 25
+  premium: 25
+  luxury: 25
+ranking_weights:                # Parts of the score (PRD R8). Normalised by the combiner.
+  text: 0.5
+  image: 0.3
+  price: 0.2
+min_match_score: 0.2            # Products scoring below this are never shown (PRD "Rules").
+neutral_price_score: 0.5        # Price-fit score when the shopper gave no budget.
+
+# --- Models -------------------------------------------------------------------------------
+# Quoted on purpose: an unquoted `off` is read by YAML as a boolean.
+# The siglip revision below is the one measured in spikes/siglip/REPORT.md (verdict GO as a
+# low-weight signal). Changing it requires re-running the spike's quality check
+# (spikes/siglip/03_quality.py) and re-deriving siglip_cos_lo / siglip_cos_hi.
+image_ranker: siglip            # "siglip" (needs `uv sync --group ml` and siglip_revision) or "off".
+siglip_revision: c56244cc94f92419e8369fa71efdaf403b124ce8   # 40-character Hugging Face commit hash.
+siglip_cos_lo: 0.45             # Image cosine at or below this scores 0 (spike: median cosine between different categories, rounded down).
+siglip_cos_hi: 0.90             # Image cosine at or above this scores 1 (spike: 10th percentile of edited same-photo pairs, rounded down).
+# The OpenAI model for the Understand step: a pinned snapshot id, never an alias. Chosen by the
+# user on 2026-10-08 ("Luna"). OpenAI publishes no dated snapshot for it
+# (https://developers.openai.com/api/docs/models/gpt-6-luna lists only `gpt-6-luna` itself), so the
+# versioned name is the pin; src/vga/settings.py allows it by name (UNDATED_SNAPSHOT_IDS) and still
+# rejects aliases such as gpt-6-luna-latest. Changing it requires re-running the Understand eval
+# (`uv run pytest -m live tests/understand`) and adding an entry to
+# src/vga/understand/prompts/CHANGELOG.md.
+openai_model: gpt-6-luna
+daily_llm_call_cap: 200         # Fail closed when reached (also VGA_DAILY_LLM_CALL_CAP).
+
+# --- Logging and debugging ----------------------------------------------------------------
+user_agent: "vga-shopping-agent-demo/0.1 (store search demo)"   # Honest and identifying; never a browser string.
+log_dir: logs
+log_level: INFO
+log_prompts: false              # true also logs the text prompt and parsed result, never the photo.
+debug_dump: false               # true writes each request's ranked candidates to a JSONL file.
+ui_fixture: false               # true runs the UI from the bundled sample response.

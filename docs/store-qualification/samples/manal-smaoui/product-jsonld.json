@@ -1,0 +1,57 @@
+{
+ "@context": "http://schema.org/",
+ "@type": "Product",
+ "name": "AICHA KAFTAN - BROWN",
+ "url": "https://manalsmaoui.com/products/aicha-kaftan-brown",
+ "image": [
+  "https:files/0S5A7706.jpg"
+ ],
+ "description": "Our Moroccan-inspired kaftans bring an air of elegance and sophistication to any wardrobe. Luxuriously embroidered, these pieces not only drape beautifully but also accentuate your figure, creating a flattering and graceful silhouette. Designed to elevate your style seamlessly, these kaftans combine",
+ "sku": "1003710",
+ "brand": {
+  "@type": "Thing",
+  "name": "MANAL SMAOUI"
+ },
+ "offers": [
+  {
+   "@type": "Offer",
+   "sku": "1003710",
+   "availability": "http://schema.org/InStock",
+   "price": 85.0,
+   "priceCurrency": "KWD",
+   "url": "https://manalsmaoui.com/products/aicha-kaftan-brown?variant=51781013274917"
+  },
+  {
+   "@type": "Offer",
+   "sku": "1003711",
+   "availability": "http://schema.org/InStock",
+   "price": 85.0,
+   "priceCurrency": "KWD",
+   "url": "https://manalsmaoui.com/products/aicha-kaftan-brown?variant=51781013307685"
+  },
+  {
+   "@type": "Offer",
+   "sku": "1003712",
+   "availability": "http://schema.org/OutOfStock",
+   "price": 85.0,
+   "priceCurrency": "KWD",
+   "url": "https://manalsmaoui.com/products/aicha-kaftan-brown?variant=51781013340453"
+  },
+  {
+   "@type": "Offer",
+   "sku": "1003713",
+   "availability": "http://schema.org/OutOfStock",
+   "price": 85.0,
+   "priceCurrency": "KWD",
+   "url": "https://manalsmaoui.com/products/aicha-kaftan-brown?variant=51781013373221"
+  },
+  {
+   "@type": "Offer",
+   "sku": "1003714",
+   "availability": "http://schema.org/OutOfStock",
+   "price": 85.0,
+   "priceCurrency": "KWD",
+   "url": "https://manalsmaoui.com/products/aicha-kaftan-brown?variant=51781013405989"
+  }
+ ]
+}

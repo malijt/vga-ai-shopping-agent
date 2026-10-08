@@ -1,0 +1,32 @@
+User-agent: *
+Disallow: /my-account/
+Disallow: /cart$
+Disallow: /cart/
+Disallow: /checkout$
+Disallow: /checkout/
+Disallow: /sales/order/history/
+Disallow: /storecredit/
+Disallow: /catalogsearch/
+Disallow: /viewall/
+Disallow: /*?*dFR
+Disallow: /*?*hFR
+Disallow: /*?*nR
+Disallow: /*?*idx=
+Disallow: /*?*facetFilters=
+Disallow: /*?*utm_
+Disallow: /*?*gclid=
+
+# Sitemap
+
+Sitemap: https://ar-ae.aivi.com/sitemap.xml
+Sitemap: https://ar-bh.aivi.com/sitemap.xml
+Sitemap: https://ar-kw.aivi.com/sitemap.xml
+Sitemap: https://ar-om.aivi.com/sitemap.xml
+Sitemap: https://ar-qa.aivi.com/sitemap.xml
+Sitemap: https://ar-sa.aivi.com/sitemap.xml
+Sitemap: https://en-ae.aivi.com/sitemap.xml
+Sitemap: https://en-bh.aivi.com/sitemap.xml
+Sitemap: https://en-kw.aivi.com/sitemap.xml
+Sitemap: https://en-om.aivi.com/sitemap.xml
+Sitemap: https://en-sa.aivi.com/sitemap.xml
+Sitemap: https://en-qa.aivi.com/sitemap.xml

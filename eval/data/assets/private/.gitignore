@@ -1,0 +1,4 @@
+# Private test photos (the user's own items and mirror selfies of real people).
+# Nothing in this folder may ever be committed: ignore everything except this file.
+*
+!.gitignore

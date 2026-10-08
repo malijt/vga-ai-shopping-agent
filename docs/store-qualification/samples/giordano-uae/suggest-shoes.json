@@ -1,0 +1,120 @@
+{
+ "resources": {
+  "results": {
+   "products": [
+    {
+     "available": true,
+     "body": "Polyester fabric shoes. Light weight, comfortable and soft sole",
+     "compare_at_price_max": "185.00",
+     "compare_at_price_min": "185.00",
+     "handle": "mens-casual-shoes-5",
+     "id": 8903637663969,
+     "image": "https://cdn.shopify.com/s/files/1/0742/5379/5553/files/mens-casual-shoes-40-1188924.png?v=1765657446",
+     "price": "83.00",
+     "price_max": "83.00",
+     "price_min": "83.00",
+     "tags": [
+      "01180001",
+      "Bazar"
+     ],
+     "title": "Men's Casual Shoes",
+     "type": "Shoes",
+     "url": "/products/mens-casual-shoes-5?_pos=1&_psq=shoes&_psid=1fbeb0f03&_ss=e",
+     "variants": [],
+     "vendor": "Giordano",
+     "featured_image": {
+      "alt": "Giordano Men's Casual Shoes - Premium Shoes",
+      "aspect_ratio": 1.0,
+      "height": 1024,
+      "url": "https://cdn.shopify.com/s/files/1/0742/5379/5553/files/mens-casual-shoes-40-1188924.png?v=1765657446",
+      "width": 1024
+     }
+    },
+    {
+     "available": true,
+     "body": "<p>Polyester fabric shoes. Light weight, comfortable and soft sole</p>",
+     "compare_at_price_max": "185.00",
+     "compare_at_price_min": "185.00",
+     "handle": "mens-casual-shoes",
+     "id": 8897415610593,
+     "image": "https://cdn.shopify.com/s/files/1/0742/5379/5553/files/mens-casual-shoes-35-1436610.png?v=1765032008",
+     "price": "83.00",
+     "price_max": "83.00",
+     "price_min": "83.00",
+     "tags": [
+      "01180001",
+      "Bazar"
+     ],
+     "title": "Men's Casual Shoes",
+     "type": "Shoes",
+     "url": "/products/mens-casual-shoes?_pos=2&_psq=shoes&_psid=1fbeb0f03&_ss=e",
+     "variants": [],
+     "vendor": "Giordano",
+     "featured_image": {
+      "alt": "Giordano Men's Casual Shoes - Premium Shoes",
+      "aspect_ratio": 1.0,
+      "height": 1024,
+      "url": "https://cdn.shopify.com/s/files/1/0742/5379/5553/files/mens-casual-shoes-35-1436610.png?v=1765032008",
+      "width": 1024
+     }
+    },
+    {
+     "available": true,
+     "body": "Step into style and comfort with the Giordano Unisex Sneaker Shoes. These versatile sneakers are crafted from high-quality polyester and rubber, ensuring durability and a comfortable fit. Designed for both men and women, these sneakers offer a sleek and modern look that complements any casual outfit",
+     "compare_at_price_max": "195.00",
+     "compare_at_price_min": "195.00",
+     "handle": "unisex-sneaker-shoes-18",
+     "id": 8906397253857,
+     "image": "https://cdn.shopify.com/s/files/1/0742/5379/5553/files/unisex-sneaker-shoes-1347051.jpg?v=1752599857",
+     "price": "99.50",
+     "price_max": "99.50",
+     "price_min": "99.50",
+     "tags": [
+      "01184608",
+      "Bazar"
+     ],
+     "title": "Unisex Sneaker Shoes",
+     "type": "Shoes",
+     "url": "/products/unisex-sneaker-shoes-18?_pos=3&_psq=shoes&_psid=1fbeb0f03&_ss=e",
+     "variants": [],
+     "vendor": "Giordano",
+     "featured_image": {
+      "alt": "Giordano Unisex Sneaker Shoes - Premium Shoes",
+      "aspect_ratio": 1.0,
+      "height": 1200,
+      "url": "https://cdn.shopify.com/s/files/1/0742/5379/5553/files/unisex-sneaker-shoes-1347051.jpg?v=1752599857",
+      "width": 1200
+     }
+    },
+    {
+     "available": true,
+     "body": "Experience effortless comfort with these unisex slip-on comfort sneakers, designed with a breathable polyester knit upper and lightweight EVA sole. The stretchable sock-fit design ensures easy wear, while the cushioned sole delivers superior support for walking, travel, or all-day activities. Modern",
+     "compare_at_price_max": "185.00",
+     "compare_at_price_min": "185.00",
+     "handle": "unisex-lightweight-sneaker-shoes",
+     "id": 9392623485153,
+     "image": "https://cdn.shopify.com/s/files/1/0742/5379/5553/files/giordano-unisex-lightweight-sneaker-shoes-brown-7573628.png?v=1771870947",
+     "price": "85.50",
+     "price_max": "85.50",
+     "price_min": "85.50",
+     "tags": [
+      "01186001",
+      "Bazar"
+     ],
+     "title": "Unisex Lightweight Sneaker Shoes",
+     "type": "Shoes",
+     "url": "/products/unisex-lightweight-sneaker-shoes?_pos=4&_psq=shoes&_psid=1fbeb0f03&_ss=e",
+     "variants": [],
+     "vendor": "Giordano",
+     "featured_image": {
+      "alt": "Giordano Unisex Lightweight Sneaker Shoes - Premium Shoes",
+      "aspect_ratio": 1.0,
+      "height": 1024,
+      "url": "https://cdn.shopify.com/s/files/1/0742/5379/5553/files/giordano-unisex-lightweight-sneaker-shoes-brown-7573628.png?v=1771870947",
+      "width": 1024
+     }
+    }
+   ]
+  }
+ }
+}

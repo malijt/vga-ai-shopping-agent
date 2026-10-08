@@ -1,0 +1,18 @@
+# Spike artefacts that must never be committed (CLAUDE.md: no model weights, images or virtualenvs)
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Downloaded images: licence-clean, but this repo never redistributes them
+images/
+thumbs/
+
+# Model weights and caches
+.cache/
+hf_cache/
+*.pt
+*.pth
+*.safetensors
+*.bin
+*.npy

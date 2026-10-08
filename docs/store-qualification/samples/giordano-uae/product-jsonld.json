@@ -1,0 +1,14 @@
+{
+ "@context": "https://schema.org",
+ "@type": "Product",
+ "name": "Men’s Cotton Slim Oxford Shirt with Embroidery",
+ "image": "//giordano.ae/cdn/shop/files/giordano-mens-cotton-slim-oxford-shirt-with-embroidery-brown-1181918.jpg?v=1775790933",
+ "description": "Upgrade your smart-casual wardrobe with this men’s slim-fit Oxford shirt, crafted from 100% cotton for a crisp, breathable, and premium feel. Designed with a full button-front opening and long sleeves, it delivers a sharp, tailored silhouette perfect for office wear or refined casual styling. The ga",
+ "sku": "",
+ "offers": {
+  "@type": "Offer",
+  "priceCurrency": "AED",
+  "price": "138.75",
+  "availability": "https://schema.org/InStock"
+ }
+}

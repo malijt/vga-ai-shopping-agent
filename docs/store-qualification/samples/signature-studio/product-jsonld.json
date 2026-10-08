@@ -1,0 +1,25 @@
+{
+ "@context": "http://schema.org/",
+ "@type": "Product",
+ "name": "HAFSA MALIK - Noor Jahan",
+ "url": "https://www.signaturestudio.ae/products/hafsa-malik-noor-jahan",
+ "image": [
+  "https://www.signaturestudio.ae/cdn/shop/files/NoorJahanAway2_1.jpg?v=1770134117&width=800"
+ ],
+ "description": "HAFSA MALIK \nFabric\n\n\nRaw Silk  Top\n\nCrushed Pants \nOrganza Duppatta \n\n\nDescription\n\n\nFormal - Wear\n\n\n\n\nThree - pieces\n\n\n\n\n\n\nNoor Jahan — A long, dreamy dress with exquisite craftsmanship and elegant cut styling, perfect for wedding wear. It features a beautifully crushed lehenga paired with a delic",
+ "sku": "HM-NJ-497-0126",
+ "brand": {
+  "@type": "Brand",
+  "name": "Hafsa Malik"
+ },
+ "offers": [
+  {
+   "@type": "Offer",
+   "sku": "HM-NJ-497-0126",
+   "availability": "http://schema.org/InStock",
+   "price": 1838.0,
+   "priceCurrency": "AED",
+   "url": "https://www.signaturestudio.ae/products/hafsa-malik-noor-jahan?variant=42094901264439"
+  }
+ ]
+}

@@ -1,0 +1,9 @@
+# The product page has no JSON-LD block. These are its Open Graph tags and the Shopify globals, as served.
+
+<meta property="og:url" content="https://hebashaikh.com/products/esme-dress">
+<meta property="og:type" content="product">
+<meta property="og:title" content="Esme Dress">
+<meta property="og:image" content="http://hebashaikh.com/cdn/shop/files/HEBASHAIKHxNeleBogaertsxJadeMadoe-19_1024x.jpg?v=1732999053">
+<meta property="og:price:amount" content="910.00">
+<meta property="og:price:currency" content="GBP">
+

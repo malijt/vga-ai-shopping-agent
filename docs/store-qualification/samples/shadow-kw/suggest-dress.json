@@ -1,0 +1,110 @@
+{
+ "resources": {
+  "results": {
+   "products": [
+    {
+     "available": true,
+     "body": "",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Sepcial Chiffon Crystalized Shaila",
+      "aspect_ratio": 0.667,
+      "height": 5472,
+      "url": "https://cdn.shopify.com/s/files/1/0903/6224/9463/files/SH13240108539.jpg?v=1763375237",
+      "width": 3648
+     },
+     "handle": "sh13240108539",
+     "id": 9840218898679,
+     "image": "https://cdn.shopify.com/s/files/1/0903/6224/9463/files/SH13240108539.jpg?v=1763375237",
+     "price": "16.900",
+     "price_max": "16.900",
+     "price_min": "16.900",
+     "tags": [],
+     "title": "Sepcial Chiffon Crystalized Shaila",
+     "type": "SHEILA",
+     "url": "/products/sh13240108539?_pos=1&_psq=dress&_psid=615ea932c&_ss=e",
+     "variants": [],
+     "vendor": "Shadow"
+    },
+    {
+     "available": true,
+     "body": "",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Special Chiffon Crystalized Shaila",
+      "aspect_ratio": 0.667,
+      "height": 5472,
+      "url": "https://cdn.shopify.com/s/files/1/0903/6224/9463/files/2IMG_0009_2.jpg?v=1764049024",
+      "width": 3648
+     },
+     "handle": "sh13240108534",
+     "id": 9840227156215,
+     "image": "https://cdn.shopify.com/s/files/1/0903/6224/9463/files/2IMG_0009_2.jpg?v=1764049024",
+     "price": "18.900",
+     "price_max": "18.900",
+     "price_min": "18.900",
+     "tags": [],
+     "title": "Special Chiffon Crystalized Shaila",
+     "type": "SHEILA",
+     "url": "/products/sh13240108534?_pos=2&_psq=dress&_psid=615ea932c&_ss=e",
+     "variants": [],
+     "vendor": "Shadow"
+    },
+    {
+     "available": true,
+     "body": "",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Special Chiffon Crystalized Shaila",
+      "aspect_ratio": 0.667,
+      "height": 5472,
+      "url": "https://cdn.shopify.com/s/files/1/0903/6224/9463/files/SH13240108528_1.jpg?v=1763378283",
+      "width": 3648
+     },
+     "handle": "sh13240108528",
+     "id": 9840265625847,
+     "image": "https://cdn.shopify.com/s/files/1/0903/6224/9463/files/SH13240108528_1.jpg?v=1763378283",
+     "price": "19.000",
+     "price_max": "19.000",
+     "price_min": "19.000",
+     "tags": [],
+     "title": "Special Chiffon Crystalized Shaila",
+     "type": "SHEILA",
+     "url": "/products/sh13240108528?_pos=3&_psq=dress&_psid=615ea932c&_ss=e",
+     "variants": [],
+     "vendor": "Shadow"
+    },
+    {
+     "available": true,
+     "body": "<p><span>Abaya Crepe in Big Closh Color</span></p>",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Abaya Crepe Big Closh",
+      "aspect_ratio": 0.667,
+      "height": 4859,
+      "url": "https://cdn.shopify.com/s/files/1/0903/6224/9463/files/ICHT7806.jpg?v=1762421715",
+      "width": 3240
+     },
+     "handle": "sh11250207106",
+     "id": 9826946515191,
+     "image": "https://cdn.shopify.com/s/files/1/0903/6224/9463/files/ICHT7806.jpg?v=1762421715",
+     "price": "55.000",
+     "price_max": "55.000",
+     "price_min": "55.000",
+     "tags": [
+      "ABAYA SET"
+     ],
+     "title": "Abaya Crepe Big Closh",
+     "type": "ABAYA SET",
+     "url": "/products/sh11250207106?_pos=4&_psq=dress&_psid=615ea932c&_ss=e",
+     "variants": [],
+     "vendor": "Shadow"
+    }
+   ]
+  }
+ }
+}

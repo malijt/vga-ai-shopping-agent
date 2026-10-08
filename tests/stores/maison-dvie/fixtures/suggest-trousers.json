@@ -1,0 +1,290 @@
+{
+ "resources": {
+  "results": {
+   "products": [
+    {
+     "available": true,
+     "body": "Silky wide-leg trousers with elasticated waist, pockets in the front",
+     "compare_at_price_max": "0.00",
+     "compare_at_price_min": "0.00",
+     "handle": "wide-leg-trousers-black",
+     "id": 7923398934778,
+     "image": "https://cdn.shopify.com/s/files/1/0654/8160/5370/products/federica-tosi-trousers-black-side.jpg?v=1699513111",
+     "price": "1300.00",
+     "price_max": "1300.00",
+     "price_min": "1300.00",
+     "tags": [
+      "Valentine Sale 2024",
+      "Women"
+     ],
+     "title": "Wide-leg Trousers Black",
+     "type": "Women pants",
+     "url": "/products/wide-leg-trousers-black?_pos=1&_psq=trousers&_psid=1a75497e6&_ss=e",
+     "variants": [],
+     "vendor": "Federica Tosi",
+     "featured_image": {
+      "alt": "Wide-leg Trousers Black",
+      "aspect_ratio": 0.667,
+      "height": 1440,
+      "url": "https://cdn.shopify.com/s/files/1/0654/8160/5370/products/federica-tosi-trousers-black-side.jpg?v=1699513111",
+      "width": 960
+     }
+    },
+    {
+     "available": true,
+     "body": "Wide-leg cotton trousers, holed out with embroidery all over the fabric. Pockets in front and in the back.",
+     "compare_at_price_max": "0.00",
+     "compare_at_price_min": "0.00",
+     "handle": "wide-leg-trousers",
+     "id": 7923388055802,
+     "image": "https://cdn.shopify.com/s/files/1/0654/8160/5370/products/federica-tosi-wide-leg-trousers-white-main.jpg?v=1699513175",
+     "price": "1070.00",
+     "price_max": "1070.00",
+     "price_min": "1070.00",
+     "tags": [
+      "Women"
+     ],
+     "title": "Wide-leg Trousers",
+     "type": "Women pants",
+     "url": "/products/wide-leg-trousers?_pos=2&_psq=trousers&_psid=1a75497e6&_ss=e",
+     "variants": [],
+     "vendor": "Federica Tosi",
+     "featured_image": {
+      "alt": "Wide-leg Trousers",
+      "aspect_ratio": 0.667,
+      "height": 1440,
+      "url": "https://cdn.shopify.com/s/files/1/0654/8160/5370/products/federica-tosi-wide-leg-trousers-white-main.jpg?v=1699513175",
+      "width": 960
+     }
+    },
+    {
+     "available": true,
+     "body": "Low waist wide leg trousers, invisible zipper and hook in the front.",
+     "compare_at_price_max": "930.00",
+     "compare_at_price_min": "930.00",
+     "handle": "wide-leg-trousers-1",
+     "id": 7957798093050,
+     "image": "https://cdn.shopify.com/s/files/1/0654/8160/5370/files/federica-tosi-white-trousers-main.jpg?v=1682490028",
+     "price": "745.00",
+     "price_max": "745.00",
+     "price_min": "745.00",
+     "tags": [
+      "Christmas sale",
+      "Women"
+     ],
+     "title": "Wide Leg Trousers",
+     "type": "Women pants",
+     "url": "/products/wide-leg-trousers-1?_pos=3&_psq=trousers&_psid=1a75497e6&_ss=e",
+     "variants": [],
+     "vendor": "Federica Tosi",
+     "featured_image": {
+      "alt": "Wide Leg Trousers",
+      "aspect_ratio": 0.667,
+      "height": 1440,
+      "url": "https://cdn.shopify.com/s/files/1/0654/8160/5370/files/federica-tosi-white-trousers-main.jpg?v=1682490028",
+      "width": 960
+     }
+    },
+    {
+     "available": true,
+     "body": "Silky wide-leg trousers with elasticated waist, pockets in the front",
+     "compare_at_price_max": "0.00",
+     "compare_at_price_min": "0.00",
+     "handle": "wide-leg-trousers-ivory",
+     "id": 7923397427450,
+     "image": "https://cdn.shopify.com/s/files/1/0654/8160/5370/products/federica-tosi-trousers-ivory-front.jpg?v=1699513137",
+     "price": "1300.00",
+     "price_max": "1300.00",
+     "price_min": "1300.00",
+     "tags": [
+      "Valentine Sale 2024",
+      "Women"
+     ],
+     "title": "Wide-leg Trousers Ivory",
+     "type": "Women pants",
+     "url": "/products/wide-leg-trousers-ivory?_pos=4&_psq=trousers&_psid=1a75497e6&_ss=e",
+     "variants": [],
+     "vendor": "Federica Tosi",
+     "featured_image": {
+      "alt": "Wide-leg Trousers Ivory",
+      "aspect_ratio": 0.667,
+      "height": 1440,
+      "url": "https://cdn.shopify.com/s/files/1/0654/8160/5370/products/federica-tosi-trousers-ivory-front.jpg?v=1699513137",
+      "width": 960
+     }
+    },
+    {
+     "available": true,
+     "body": "<p>Silky wide-leg trousers with elasticated waist, pockets in the front.</p>",
+     "compare_at_price_max": "1300.00",
+     "compare_at_price_min": "1300.00",
+     "handle": "wide-leg-trousers-magenta",
+     "id": 7923400933626,
+     "image": "https://cdn.shopify.com/s/files/1/0654/8160/5370/products/federica-tosi-trousers-magenta-front.jpg?v=1699513035",
+     "price": "910.00",
+     "price_max": "910.00",
+     "price_min": "910.00",
+     "tags": [
+      "Valentine Sale 2024",
+      "Women"
+     ],
+     "title": "Wide-leg Trousers Magenta",
+     "type": "Women pants",
+     "url": "/products/wide-leg-trousers-magenta?_pos=5&_psq=trousers&_psid=1a75497e6&_ss=e",
+     "variants": [],
+     "vendor": "Federica Tosi",
+     "featured_image": {
+      "alt": "Wide-leg Trousers Magenta",
+      "aspect_ratio": 0.667,
+      "height": 1440,
+      "url": "https://cdn.shopify.com/s/files/1/0654/8160/5370/products/federica-tosi-trousers-magenta-front.jpg?v=1699513035",
+      "width": 960
+     }
+    },
+    {
+     "available": true,
+     "body": "<p>Tailored trousers in Blue and Yellow colour. Features flared legs and hidden side zipper. Crafted in fluid georgette fabric in graphic flower print. Cut to a high-waist slim fit.</p>",
+     "compare_at_price_max": "0.00",
+     "compare_at_price_min": "0.00",
+     "handle": "tailored-print-trousers",
+     "id": 8786099372282,
+     "image": "https://cdn.shopify.com/s/files/1/0654/8160/5370/files/Pants-GoldandBlue-Front.webp?v=1748263400",
+     "price": "1530.00",
+     "price_max": "1530.00",
+     "price_min": "1530.00",
+     "tags": [
+      "SS25",
+      "Women"
+     ],
+     "title": "Tailored Print Trousers",
+     "type": "Women pants",
+     "url": "/products/tailored-print-trousers?_pos=6&_psq=trousers&_psid=1a75497e6&_ss=e",
+     "variants": [],
+     "vendor": "Avavav",
+     "featured_image": {
+      "alt": "Tailored Print Trousers",
+      "aspect_ratio": 0.667,
+      "height": 1440,
+      "url": "https://cdn.shopify.com/s/files/1/0654/8160/5370/files/Pants-GoldandBlue-Front.webp?v=1748263400",
+      "width": 960
+     }
+    },
+    {
+     "available": true,
+     "body": "Mattise Trousers in Black colour. High-rise flared-leg trousers in Black colour. A wardrobe must-have, the Matisse trousers were designed to go with your entire closet.",
+     "compare_at_price_max": "1760.00",
+     "compare_at_price_min": "1760.00",
+     "handle": "mattise-trousers-black",
+     "id": 7676338340090,
+     "image": "https://cdn.shopify.com/s/files/1/0654/8160/5370/products/violante-nessi-mattise-trousers-black-front.jpg?v=1658146891",
+     "price": "1232.00",
+     "price_max": "1232.00",
+     "price_min": "1232.00",
+     "tags": [
+      "Best seller",
+      "EOS_W25",
+      "Ramadan24",
+      "Women"
+     ],
+     "title": "Matisse Trousers",
+     "type": "Women pants",
+     "url": "/products/mattise-trousers-black?_pos=7&_psq=trousers&_psid=1a75497e6&_ss=e",
+     "variants": [],
+     "vendor": "Violante Nessi",
+     "featured_image": {
+      "alt": "Violante nessi mattise trousers black front",
+      "aspect_ratio": 0.667,
+      "height": 1440,
+      "url": "https://cdn.shopify.com/s/files/1/0654/8160/5370/products/violante-nessi-mattise-trousers-black-front.jpg?v=1658146891",
+      "width": 960
+     }
+    },
+    {
+     "available": true,
+     "body": "Silky wide-leg trousers with elasticated waist, pockets in the front",
+     "compare_at_price_max": "0.00",
+     "compare_at_price_min": "0.00",
+     "handle": "wide-leg-trousers-green",
+     "id": 7923399688442,
+     "image": "https://cdn.shopify.com/s/files/1/0654/8160/5370/products/federica-tosi-trousers-green-side.jpg?v=1699513060",
+     "price": "1300.00",
+     "price_max": "1300.00",
+     "price_min": "1300.00",
+     "tags": [
+      "Women"
+     ],
+     "title": "Wide-leg Trousers Green",
+     "type": "Women pants",
+     "url": "/products/wide-leg-trousers-green?_pos=8&_psq=trousers&_psid=1a75497e6&_ss=e",
+     "variants": [],
+     "vendor": "Federica Tosi",
+     "featured_image": {
+      "alt": "Wide-leg Trousers Green",
+      "aspect_ratio": 0.667,
+      "height": 1440,
+      "url": "https://cdn.shopify.com/s/files/1/0654/8160/5370/products/federica-tosi-trousers-green-side.jpg?v=1699513060",
+      "width": 960
+     }
+    },
+    {
+     "available": true,
+     "body": "<p>Tailored and timeless, these Ivory striped trousers bring a polished edge to any ensemble. Crafted from a lightweight, structured fabric, they feature a flattering mid-to-high rise, straight-leg cut, and subtle pinstripes for a sophisticated finish. Ideal for both office wear and elevated casual looks.</p>",
+     "compare_at_price_max": "0.00",
+     "compare_at_price_min": "0.00",
+     "handle": "ivory-stripes-trousers",
+     "id": 8762517684474,
+     "image": "https://cdn.shopify.com/s/files/1/0654/8160/5370/files/Pants-Off-White-Front.webp?v=1748674684",
+     "price": "2610.00",
+     "price_max": "2610.00",
+     "price_min": "2610.00",
+     "tags": [
+      "Spring/Summer 2025",
+      "SS25",
+      "Women"
+     ],
+     "title": "Ivory Stripes Trousers",
+     "type": "Women pants",
+     "url": "/products/ivory-stripes-trousers?_pos=9&_psq=trousers&_psid=1a75497e6&_ss=e",
+     "variants": [],
+     "vendor": "Vivetta",
+     "featured_image": {
+      "alt": "Ivory Stripes Trousers",
+      "aspect_ratio": 0.667,
+      "height": 1440,
+      "url": "https://cdn.shopify.com/s/files/1/0654/8160/5370/files/Pants-Off-White-Front.webp?v=1748674684",
+      "width": 960
+     }
+    },
+    {
+     "available": true,
+     "body": "<p>Tailored and timeless, these blue striped trousers bring a polished edge to any ensemble. Crafted from a lightweight, structured fabric, they feature a flattering mid-to-high rise, straight-leg cut, and subtle pinstripes for a sophisticated finish. Ideal for both office wear and elevated casual looks.</p>",
+     "compare_at_price_max": "0.00",
+     "compare_at_price_min": "0.00",
+     "handle": "blue-stripes-trousers",
+     "id": 8762518700282,
+     "image": "https://cdn.shopify.com/s/files/1/0654/8160/5370/files/Pants-Navy-Front.webp?v=1748325903",
+     "price": "2610.00",
+     "price_max": "2610.00",
+     "price_min": "2610.00",
+     "tags": [
+      "Spring/Summer 2025",
+      "SS25",
+      "Women"
+     ],
+     "title": "Blue Stripes Trousers",
+     "type": "Women pants",
+     "url": "/products/blue-stripes-trousers?_pos=10&_psq=trousers&_psid=1a75497e6&_ss=e",
+     "variants": [],
+     "vendor": "Vivetta",
+     "featured_image": {
+      "alt": "Blue Stripes Trousers",
+      "aspect_ratio": 0.667,
+      "height": 1440,
+      "url": "https://cdn.shopify.com/s/files/1/0654/8160/5370/files/Pants-Navy-Front.webp?v=1748325903",
+      "width": 960
+     }
+    }
+   ]
+  }
+ }
+}

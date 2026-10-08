@@ -1,0 +1,25 @@
+# Manal Smaoui: a Kuwaiti ready-to-wear label on Shopify (single brand, vendor "MANAL SMAOUI"):
+# kaftans, dresses and tailored sets (a blazer, trousers, skirts, a top).
+# Prices are in Kuwaiti dinars with three decimals ("85.000"); the response has no currency, so
+# KWD is pinned here. The app shows the dinar price and an approximate dirham figure (ADR 0006).
+# Data path: Shopify's public predictive search, /search/suggest.json, which robots.txt leaves open.
+# Evidence: docs/store-qualification/manal-smaoui.md. Quirks and what would break this file:
+# docs/store-notes/manal-smaoui.md
+id: manal-smaoui
+name: Manal Smaoui
+country: KW             # Kuwait is searched too through `extra_store_countries: [KW]` in config/settings.yaml
+currency: KWD           # the suggest response has no currency field; KWD is store-level (product page JSON-LD priceCurrency, og:price:currency, Shopify.currency)
+search_url_template: "https://manalsmaoui.com/search/suggest.json?q={query}&resources[type]=product&resources[limit]=10"
+allowed_hosts:
+  - manalsmaoui.com     # product links; the apex answered directly, no redirect
+  - cdn.shopify.com     # product images
+extraction:
+  strategies:
+    - name: shopify
+genders:
+  - women               # the range is women's wear (kaftans, dresses, a blazer, skirts, trousers, a top): 13 of 13 distinct records seen; no field names a gender, so this rests on the range and the brand
+# categories is left unset on purpose: the store sells dresses and kaftans (dresses), a blazer (outerwear),
+# trousers and skirts (bottoms) and a top (tops), and `type` is a collection label ("BLACK SETS"), not a
+# garment type. Searches for all four of those categories go to it; the ranker sorts them by title.
+tier_hint: mid_range    # KWD 29-85 for garments, about AED 350-1,010 (dresses 55, kaftans 85, trousers and skirts 29-32, blazer 35)
+enabled: true           # the live smoke test passed on 2026-10-08 (tests/stores/manal-smaoui); every record has one price, so the default price is the garment's

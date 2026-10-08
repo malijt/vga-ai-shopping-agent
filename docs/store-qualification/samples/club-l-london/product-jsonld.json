@@ -1,0 +1,29 @@
+{
+ "@context": "http://schema.org/",
+ "@type": "ProductGroup",
+ "@id": "/products/unbeaten-white-fitted-corset-blazer-jacket-cl126398005#product",
+ "url": "/products/unbeaten-white-fitted-corset-blazer-jacket-cl126398005",
+ "name": "Unbeaten | White Fitted Corset Blazer Jacket",
+ "image": "https://www.clubllondon.ae/cdn/shop/files/uploaded_image_5_ttxkd_450x450.jpg?v=1756985170",
+ "description": "Blazers may be fine for the office but they look even better styled up for special occasions. Our Unbeaten blazer is a prime example, designed in weighted white crepe with a curve-contouring corset, long sleeves and a plunging notched collar. Pair this fitted blazer with encrusted accents and you're",
+ "mpn": "15066626949501",
+ "brand": {
+  "@type": "Brand",
+  "name": "Club L London - UAE"
+ },
+ "offers": {
+  "@type": "Offer",
+  "priceCurrency": "AED",
+  "price": "999.0",
+  "availability": "InStock",
+  "seller": {
+   "@type": "Organization",
+   "name": "Club L London - UAE"
+  }
+ },
+ "aggregateRating": {
+  "@type": "AggregateRating",
+  "ratingValue": "5.0",
+  "ratingCount": "1"
+ }
+}

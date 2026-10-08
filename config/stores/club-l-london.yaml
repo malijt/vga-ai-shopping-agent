@@ -1,0 +1,16 @@
+# config/stores/club-l-london.yaml - Club L London UAE (plan 12.5). Shopify predictive search.
+# Evidence: docs/store-qualification/club-l-london.md, notes: docs/store-notes/club-l-london.md.
+id: club-l-london
+name: Club L London UAE   # shown to the shopper; must be unique among enabled stores
+country: AE
+currency: AED             # the suggest response has no currency; AED is store-level (JSON-LD on the product page)
+search_url_template: "https://www.clubllondon.ae/search/suggest.json?q={query}&resources[type]=product&resources[limit]=10"
+allowed_hosts:
+  - www.clubllondon.ae    # the store (the apex clubllondon.ae redirects here)
+  - cdn.shopify.com       # product images
+extraction:
+  strategies:
+    - name: shopify       # defaults: name from `title`, image width 400
+genders: [women]          # a women-only going-out brand
+tier_hint: premium        # AED 199-1,499 seen
+enabled: true             # the live smoke test passed on 2026-10-08 (blazer, jacket, heels: 10 products each)

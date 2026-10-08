@@ -1,0 +1,1012 @@
+"""Behaviour of the shared contracts in vga.models (plan features 1.2.1 to 1.2.3)."""
+
+import json
+from typing import Any
+
+import pytest
+import yaml
+from pydantic import ValidationError
+
+from tests.factories import (
+    make_budget,
+    make_garment_group,
+    make_item_intent,
+    make_product,
+    make_products,
+    make_scored_product,
+    make_scores,
+    make_search_request,
+    make_search_response,
+    make_store_config,
+    make_store_report,
+    make_store_result,
+    make_tier_result,
+    make_understand_result,
+)
+from vga.models import (
+    MAX_TEXT_CHARS,
+    Category,
+    ChipEdits,
+    Flag,
+    GarmentGroup,
+    Gender,
+    GenderSource,
+    ItemEdit,
+    MixPreset,
+    Product,
+    QueryImage,
+    RunOverrides,
+    SearchRequest,
+    StoreConfig,
+    StoreResult,
+    StoreStatus,
+    Tier,
+    TierMix,
+    TierResult,
+)
+
+PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
+
+
+def round_trip(model: Any) -> Any:
+    return type(model).model_validate_json(model.model_dump_json())
+
+
+class TestSearchRequest:
+    def test_text_request_round_trips_through_json(self) -> None:
+        request = make_search_request(text="red dress")
+
+        assert round_trip(request) == request
+
+    def test_text_is_stripped(self) -> None:
+        assert SearchRequest(text="  red dress \n").text == "red dress"
+
+    def test_whitespace_only_text_with_no_image_is_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="needs text, a photo, or both"):
+            SearchRequest(text="   \n\t ")
+
+    def test_whitespace_only_text_with_an_image_is_accepted_and_becomes_none(self) -> None:
+        request = SearchRequest(text="   ", image=PNG_BYTES)
+
+        assert request.text is None
+        assert request.has_image
+
+    def test_request_with_neither_text_nor_image_is_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="needs text, a photo, or both"):
+            SearchRequest()
+
+    def test_rerun_of_is_unset_by_default(self) -> None:
+        assert SearchRequest(text="x").rerun_of is None
+
+    def test_a_rerun_with_neither_text_nor_image_is_accepted(self) -> None:
+        request = SearchRequest(rerun_of="a1b2c3")
+
+        assert request.rerun_of == "a1b2c3"
+        assert request.text is None
+        assert not request.has_image
+
+    def test_neither_text_nor_image_is_still_rejected_without_rerun_of(self) -> None:
+        with pytest.raises(ValidationError, match="needs text, a photo, or both"):
+            SearchRequest(rerun_of=None)
+
+    @pytest.mark.parametrize("blank", ["", "   ", "\n\t"])
+    def test_a_blank_rerun_of_is_rejected(self, blank: str) -> None:
+        with pytest.raises(ValidationError, match="rerun_of"):
+            SearchRequest(rerun_of=blank)
+
+    @pytest.mark.parametrize("blank", ["", "  "])
+    def test_a_blank_rerun_of_does_not_rescue_a_request_with_text(self, blank: str) -> None:
+        with pytest.raises(ValidationError, match="rerun_of"):
+            SearchRequest(text="red dress", rerun_of=blank)
+
+    @pytest.mark.parametrize("bad", ["has space", "x" * 65, "semi;colon", "new\nline"])
+    def test_an_unsafe_rerun_of_is_rejected(self, bad: str) -> None:
+        with pytest.raises(ValidationError, match="rerun_of"):
+            SearchRequest(rerun_of=bad)
+
+    def test_rerun_of_is_stripped(self) -> None:
+        assert SearchRequest(rerun_of="  a1b2c3 ").rerun_of == "a1b2c3"
+
+    def test_a_rerun_may_still_carry_text_or_an_image(self) -> None:
+        assert SearchRequest(text="darker", rerun_of="a1b2c3").text == "darker"
+        assert SearchRequest(image=PNG_BYTES, rerun_of="a1b2c3").has_image
+
+    def test_the_text_rules_are_unchanged_for_a_rerun(self) -> None:
+        assert SearchRequest(text="   ", rerun_of="a1b2c3").text is None
+        with pytest.raises(ValidationError, match="at most 2000 characters"):
+            SearchRequest(text="a" * (MAX_TEXT_CHARS + 1), rerun_of="a1b2c3")
+
+    def test_a_rerun_round_trips_through_json(self) -> None:
+        request = SearchRequest(rerun_of="a1b2c3", request_id="d4e5f6")
+
+        assert round_trip(request) == request
+        assert round_trip(request).rerun_of == "a1b2c3"
+        assert json.loads(request.model_dump_json())["rerun_of"] == "a1b2c3"
+
+    def test_a_rerun_round_trips_through_json_with_text(self) -> None:
+        request = make_search_request(text="darker", rerun_of="a1b2c3")
+
+        assert round_trip(request) == request
+
+    def test_text_of_exactly_the_limit_is_accepted(self) -> None:
+        assert len(SearchRequest(text="a" * MAX_TEXT_CHARS).text or "") == MAX_TEXT_CHARS
+
+    def test_text_one_character_over_the_limit_is_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="at most 2000 characters"):
+            SearchRequest(text="a" * (MAX_TEXT_CHARS + 1))
+
+    def test_limit_is_counted_after_stripping(self) -> None:
+        padded = " " * 50 + "a" * MAX_TEXT_CHARS + " " * 50
+
+        assert len(SearchRequest(text=padded).text or "") == MAX_TEXT_CHARS
+
+    def test_arabic_text_is_kept_intact(self) -> None:
+        assert SearchRequest(text="جاكيت أسود").text == "جاكيت أسود"
+
+    def test_photo_never_appears_in_repr_or_json(self) -> None:
+        request = SearchRequest(text="x", image=PNG_BYTES)
+
+        assert "PNG" not in repr(request)
+        assert "image" not in request.model_dump()
+        assert "image" not in request.model_dump_json()
+
+    def test_request_id_is_generated_and_unique(self) -> None:
+        ids = {SearchRequest(text="x").request_id for _ in range(20)}
+
+        assert len(ids) == 20
+
+    @pytest.mark.parametrize("bad", ["", "has space", "x" * 65, "semi;colon", "new\nline"])
+    def test_unsafe_request_ids_are_rejected(self, bad: str) -> None:
+        with pytest.raises(ValidationError):
+            SearchRequest(text="x", request_id=bad)
+
+    def test_unknown_fields_are_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            SearchRequest.model_validate({"text": "x", "colour": "red"})
+
+
+class TestItemIntentAndUnderstandResult:
+    def test_round_trip(self) -> None:
+        result = make_understand_result(budget=make_budget())
+
+        assert round_trip(result) == result
+
+    @pytest.mark.parametrize("category", ["accessories", "bag", "Shirts", "dress", ""])
+    def test_category_outside_the_five_is_rejected(self, category: str) -> None:
+        with pytest.raises(ValidationError):
+            make_item_intent(category=category)
+
+    @pytest.mark.parametrize("category", ["tops", "outerwear", "bottoms", "shoes", "dresses"])
+    def test_the_five_categories_are_accepted(self, category: str) -> None:
+        assert make_item_intent(category=category).category == Category(category)
+
+    def test_dresses_is_the_fifth_category_and_follows_the_original_four(self) -> None:
+        # The order is the order the UI lists them in, so adding dresses must not reorder the rest.
+        assert [category.value for category in Category] == [
+            "tops",
+            "outerwear",
+            "bottoms",
+            "shoes",
+            "dresses",
+        ]
+
+    @pytest.mark.parametrize("count", [0, 4])
+    def test_keywords_must_be_one_to_three(self, count: int) -> None:
+        with pytest.raises(ValidationError):
+            make_item_intent(search_keywords=[f"word {i}" for i in range(count)])
+
+    @pytest.mark.parametrize("count", [1, 2, 3])
+    def test_one_to_three_keywords_are_accepted(self, count: int) -> None:
+        item = make_item_intent(search_keywords=[f"word {i}" for i in range(count)])
+
+        assert len(item.search_keywords) == count
+
+    def test_a_blank_keyword_is_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            make_item_intent(search_keywords=["black blazer", "   "])
+
+    def test_blank_attributes_become_none(self) -> None:
+        item = make_item_intent(colour="  ", style="", material=" ")
+
+        assert (item.colour, item.style, item.material) == (None, None, None)
+
+    def test_gender_needs_a_source(self) -> None:
+        with pytest.raises(ValidationError, match="gender_source"):
+            make_item_intent(gender=Gender.MEN, gender_source=GenderSource.NONE)
+
+    def test_a_source_needs_a_gender(self) -> None:
+        with pytest.raises(ValidationError, match="gender_source"):
+            make_item_intent(gender=None, gender_source=GenderSource.INFERRED)
+
+    def test_inferred_gender_is_representable(self) -> None:
+        item = make_item_intent(gender=Gender.WOMEN, gender_source=GenderSource.INFERRED)
+
+        assert item.gender_source is GenderSource.INFERRED
+
+    def test_at_most_four_items(self) -> None:
+        with pytest.raises(ValidationError):
+            make_understand_result(items=[make_item_intent() for _ in range(5)])
+
+    def test_at_least_one_item(self) -> None:
+        with pytest.raises(ValidationError):
+            make_understand_result(items=[])
+
+    def test_budget_must_be_positive(self) -> None:
+        with pytest.raises(ValidationError):
+            make_budget(max_price=0)
+
+    def test_budget_currency_is_normalised(self) -> None:
+        assert make_budget(currency="aed").currency == "AED"
+
+    def test_input_type_must_be_known(self) -> None:
+        with pytest.raises(ValidationError):
+            make_understand_result(input_type="video")
+
+    def test_language_must_be_known(self) -> None:
+        with pytest.raises(ValidationError):
+            make_understand_result(language="klingon")
+
+
+class TestChipEditsAndOverrides:
+    def test_round_trip(self) -> None:
+        edits = ChipEdits(
+            items=[
+                ItemEdit(index=0, category=Category.TOPS, colour="dark brown", gender=Gender.MEN)
+            ],
+            budget=make_budget(),
+        )
+
+        assert round_trip(edits) == edits
+
+    def test_item_index_must_not_repeat(self) -> None:
+        with pytest.raises(ValidationError, match="repeat"):
+            ChipEdits(items=[ItemEdit(index=0), ItemEdit(index=0)])
+
+    def test_item_index_must_be_a_possible_item(self) -> None:
+        with pytest.raises(ValidationError):
+            ItemEdit(index=4)
+
+    def test_budget_and_clear_budget_are_exclusive(self) -> None:
+        with pytest.raises(ValidationError, match="not both"):
+            ChipEdits(budget=make_budget(), clear_budget=True)
+
+    def test_empty_colour_means_clear_it(self) -> None:
+        assert ItemEdit(index=0, colour="  ").colour == ""
+
+    def test_run_overrides_keep_the_embedding_out_of_json_and_repr(self) -> None:
+        overrides = RunOverrides(query_embedding=[0.123456, 0.2])
+
+        assert "query_embedding" not in overrides.model_dump_json()
+        assert "0.123456" not in repr(overrides)
+
+    def test_query_image_hides_photo_and_embedding_in_repr(self) -> None:
+        query = QueryImage(image=PNG_BYTES, embedding=[0.987654])
+
+        assert "PNG" not in repr(query)
+        assert "0.987654" not in repr(query)
+
+
+class TestTierMix:
+    def test_mix_that_sums_to_100_is_accepted(self) -> None:
+        mix = TierMix(budget=40, mid_range=30, premium=20, luxury=10)
+
+        assert mix.as_tuple() == (40, 30, 20, 10)
+        assert mix.share(Tier.PREMIUM) == 20
+
+    @pytest.mark.parametrize("values", [(25, 25, 25, 24), (30, 30, 30, 30), (0, 0, 0, 0)])
+    def test_mix_that_does_not_sum_to_100_names_the_total(self, values: tuple[int, ...]) -> None:
+        with pytest.raises(ValidationError, match=f"sum to 100, got {sum(values)}"):
+            TierMix(budget=values[0], mid_range=values[1], premium=values[2], luxury=values[3])
+
+    def test_negative_share_is_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            TierMix(budget=-10, mid_range=50, premium=30, luxury=30)
+
+    @pytest.mark.parametrize(
+        ("preset", "expected"),
+        [
+            (MixPreset.EVEN, (25, 25, 25, 25)),
+            (MixPreset.VALUE_FIRST, (40, 30, 20, 10)),
+            (MixPreset.LUXURY_FIRST, (10, 20, 30, 40)),
+        ],
+    )
+    def test_presets_match_the_prd(self, preset: MixPreset, expected: tuple[int, ...]) -> None:
+        assert preset.mix.as_tuple() == expected
+
+
+class TestStoreConfig:
+    def test_enabled_defaults_to_false(self) -> None:
+        config = StoreConfig.model_validate(
+            {
+                **make_store_config().model_dump(exclude={"enabled"}),
+            }
+        )
+
+        assert config.enabled is False
+
+    def test_enabled_must_be_set_explicitly(self) -> None:
+        assert make_store_config(enabled=True).enabled is True
+
+    def test_round_trip(self) -> None:
+        config = make_store_config()
+
+        assert round_trip(config) == config
+
+    @pytest.mark.parametrize(
+        "template",
+        [
+            "http://www.demo-store.example/search?q={query}",
+            "ftp://www.demo-store.example/search?q={query}",
+            "//www.demo-store.example/search?q={query}",
+            "www.demo-store.example/search?q={query}",
+        ],
+    )
+    def test_non_https_template_is_rejected(self, template: str) -> None:
+        with pytest.raises(ValidationError, match="https"):
+            make_store_config(search_url_template=template)
+
+    def test_template_without_query_placeholder_is_rejected(self) -> None:
+        with pytest.raises(ValidationError, match=r"\{query\}"):
+            make_store_config(search_url_template="https://www.demo-store.example/search")
+
+    def test_template_with_another_placeholder_is_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="only use"):
+            make_store_config(
+                search_url_template="https://www.demo-store.example/{lang}/search?q={query}"
+            )
+
+    def test_template_host_must_be_allowed(self) -> None:
+        with pytest.raises(ValidationError, match="allowed_hosts"):
+            make_store_config(
+                search_url_template="https://www.other.example/search?q={query}",
+            )
+
+    def test_query_placeholder_in_the_host_is_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="not the host"):
+            make_store_config(
+                search_url_template="https://{query}.demo-store.example/",
+                allowed_hosts=["demo-store.example"],
+            )
+
+    def test_template_with_credentials_is_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="credentials"):
+            make_store_config(
+                search_url_template="https://user:pass@www.demo-store.example/s?q={query}"
+            )
+
+    def test_allowed_hosts_is_required_and_not_empty(self) -> None:
+        with pytest.raises(ValidationError):
+            make_store_config(allowed_hosts=[])
+        data = make_store_config().model_dump()
+        del data["allowed_hosts"]
+        with pytest.raises(ValidationError):
+            StoreConfig.model_validate(data)
+
+    @pytest.mark.parametrize(
+        "host",
+        ["http://x.example", "x.example/path", "x.example:8080", "*.example.com", "127.0.0.1",
+         "localhost", "10.0.0.5", "exa mple.com", ""],
+    )  # fmt: skip
+    def test_allowed_hosts_must_be_plain_host_names(self, host: str) -> None:
+        with pytest.raises(ValidationError, match="plain host name"):
+            make_store_config(allowed_hosts=["www.demo-store.example", host])
+
+    def test_allowed_hosts_are_lowercased_and_deduplicated(self) -> None:
+        config = make_store_config(
+            allowed_hosts=["WWW.Demo-Store.example", "www.demo-store.example", "cdn.x.example"]
+        )
+
+        assert config.allowed_hosts == ["www.demo-store.example", "cdn.x.example"]
+
+    def test_unknown_field_is_rejected_so_typos_fail_loudly(self) -> None:
+        with pytest.raises(ValidationError):
+            make_store_config(enabeld=True)
+
+    def test_extraction_needs_at_least_one_strategy(self) -> None:
+        with pytest.raises(ValidationError):
+            make_store_config(extraction={"strategies": []})
+
+    def test_strategy_may_only_map_product_fields(self) -> None:
+        with pytest.raises(ValidationError, match="unknown product field"):
+            make_store_config(
+                extraction={"strategies": [{"name": "store_json", "fields": {"store": "x"}}]}
+            )
+
+    def test_display_name_defaults_to_the_id(self) -> None:
+        assert make_store_config(name=None).display_name == "demo-store"
+        assert make_store_config(name="Demo Store").display_name == "Demo Store"
+
+    def test_country_and_currency_are_normalised_to_upper_case(self) -> None:
+        config = make_store_config(country="ae", currency="aed")
+
+        assert (config.country, config.currency) == ("AE", "AED")
+
+    def test_rps_and_timeout_are_optional_overrides(self) -> None:
+        config = make_store_config()
+
+        assert config.rps is None
+        assert config.timeout_s is None
+
+    def test_rps_must_be_polite(self) -> None:
+        with pytest.raises(ValidationError):
+            make_store_config(rps=50)
+
+    def test_response_cap_and_variant_limit_default_to_the_settings(self) -> None:
+        config = make_store_config()
+
+        assert config.max_response_bytes is None
+        assert config.max_variants is None
+
+    @pytest.mark.parametrize("value", [1, 500_000, 8_000_000])
+    def test_response_cap_accepts_positive_values(self, value: int) -> None:
+        assert make_store_config(max_response_bytes=value).max_response_bytes == value
+
+    @pytest.mark.parametrize("value", [0, -1, 1.5])
+    def test_response_cap_must_be_a_positive_whole_number(self, value: float) -> None:
+        with pytest.raises(ValidationError, match="max_response_bytes"):
+            make_store_config(max_response_bytes=value)
+
+    @pytest.mark.parametrize("value", [1, 2, 3])
+    def test_variant_limit_accepts_one_to_three(self, value: int) -> None:
+        assert make_store_config(max_variants=value).max_variants == value
+
+    @pytest.mark.parametrize("value", [0, 4, -1, 2.5])
+    def test_variant_limit_outside_one_to_three_is_rejected(self, value: float) -> None:
+        with pytest.raises(ValidationError, match="max_variants"):
+            make_store_config(max_variants=value)
+
+    def test_response_cap_and_variant_limit_survive_a_round_trip(self) -> None:
+        config = make_store_config(max_response_bytes=750_000, max_variants=2)
+
+        assert round_trip(config) == config
+
+    def test_genders_default_to_unset_meaning_all_or_unknown(self) -> None:
+        assert make_store_config().genders is None
+
+    @pytest.mark.parametrize(
+        "genders",
+        [
+            [Gender.WOMEN],
+            ["women"],
+            ["men", "unisex"],
+            [Gender.MEN, Gender.WOMEN, Gender.UNISEX],
+            {"women"},
+            frozenset({Gender.MEN}),
+        ],
+    )
+    def test_genders_accept_a_non_empty_collection_of_known_genders(
+        self, genders: object
+    ) -> None:
+        config = make_store_config(genders=genders)
+
+        assert isinstance(config.genders, frozenset)
+        assert all(isinstance(gender, Gender) for gender in config.genders)
+        assert config.genders
+
+    def test_genders_ignore_order_and_duplicates(self) -> None:
+        a = make_store_config(genders=["women", "men", "women"])
+        b = make_store_config(genders=["men", "women"])
+
+        assert a.genders == b.genders == frozenset({Gender.MEN, Gender.WOMEN})
+        assert a == b
+
+    @pytest.mark.parametrize("genders", [[], (), set(), frozenset()])
+    def test_empty_genders_are_rejected(self, genders: object) -> None:
+        with pytest.raises(ValidationError, match="genders"):
+            make_store_config(genders=genders)
+
+    @pytest.mark.parametrize("genders", [["kids"], ["women", "boys"], "women", [None]])
+    def test_unknown_or_malformed_genders_are_rejected(self, genders: object) -> None:
+        with pytest.raises(ValidationError, match="genders"):
+            make_store_config(genders=genders)
+
+    def test_genders_round_trip_through_json(self) -> None:
+        config = make_store_config(genders=["women", "unisex"])
+
+        assert round_trip(config) == config
+
+    def test_genders_are_written_as_a_list_in_a_fixed_order(self) -> None:
+        # A frozenset has no order of its own, so dumps must not depend on hashing.
+        config = make_store_config(genders={Gender.UNISEX, Gender.WOMEN, Gender.MEN})
+
+        assert config.model_dump(mode="json")["genders"] == ["men", "women", "unisex"]
+        assert json.loads(config.model_dump_json())["genders"] == ["men", "women", "unisex"]
+        assert make_store_config().model_dump(mode="json")["genders"] is None
+
+    def test_genders_round_trip_through_yaml(self) -> None:
+        config = make_store_config(genders=["unisex", "women"])
+
+        text = yaml.safe_dump(config.model_dump(mode="json"))
+        loaded = StoreConfig.model_validate(yaml.safe_load(text))
+
+        assert "genders:\n- women\n- unisex\n" in text
+        assert loaded == config
+
+    def test_a_store_file_can_write_genders_as_a_yaml_list(self) -> None:
+        data = make_store_config().model_dump(mode="json")
+        data["genders"] = yaml.safe_load("[women]")
+
+        assert StoreConfig.model_validate(data).genders == frozenset({Gender.WOMEN})
+
+    @pytest.mark.parametrize("requested", [*Gender, None])
+    def test_a_store_without_genders_sells_for_every_request(
+        self, requested: Gender | None
+    ) -> None:
+        assert make_store_config().sells_for_gender(requested) is True
+
+    @pytest.mark.parametrize(
+        ("genders", "requested", "expected"),
+        [
+            # A women-only boutique: a men's query must not be sent to it.
+            ([Gender.WOMEN], Gender.WOMEN, True),
+            ([Gender.WOMEN], Gender.MEN, False),
+            ([Gender.MEN], Gender.MEN, True),
+            ([Gender.MEN], Gender.WOMEN, False),
+            # Listing both genders is the same as selling for both.
+            ([Gender.MEN, Gender.WOMEN], Gender.MEN, True),
+            ([Gender.MEN, Gender.WOMEN], Gender.WOMEN, True),
+            # A store that lists unisex sells for everyone, alone or with another gender.
+            ([Gender.UNISEX], Gender.MEN, True),
+            ([Gender.UNISEX], Gender.WOMEN, True),
+            ([Gender.UNISEX, Gender.WOMEN], Gender.MEN, True),
+            # Asking for unisex, or for no gender, does not narrow the audience.
+            ([Gender.WOMEN], Gender.UNISEX, True),
+            ([Gender.MEN], Gender.UNISEX, True),
+            ([Gender.WOMEN], None, True),
+        ],
+    )
+    def test_sells_for_gender(
+        self, genders: list[Gender], requested: Gender | None, expected: bool
+    ) -> None:
+        assert make_store_config(genders=genders).sells_for_gender(requested) is expected
+
+    def test_categories_default_to_unset_meaning_every_category(self) -> None:
+        assert make_store_config().categories is None
+
+    @pytest.mark.parametrize(
+        "categories",
+        [
+            [Category.DRESSES],
+            ["dresses"],
+            ["tops", "bottoms"],
+            list(Category),
+            {"shoes"},
+            frozenset({Category.OUTERWEAR}),
+        ],
+    )
+    def test_categories_accept_a_non_empty_collection_of_known_categories(
+        self, categories: object
+    ) -> None:
+        config = make_store_config(categories=categories)
+
+        assert isinstance(config.categories, frozenset)
+        assert all(isinstance(category, Category) for category in config.categories)
+        assert config.categories
+
+    def test_categories_ignore_order_and_duplicates(self) -> None:
+        a = make_store_config(categories=["tops", "dresses", "tops"])
+        b = make_store_config(categories=["dresses", "tops"])
+
+        assert a.categories == b.categories == frozenset({Category.TOPS, Category.DRESSES})
+        assert a == b
+
+    @pytest.mark.parametrize("categories", [[], (), set(), frozenset()])
+    def test_empty_categories_are_rejected(self, categories: object) -> None:
+        # A store that sells nothing we search for should be ``enabled: false``.
+        with pytest.raises(ValidationError, match="categories"):
+            make_store_config(categories=categories)
+
+    @pytest.mark.parametrize(
+        "categories", [["accessories"], ["dresses", "hats"], "dresses", [None], ["Dress"]]
+    )
+    def test_unknown_or_malformed_categories_are_rejected(self, categories: object) -> None:
+        with pytest.raises(ValidationError, match="categories"):
+            make_store_config(categories=categories)
+
+    def test_categories_round_trip_through_json(self) -> None:
+        config = make_store_config(categories=["dresses", "shoes"])
+
+        assert round_trip(config) == config
+
+    def test_categories_are_written_as_a_list_in_a_fixed_order(self) -> None:
+        # A frozenset has no order of its own, so dumps must not depend on hashing.
+        config = make_store_config(categories={Category.DRESSES, Category.SHOES, Category.TOPS})
+
+        expected = ["tops", "shoes", "dresses"]
+        assert config.model_dump(mode="json")["categories"] == expected
+        assert json.loads(config.model_dump_json())["categories"] == expected
+        assert make_store_config().model_dump(mode="json")["categories"] is None
+
+    def test_categories_round_trip_through_yaml(self) -> None:
+        config = make_store_config(categories=["shoes", "dresses"])
+
+        text = yaml.safe_dump(config.model_dump(mode="json"))
+        loaded = StoreConfig.model_validate(yaml.safe_load(text))
+
+        assert "categories:\n- shoes\n- dresses\n" in text
+        assert loaded == config
+
+    def test_a_store_file_can_write_categories_as_a_yaml_list(self) -> None:
+        data = make_store_config().model_dump(mode="json")
+        data["categories"] = yaml.safe_load("[dresses]")
+
+        assert StoreConfig.model_validate(data).categories == frozenset({Category.DRESSES})
+
+    @pytest.mark.parametrize("requested", list(Category))
+    def test_a_store_without_categories_sells_every_category(self, requested: Category) -> None:
+        assert make_store_config().sells_category(requested) is True
+
+    @pytest.mark.parametrize(
+        ("categories", "requested", "expected"),
+        [
+            # A dresses-only boutique: a shoe search must not be sent to it.
+            ([Category.DRESSES], Category.DRESSES, True),
+            ([Category.DRESSES], Category.SHOES, False),
+            ([Category.DRESSES], Category.TOPS, False),
+            ([Category.DRESSES], Category.BOTTOMS, False),
+            ([Category.DRESSES], Category.OUTERWEAR, False),
+            # Several categories: each listed one is sold, the others are not.
+            ([Category.TOPS, Category.BOTTOMS], Category.TOPS, True),
+            ([Category.TOPS, Category.BOTTOMS], Category.BOTTOMS, True),
+            ([Category.TOPS, Category.BOTTOMS], Category.SHOES, False),
+            # Listing all five is the same as selling every category.
+            (list(Category), Category.SHOES, True),
+        ],
+    )
+    def test_sells_category(
+        self, categories: list[Category], requested: Category, expected: bool
+    ) -> None:
+        assert make_store_config(categories=categories).sells_category(requested) is expected
+
+    def test_categories_and_genders_are_independent(self) -> None:
+        config = make_store_config(categories=["dresses"], genders=["women"])
+
+        assert config.sells_category(Category.DRESSES)
+        assert config.sells_for_gender(Gender.WOMEN)
+        assert not config.sells_category(Category.SHOES)
+        assert not config.sells_for_gender(Gender.MEN)
+
+
+class TestProduct:
+    REQUIRED = ["title", "price", "currency", "image_url", "product_url", "store"]
+
+    def test_round_trip(self) -> None:
+        product = make_product()
+
+        assert round_trip(product) == product
+
+    @pytest.mark.parametrize("missing", REQUIRED)
+    def test_each_of_the_six_required_fields_is_required(self, missing: str) -> None:
+        data = make_product().model_dump()
+        del data[missing]
+
+        with pytest.raises(ValidationError, match=missing):
+            Product.model_validate(data)
+
+    @pytest.mark.parametrize("field", ["title", "store", "image_url", "product_url", "currency"])
+    def test_required_text_fields_must_not_be_blank(self, field: str) -> None:
+        with pytest.raises(ValidationError):
+            make_product(**{field: "   "})
+
+    @pytest.mark.parametrize("price", [0, -1, -0.01, float("nan"), float("inf")])
+    def test_price_must_be_positive_and_finite(self, price: float) -> None:
+        with pytest.raises(ValidationError):
+            make_product(price=price)
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "http://www.demo-store.example/p/1",
+            "javascript:alert(1)",
+            "data:text/html;base64,PGgxPmhpPC9oMT4=",
+            "ftp://x.example/a",
+            "https://",
+            "https:///path",
+            "https://user:pw@www.demo-store.example/p/1",
+            "https://www.demo-store.example/p/1 2",
+            "https://www.demo-store.example/p/1\n",
+            "/relative/path",
+        ],
+    )
+    @pytest.mark.parametrize("field", ["product_url", "image_url"])
+    def test_urls_must_be_absolute_https_without_credentials_or_whitespace(
+        self, field: str, url: str
+    ) -> None:
+        # A trailing newline is stripped by the model, so only the inner-space cases still fail.
+        if url.endswith("\n"):
+            assert make_product(**{field: url}).model_dump()[field] == url.strip()
+            return
+        with pytest.raises(ValidationError):
+            make_product(**{field: url})
+
+    def test_very_long_url_is_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="at most"):
+            make_product(product_url="https://www.demo-store.example/" + "a" * 2100)
+
+    def test_optional_fields_default_to_none(self) -> None:
+        product = Product(
+            title="Plain Tee",
+            price=59,
+            currency="AED",
+            image_url="https://cdn.demo-store.example/a.jpg",
+            product_url="https://www.demo-store.example/p/a",
+            store="Demo Store",
+        )
+
+        assert (product.colour, product.in_stock, product.category) == (None, None, None)
+
+    def test_gender_defaults_to_unknown(self) -> None:
+        product = Product(
+            title="Plain Tee",
+            price=59,
+            currency="AED",
+            image_url="https://cdn.demo-store.example/a.jpg",
+            product_url="https://www.demo-store.example/p/a",
+            store="Demo Store",
+        )
+
+        assert product.gender is None
+        assert make_product().gender is None
+
+    @pytest.mark.parametrize("gender", list(Gender))
+    def test_gender_round_trips(self, gender: Gender) -> None:
+        product = make_product(gender=gender)
+
+        assert round_trip(product) == product
+        assert round_trip(product).gender is gender
+
+    def test_gender_is_read_from_its_json_value(self) -> None:
+        data = make_product().model_dump(mode="json")
+        data["gender"] = "women"
+
+        assert Product.model_validate(data).gender is Gender.WOMEN
+
+    def test_a_gender_that_is_not_men_women_or_unisex_is_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            make_product(gender="kids")
+
+    def test_very_long_title_is_accepted(self) -> None:
+        assert len(make_product(title="Blazer " * 100).title) > 600
+
+    def test_unknown_field_is_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            make_product(brand="Acme")
+
+    def test_key_is_the_product_url(self) -> None:
+        product = make_product()
+
+        assert product.key == product.product_url
+
+
+class TestStoreResult:
+    def test_round_trip(self) -> None:
+        result = make_store_result()
+
+        assert round_trip(result) == result
+
+    @pytest.mark.parametrize(
+        "status",
+        [s for s in StoreStatus if s is not StoreStatus.OK],
+    )
+    def test_failed_or_empty_status_must_not_carry_products(self, status: StoreStatus) -> None:
+        with pytest.raises(ValidationError, match="must not carry products"):
+            StoreResult(store_id="x", status=status, products=make_products(1))
+
+    def test_ok_status_needs_products(self) -> None:
+        with pytest.raises(ValidationError, match="at least one product"):
+            StoreResult(store_id="x", status=StoreStatus.OK)
+
+    def test_unknown_status_is_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            StoreResult(store_id="x", status="exploded")  # type: ignore[arg-type]
+
+    def test_negative_duration_is_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            make_store_result(duration_ms=-1)
+
+
+class TestResultModels:
+    def test_scores_must_lie_between_zero_and_one(self) -> None:
+        with pytest.raises(ValidationError):
+            make_scores(total=1.01)
+        with pytest.raises(ValidationError):
+            make_scores(text=-0.1)
+
+    def test_image_score_may_be_missing(self) -> None:
+        assert make_scores(image=None).image is None
+
+    def test_scored_product_round_trip(self) -> None:
+        scored = make_scored_product(flags=[Flag.OVER_BUDGET], tier=Tier.PREMIUM)
+
+        assert round_trip(scored) == scored
+
+    def test_a_scored_product_has_no_base_price_unless_one_is_set(self) -> None:
+        assert make_scored_product().base_price is None
+
+    @pytest.mark.parametrize("bad", [0, -1.0])
+    def test_base_price_must_be_positive(self, bad: float) -> None:
+        with pytest.raises(ValidationError):
+            make_scored_product(base_price=bad)
+
+    def test_base_price_survives_a_json_round_trip(self) -> None:
+        kwd = make_product(1, price=245.0, currency="KWD")
+        scored = make_scored_product(kwd, base_price=2920.4, tier=Tier.LUXURY)
+
+        assert round_trip(scored) == scored
+        assert round_trip(scored).base_price == 2920.4
+
+    def test_a_range_span_is_in_the_base_currency_for_a_converted_product(self) -> None:
+        # KWD 245.000 at 11.92 is AED 2,920.40: the span is measured on that figure, not on 245.
+        kwd = make_product(1, price=245.0, currency="KWD")
+        scored = make_scored_product(kwd, base_price=2920.4, tier=Tier.LUXURY)
+
+        tier = TierResult(
+            name=Tier.LUXURY,
+            price_min=2920.4,
+            price_max=2920.4,
+            currency="AED",
+            target_count=1,
+            count=1,
+            results=[scored],
+        )
+
+        assert tier.results[0].base_price == 2920.4
+
+    def test_a_converted_products_base_price_must_lie_inside_the_span(self) -> None:
+        kwd = make_product(1, price=245.0, currency="KWD")
+        scored = make_scored_product(kwd, base_price=2920.4, tier=Tier.LUXURY)
+
+        with pytest.raises(ValidationError, match="outside the span"):
+            TierResult(
+                name=Tier.LUXURY,
+                price_min=200.0,
+                price_max=300.0,  # would cover the dinar figure 245, but not the dirham one
+                currency="AED",
+                target_count=1,
+                count=1,
+                results=[scored],
+            )
+
+    def test_tier_result_always_carries_span_count_target_and_flags(self) -> None:
+        tier = make_tier_result(
+            Tier.MID_RANGE, make_products(3), target_count=4, flags=[Flag.FEW_OPTIONS]
+        )
+        dumped = tier.model_dump(mode="json")
+
+        assert dumped["price_min"] == 125.0
+        assert dumped["price_max"] == 175.0
+        assert (dumped["count"], dumped["target_count"]) == (3, 4)
+        assert dumped["flags"] == ["few_options"]
+        assert dumped["currency"] == "AED"
+
+    def test_tier_result_count_must_match_results(self) -> None:
+        data = make_tier_result().model_dump()
+        data["count"] = 5
+
+        with pytest.raises(ValidationError, match="count"):
+            TierResult.model_validate(data)
+
+    def test_tier_result_span_must_cover_every_price(self) -> None:
+        data = make_tier_result().model_dump()
+        data["price_max"] = data["price_min"]
+
+        with pytest.raises(ValidationError, match="outside the span"):
+            TierResult.model_validate(data)
+
+    def test_tier_result_with_results_needs_a_span(self) -> None:
+        data = make_tier_result().model_dump()
+        data["price_min"] = None
+
+        with pytest.raises(ValidationError, match="needs price_min"):
+            TierResult.model_validate(data)
+
+    def test_empty_tier_has_no_span(self) -> None:
+        tier = TierResult(name=Tier.LUXURY, target_count=3, count=0, flags=[Flag.FEW_OPTIONS])
+
+        assert tier.price_min is None
+
+    def test_empty_tier_must_not_claim_a_span(self) -> None:
+        with pytest.raises(ValidationError, match="empty range"):
+            TierResult(name=Tier.LUXURY, price_min=10, price_max=20, target_count=3, count=0)
+
+    @pytest.mark.parametrize(
+        ("tier", "prices", "expected"),
+        [
+            (Tier.BUDGET, [45, 80, 139], "Budget · 45-139 AED · 3 results"),
+            (Tier.MID_RANGE, [140, 299], "Mid-range · 140-299 AED · 2 results"),
+            (Tier.LUXURY, [700, 2400], "Luxury · 700-2,400 AED · 2 results"),
+            (Tier.PREMIUM, [349.5, 520], "Premium · 349.50-520 AED · 2 results"),
+            (Tier.BUDGET, [99], "Budget · 99 AED · 1 result"),
+        ],
+    )
+    def test_display_label_follows_the_prd_format(
+        self, tier: Tier, prices: list[float], expected: str
+    ) -> None:
+        products = [make_product(i, price=p) for i, p in enumerate(prices, start=1)]
+
+        assert make_tier_result(tier, products).display_label == expected
+
+    def test_display_label_for_an_empty_range(self) -> None:
+        tier = TierResult(name=Tier.LUXURY, target_count=3, count=0)
+
+        assert tier.display_label == "Luxury · no results"
+
+    def test_tier_labels_use_shopper_words(self) -> None:
+        assert [t.label for t in Tier] == ["Budget", "Mid-range", "Premium", "Luxury"]
+
+    def test_group_needs_exactly_the_four_tiers_in_order(self) -> None:
+        group = make_garment_group()
+        shuffled = [group.tiers[1], group.tiers[0], *group.tiers[2:]]
+
+        with pytest.raises(ValidationError, match="exactly budget"):
+            GarmentGroup(item_index=0, category=Category.TOPS, tiers=shuffled)
+        with pytest.raises(ValidationError, match="exactly budget"):
+            GarmentGroup(item_index=0, category=Category.TOPS, tiers=group.tiers[:3])
+
+    def test_group_counts_its_results(self) -> None:
+        assert make_garment_group(per_tier=2).result_count == 8
+
+
+class TestSearchResponse:
+    def test_serialises_to_json_and_back(self) -> None:
+        response = make_search_response()
+
+        assert round_trip(response) == response
+
+    def test_json_contains_the_documented_top_level_fields(self) -> None:
+        dumped = make_search_response().model_dump(mode="json")
+
+        assert {
+            "understood",
+            "groups",
+            "stores_used",
+            "stores_skipped",
+            "timings",
+            "usage",
+            "warnings",
+            "request_id",
+        } <= set(dumped)
+
+    def test_query_embedding_is_excluded_from_json_and_repr(self) -> None:
+        response = make_search_response(query_embedding=[0.424242, 0.1])
+
+        assert "query_embedding" not in response.model_dump_json()
+        assert "0.424242" not in repr(response)
+        assert response.query_embedding == [0.424242, 0.1]
+
+    def test_skipped_store_needs_a_reason(self) -> None:
+        with pytest.raises(ValidationError, match="needs a reason"):
+            make_search_response(
+                stores_skipped=[make_store_report(StoreStatus.TIMEOUT, reason=None)]
+            )
+
+    def test_an_ok_store_cannot_be_listed_as_skipped(self) -> None:
+        with pytest.raises(ValidationError, match="must not hold status 'ok'"):
+            make_search_response(stores_skipped=[make_store_report(StoreStatus.OK, reason="x")])
+
+    def test_only_ok_stores_are_listed_as_used(self) -> None:
+        with pytest.raises(ValidationError, match="only hold status 'ok'"):
+            make_search_response(stores_used=[make_store_report(StoreStatus.BLOCKED)])
+
+    def test_may_have_no_groups_when_every_store_failed(self) -> None:
+        response = make_search_response(groups=[], stores_used=[])
+
+        assert response.result_count == 0
+        assert response.products == []
+
+    def test_result_count_adds_up_all_groups(self) -> None:
+        response = make_search_response(
+            groups=[make_garment_group(per_tier=1), make_garment_group(per_tier=2, item_index=1)]
+        )
+
+        assert response.result_count == 4 + 8
+        assert len(response.products) == 12
+
+    def test_store_report_is_built_from_a_result(self) -> None:
+        result = make_store_result(dropped={"missing_price": 2})
+
+        report = type(make_store_report()).from_result(result)
+
+        assert report.product_count == 3
+        assert report.dropped == {"missing_price": 2}
+        assert report.store_id == result.store_id

@@ -1,0 +1,21 @@
+# Maison Arabelle: a Dubai atelier selling kaftans and abayas on Shopify (single brand).
+# Data path: Shopify's public predictive search, /search/suggest.json, which robots.txt leaves open.
+# Evidence: docs/store-qualification/maison-arabelle.md. Quirks and what would break this file:
+# docs/store-notes/maison-arabelle.md
+id: maison-arabelle
+name: Maison Arabelle
+country: AE
+currency: AED          # the suggest response has no currency field; AED is store-level (product page JSON-LD)
+search_url_template: "https://maisonarabelle.com/search/suggest.json?q={query}&resources[type]=product&resources[limit]=10"
+allowed_hosts:
+  - maisonarabelle.com  # product links; www.maisonarabelle.com was never requested
+  - cdn.shopify.com     # product images
+extraction:
+  strategies:
+    - name: shopify     # the price is `price`; `compare_at_price_max` is unreliable here and is never read
+genders:
+  - women               # kaftans, abayas and dresses only: 40 of 40 records in the qualification pass
+categories:
+  - dresses             # kaftans, abayas and one-piece dresses from one collection: no shoes, trousers, tops or jackets in the 40 records seen (docs/store-qualification/maison-arabelle.md)
+tier_hint: luxury       # AED 790-2,400 seen; abayas 1,200-2,400, kaftans 790-2,400
+enabled: true           # the live smoke test passed on 2026-10-08 (tests/stores/maison-arabelle); enabled when the user raised the store limit to ten (plan A25)

@@ -1,0 +1,81 @@
+{
+ "@context": "http://schema.org/",
+ "@type": "Product",
+ "name": "Halter Dress",
+ "url": "https://bazzaalzouman.com/products/halter-dress",
+ "image": [
+  "https://bazzaalzouman.com/cdn/shop/files/BAZZA1285R_3291x.jpg?v=1752563720"
+ ],
+ "description": "Halter-neck dress in off-white, designed with a fluid silhouette that gathers at the neckline and falls into a full-length drape.\nColor: Off-white\nFabric: 100% Crepe",
+ "sku": "BAZ-PS26-D07",
+ "brand": {
+  "@type": "Thing",
+  "name": "Bazza Alzouman"
+ },
+ "offers": [
+  {
+   "@type": "Offer",
+   "sku": "BAZ-PS26-D07",
+   "availability": "http://schema.org/OutOfStock",
+   "price": 265.0,
+   "priceCurrency": "KWD",
+   "url": "https://bazzaalzouman.com/products/halter-dress?variant=58617489915985"
+  },
+  {
+   "@type": "Offer",
+   "sku": "BAZ-PS26-D07",
+   "availability": "http://schema.org/OutOfStock",
+   "price": 265.0,
+   "priceCurrency": "KWD",
+   "url": "https://bazzaalzouman.com/products/halter-dress?variant=58617489948753"
+  },
+  {
+   "@type": "Offer",
+   "sku": "BAZ-PS26-D07",
+   "availability": "http://schema.org/OutOfStock",
+   "price": 265.0,
+   "priceCurrency": "KWD",
+   "url": "https://bazzaalzouman.com/products/halter-dress?variant=58617489981521"
+  },
+  {
+   "@type": "Offer",
+   "sku": "BAZ-PS26-D07",
+   "availability": "http://schema.org/InStock",
+   "price": 265.0,
+   "priceCurrency": "KWD",
+   "url": "https://bazzaalzouman.com/products/halter-dress?variant=58617490014289"
+  },
+  {
+   "@type": "Offer",
+   "sku": "BAZ-PS26-D07",
+   "availability": "http://schema.org/InStock",
+   "price": 265.0,
+   "priceCurrency": "KWD",
+   "url": "https://bazzaalzouman.com/products/halter-dress?variant=58617490047057"
+  },
+  {
+   "@type": "Offer",
+   "sku": "BAZ-PS26-D07",
+   "availability": "http://schema.org/InStock",
+   "price": 265.0,
+   "priceCurrency": "KWD",
+   "url": "https://bazzaalzouman.com/products/halter-dress?variant=58617490079825"
+  },
+  {
+   "@type": "Offer",
+   "sku": "BAZ-PS26-D07",
+   "availability": "http://schema.org/InStock",
+   "price": 265.0,
+   "priceCurrency": "KWD",
+   "url": "https://bazzaalzouman.com/products/halter-dress?variant=58617490112593"
+  },
+  {
+   "@type": "Offer",
+   "sku": "BAZ-PS26-D07",
+   "availability": "http://schema.org/InStock",
+   "price": 265.0,
+   "priceCurrency": "KWD",
+   "url": "https://bazzaalzouman.com/products/halter-dress?variant=58617490145361"
+  }
+ ]
+}

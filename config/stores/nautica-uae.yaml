@@ -1,0 +1,16 @@
+# config/stores/nautica-uae.yaml - Nautica UAE (plan 12.2). Shopify storefront, read through its
+# public predictive-search endpoint. Evidence: docs/store-qualification/nautica-uae.md.
+# Why it behaves as it does: docs/store-notes/nautica-uae.md.
+id: nautica-uae
+name: Nautica UAE
+country: AE
+currency: AED          # the suggest response has no currency; AED is the store's (product page JSON-LD)
+search_url_template: "https://nautica-ae.com/search/suggest.json?q={query}&resources[type]=product&resources[limit]=10"
+allowed_hosts:
+  - nautica-ae.com     # product links
+  - cdn.shopify.com    # product images (shared by all Shopify merchants)
+extraction:
+  strategies:
+    - name: shopify    # fixed mapping; the title is the product name, images are asked for at width=400
+tier_hint: mid_range   # AED 59-239 seen (shirts 129-139, jackets 209-239)
+enabled: true          # live smoke test passed on 2026-10-08 (3 queries, 4 requests)

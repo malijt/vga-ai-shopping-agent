@@ -1,0 +1,115 @@
+[project]
+name = "vga"
+version = "0.1.0"
+description = "VGA AI Shopping Agent: one search across GCC fashion stores from a photo, text, or both."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "extruct>=0.18.0",
+    "httpx>=0.28.1",
+    "openai>=3.26.0",
+    "pillow>=12.3.0",
+    "protego>=0.7.0",
+    "pydantic>=2",
+    "pyyaml>=6.0.3",
+    "selectolax>=1.0.0",
+    "streamlit>=1.65.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.9,<0.13"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.13.1",   # imported directly by tests/understand/fake_openai.py (the OpenAI SDK's HTTP client)
+    "mypy>=2.4.0",
+    "pip-audit>=2.10.1",
+    "pip-licenses>=5.5.5",
+    "pre-commit>=4.6.2",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "respx>=0.23.1",
+    "ruff>=0.16.10",
+    "types-pyyaml>=6.0.12.20260906",
+]
+ml = [
+    "open-clip-torch>=3.3.0",
+    "torch>=2.14.1",
+]
+
+# `uv sync` installs runtime + dev. The `ml` group (torch, open_clip) is ~1 GB and is opt-in:
+#   uv sync --group ml
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+# `src` for the vga package, `.` so that `tests.fakes`, `tests.factories`, `app` and `eval` import cleanly.
+pythonpath = ["src", "."]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+# importlib mode: every phase owns its own tests/<area>/ folder and two areas may reuse a file name.
+# `-m "not live"` keeps live (network / OpenAI) tests out by default; `pytest -m live` overrides it.
+addopts = "-ra --strict-markers --strict-config --import-mode=importlib -m 'not live'"
+markers = [
+    "live: talks to real stores or the real OpenAI API; needs keys; never runs in CI",
+    "slow: takes more than a few seconds; deselect with -m 'not slow'",
+]
+filterwarnings = ["error::pytest.PytestUnraisableExceptionWarning"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src", "tests", "app", "eval"]
+extend-exclude = ["spikes"]   # throwaway spikes have their own pyproject.toml and are not held to repo lint rules
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # import order
+    "B",        # bugbear
+    "UP",       # pyupgrade
+    "S",        # bandit security rules
+    "C4",       # comprehensions
+    "SIM",      # simplifications
+    "ASYNC",    # async pitfalls
+    "PT",       # pytest style
+    "RUF",      # ruff-specific
+]
+ignore = [
+    "RUF012",   # mutable class attributes: Pydantic handles its own defaults
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106", "S311"]   # asserts, fake credentials, non-crypto random
+"scripts/**" = ["S603", "S607"]                  # we run fixed local tools (uv, pip-licenses)
+
+[tool.ruff.lint.isort]
+# `src` above lists these folders as import roots, so ruff finds the modules inside them but not
+# the packages `app` and `eval` themselves; without this they sort as third-party in some files.
+known-first-party = ["app", "eval"]
+
+[tool.ruff.lint.flake8-pytest-style]
+fixture-parentheses = false
+mark-parentheses = false
+
+[tool.mypy]
+python_version = "3.12"
+mypy_path = "src"
+files = ["src"]
+strict = true
+plugins = ["pydantic.mypy"]
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+# Third-party libraries that ship no type information.
+module = ["extruct.*", "open_clip.*", "torch.*", "selectolax.*"]
+ignore_missing_imports = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true

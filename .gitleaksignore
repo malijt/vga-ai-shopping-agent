@@ -1,0 +1,3 @@
+# Findings reviewed and accepted. One line per finding: the fingerprint gitleaks prints.
+# A made-up value in a test that proves the logger hides key=value secrets (not a real credential).
+ea5ce074f21a96cb59e3092eb77f59bbe04a6e5e:tests/foundation/test_log.py:generic-api-key:212

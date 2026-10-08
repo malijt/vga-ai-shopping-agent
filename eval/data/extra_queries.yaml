@@ -1,0 +1,123 @@
+# Extra photo queries: the 11 photos the business supplied on 2026-10-08 that are NOT among the
+# 10 acceptance queries (plan assumption A23).
+#
+# This list is NOT part of the PRD "Acceptance test (10 queries)" and does NOT count towards the
+# pass rule (7 of 10). It exists so that the same harness can run these photos too, to see how the
+# Understand step and the stores cope with abayas, a kaftan, South Asian sets and a few other
+# garments. Report its results beside the acceptance table, never inside it.
+#
+# Same entry contract as queries.yaml (id, type, text, image, optional shopper_gender, notes), so
+# the same loader reads it:
+#   load_queries("eval/data/extra_queries.yaml", require_images=False, check_mix=False)
+# check_mix=False because this list has no PRD mix: it is 11 photo-only queries.
+#
+# shopper_gender: women is what the shopper answers if the app asks "Who is this for?" (see the
+# header of queries.yaml). Every one of these 11 photos shows women's clothing.
+#
+# The photos live in eval/data/assets/private/ (gitignored) and were supplied by the user.
+# Ids start with "x" so they never collide with the "q" ids of queries.yaml.
+
+queries:
+  # ---- Abayas and a kaftan (product photos) -------------------------------------------
+  - id: x01_floral_kaftan
+    type: product_photo
+    text: null
+    image: eval/data/assets/private/dress_floral_kaftan.png
+    shopper_gender: women
+    notes: >-
+      A floral kaftan-style dress (dresses). Expected: one dresses item whose keywords hold
+      "kaftan". Kaftans are sold by Maison Arabelle and Nishat Linen UAE in the stores found for
+      this category; a Western dress is a style miss.
+
+  - id: x02_taupe_button_abaya
+    type: product_photo
+    text: null
+    image: eval/data/assets/private/dress_taupe_button_abaya.png
+    shopper_gender: women
+    notes: >-
+      A taupe open-front abaya fastened with buttons (dresses). Expected: one dresses item with
+      "abaya" in the keywords. Good match = an open-front abaya in a neutral colour.
+
+  - id: x03_blue_embroidered_abaya
+    type: product_photo
+    text: null
+    image: eval/data/assets/private/dress_blue_embroidered_abaya.png
+    shopper_gender: women
+    notes: >-
+      A blue embroidered abaya (dresses). Expected: one dresses item with "abaya" in the
+      keywords. Good match = an abaya with similar embroidery and a close blue.
+
+  - id: x04_grey_pintuck_abaya
+    type: product_photo
+    text: null
+    image: eval/data/assets/private/dress_grey_pintuck_abaya.png
+    shopper_gender: women
+    notes: >-
+      A grey abaya with pintuck detail (dresses). Expected: one dresses item with "abaya" in the
+      keywords. Good match = an abaya in grey or a close neutral.
+
+  - id: x05_brown_belted_abaya
+    type: product_photo
+    text: null
+    image: eval/data/assets/private/dress_brown_belted_abaya.png
+    shopper_gender: women
+    notes: >-
+      A brown belted abaya (dresses). Expected: one dresses item with "abaya" in the keywords.
+      The belt is part of the garment: a belt sold on its own is an accessory and must not appear.
+
+  # ---- Outfit photos --------------------------------------------------------------------
+  - id: x06_outfit_coral_embroidered_set
+    type: outfit_photo
+    text: null
+    image: eval/data/assets/private/outfit_coral_embroidered_set.png
+    shopper_gender: women
+    notes: >-
+      A person in a coral embroidered South Asian set (dresses). Expected: a dresses group, plus
+      shoes if they are visible. Few of the stores sell South Asian sets, so a thin or empty
+      group with a plain note is an honest result (plan assumption A24).
+
+  - id: x07_outfit_white_kurta_heels
+    type: outfit_photo
+    text: null
+    image: eval/data/assets/private/outfit_white_kurta_heels.png
+    shopper_gender: women
+    notes: >-
+      A person in a white kurta set and heels. Expected: two groups, dresses (the kurta set) and
+      shoes (heels). The keywords for the first group hold "kurta".
+
+  - id: x08_outfit_teal_maxi_heels
+    type: outfit_photo
+    text: null
+    image: eval/data/assets/private/outfit_teal_colourblock_maxi_heels.png
+    shopper_gender: women
+    notes: >-
+      A person in a teal colour-block maxi dress and heels. Expected: two groups, dresses (a
+      maxi dress) and shoes (heels).
+
+  # ---- Other garments (product photos) -------------------------------------------------
+  - id: x09_green_embroidered_palazzo
+    type: product_photo
+    text: null
+    image: eval/data/assets/private/bottoms_green_embroidered_palazzo.png
+    shopper_gender: women
+    notes: >-
+      Green embroidered palazzo trousers (bottoms). Expected: one bottoms item. Palazzo
+      trousers are bottoms, never dresses.
+
+  - id: x10_grey_pleated_skirt
+    type: product_photo
+    text: null
+    image: eval/data/assets/private/bottoms_grey_pleated_skirt.png
+    shopper_gender: women
+    notes: >-
+      A grey pleated skirt (bottoms). Expected: one bottoms item. A skirt is bottoms; a "skirt
+      dress" must not be a good match.
+
+  - id: x11_cream_satin_wrap_blouse
+    type: product_photo
+    text: null
+    image: eval/data/assets/private/top_cream_satin_wrap_blouse.png
+    shopper_gender: women
+    notes: >-
+      A cream satin wrap blouse (tops). Expected: one tops item. A shirt dress or a wrap dress
+      must not appear for it.

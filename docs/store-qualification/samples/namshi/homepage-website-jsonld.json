@@ -1,0 +1,23 @@
+{
+  "_note": "Incidental: the UAE homepage (https://www.namshi.com/uae-en/robots.txt/, reached through the redirect chain from https://en-ae.namshi.com/robots.txt) declares this search URL template in JSON-LD. It is not a search-result page and has no product data.",
+  "WebSite_JSON_LD": {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "url": "https://www.namshi.com/",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": "https://www.namshi.com/uae-en/search?q={search_term_string}"
+      },
+      "query-input": "required name=search_term_string"
+    }
+  },
+  "search_links_seen_in_homepage_html": [
+    "/uae-en/all/search/?q=luggage&amp;selected_gender=women&amp;f%5Bbrand_code%5D=benetton%2Cskybags%2Cu_s_polo_assn%2Cherschel%2Carctic_hunter%2Camerican_tourister%2Ccabinpro%2Ccalvin_klein%2Cdkny%2Ceminent%2Cbeverly_hills_polo_club%2Cdiscovery%2Cgiordano%2Cnational_geographic%2Csenator&amp;page=1",
+    "/uae-en/kids-clothing-boys-jeans/search/?q=pants",
+    "/uae-en/kids-clothing-girls-jeans/search/?q=pants",
+    "/uae-en/kids-clothing-girls-pants/search/?q=pants",
+    "/uae-en/kids/search/?q=SKIRTS&amp;selected_gender=women"
+  ]
+}

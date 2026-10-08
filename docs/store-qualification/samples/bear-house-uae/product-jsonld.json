@@ -1,0 +1,61 @@
+{
+ "@context": "http://schema.org/",
+ "@id": "/products/boali#product",
+ "@type": "ProductGroup",
+ "brand": {
+  "@type": "Brand",
+  "name": "Olive Checked Slim Fit Casual Shirt"
+ },
+ "category": "Shirts & Tops",
+ "description": "\n\nColor : Olive\n\nFabric : 60% Cotton, 40% Polyester\nSleeves : Long sleeves\n\nPattern : Checked\n\nFit : Slim Fit\nCollar : Spread Collar Design\n\nPocket : Chest pocket with Metallic bear logo\n\nWash Care : Machine wash cold with similar colors\n\nHem : A curved hem  provides a clean finish for a polished lo",
+ "hasVariant": [
+  {
+   "@id": "/products/boali?variant=43687335362699#variant",
+   "@type": "Product",
+   "image": "https://www.thebearhouse.ae/cdn/shop/files/TBH-BOALI-GR_1.jpg?v=1779285320&width=1920",
+   "name": "BOALI - S",
+   "offers": {
+    "@id": "/products/boali?variant=43687335362699#offer",
+    "@type": "Offer",
+    "availability": "http://schema.org/OutOfStock",
+    "price": "59.00",
+    "priceCurrency": "AED",
+    "url": "https://www.thebearhouse.ae/products/boali?variant=43687335362699"
+   },
+   "sku": "TBH-BOALI-GR-S"
+  },
+  {
+   "@id": "/products/boali?variant=43687335395467#variant",
+   "@type": "Product",
+   "image": "https://www.thebearhouse.ae/cdn/shop/files/TBH-BOALI-GR_1.jpg?v=1779285320&width=1920",
+   "name": "BOALI - M",
+   "offers": {
+    "@id": "/products/boali?variant=43687335395467#offer",
+    "@type": "Offer",
+    "availability": "http://schema.org/InStock",
+    "price": "59.00",
+    "priceCurrency": "AED",
+    "url": "https://www.thebearhouse.ae/products/boali?variant=43687335395467"
+   },
+   "sku": "TBH-BOALI-GR-M"
+  },
+  {
+   "@id": "/products/boali?variant=43687335428235#variant",
+   "@type": "Product",
+   "image": "https://www.thebearhouse.ae/cdn/shop/files/TBH-BOALI-GR_1.jpg?v=1779285320&width=1920",
+   "name": "BOALI - L",
+   "offers": {
+    "@id": "/products/boali?variant=43687335428235#offer",
+    "@type": "Offer",
+    "availability": "http://schema.org/OutOfStock",
+    "price": "59.00",
+    "priceCurrency": "AED",
+    "url": "https://www.thebearhouse.ae/products/boali?variant=43687335428235"
+   },
+   "sku": "TBH-BOALI-GR-L"
+  }
+ ],
+ "name": "BOALI",
+ "productGroupID": "7864765284491",
+ "url": "https://www.thebearhouse.ae/products/boali"
+}

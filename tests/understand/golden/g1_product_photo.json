@@ -1,0 +1,33 @@
+{
+  "id": "g1_product_photo",
+  "provenance": "HAND-WRITTEN example of the parsed output we expect. NOT recorded from the OpenAI API.",
+  "request": {
+    "text": null,
+    "image": "private/dress_burgundy_gown.png",
+    "image_note": "A burgundy evening gown, supplied by the business on 2026-10-08 (the same photo as acceptance query q01). Offline tests send a tiny generated image instead; the live eval needs the real photo from eval/data/ASSETS.md and skips this case without it."
+  },
+  "model_output": {
+    "verdict": "ok",
+    "input_type": "product_photo",
+    "language": "en",
+    "items": [
+      {
+        "category": "dresses",
+        "colour": "burgundy",
+        "style": "evening gown",
+        "material": null,
+        "gender": "women",
+        "gender_source": "inferred",
+        "search_keywords": ["burgundy evening gown", "burgundy gown", "evening gown"]
+      }
+    ],
+    "budget": null,
+    "edits": []
+  },
+  "expect": {
+    "input_type": "product_photo",
+    "language": "en",
+    "budget": null,
+    "items": [{"category": "dresses", "colour": "burgundy", "gender_source": "inferred"}]
+  }
+}

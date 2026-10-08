@@ -1,0 +1,51 @@
+# Secrets and local environment: never commit these.
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Tool caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# macOS / editors
+.DS_Store
+.idea/
+.vscode/
+
+# Local logs and debug dumps (may contain prompts and candidate lists)
+logs/
+
+# Model weights and downloads (FashionSigLIP is ~1 GB)
+.cache/
+.hf-cache/
+huggingface/
+*.safetensors
+*.pt
+*.pth
+*.onnx
+
+# Private test photos: outfit selfies must never reach the repo (BRD Rule 4).
+# Ignore the folder's contents, not the folder or its own .gitignore, so a nested
+# eval/data/assets/private/.gitignore can still be committed.
+eval/data/assets/private/*
+!eval/data/assets/private/.gitignore
+
+# Acceptance run output: keep only the human-written summaries
+eval/results/**
+!eval/results/**/
+!eval/results/**/SUMMARY.md
+
+# Claude Code per-developer state (worktrees, local settings)
+.claude/worktrees/
+.claude/settings.local.json

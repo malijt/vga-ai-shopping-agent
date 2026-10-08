@@ -1,0 +1,312 @@
+{
+ "resources": {
+  "results": {
+   "products": [
+    {
+     "available": true,
+     "body": "",
+     "compare_at_price_max": "249.00",
+     "compare_at_price_min": "249.00",
+     "handle": "womens-long-sleeve-shirt-navy",
+     "id": 8744529920137,
+     "image": "https://cdn.shopify.com/s/files/1/0566/4355/1369/files/NALST001_Navy_3.jpg?v=1784787362",
+     "price": "129.00",
+     "price_max": "129.00",
+     "price_min": "129.00",
+     "tags": [
+      "Long Sleeve Shirt",
+      "Shirts",
+      "Topwear",
+      "Women",
+      "women-new"
+     ],
+     "title": "Women's Long Sleeve Shirt",
+     "type": "Shirts",
+     "url": "/products/womens-long-sleeve-shirt-navy?_pos=1&_psq=women+dress&_psid=38fd49954&_ss=e",
+     "variants": [],
+     "vendor": "Nautica",
+     "featured_image": {
+      "alt": "Women's Long Sleeve Shirt",
+      "aspect_ratio": 0.75,
+      "height": 2304,
+      "url": "https://cdn.shopify.com/s/files/1/0566/4355/1369/files/NALST001_Navy_3.jpg?v=1784787362",
+      "width": 1728
+     }
+    },
+    {
+     "available": true,
+     "body": "",
+     "compare_at_price_max": "249.00",
+     "compare_at_price_min": "249.00",
+     "handle": "womens-long-sleeve-shirt-black",
+     "id": 8744529887369,
+     "image": "https://cdn.shopify.com/s/files/1/0566/4355/1369/files/NALST001_Black_3.jpg?v=1784787362",
+     "price": "129.00",
+     "price_max": "129.00",
+     "price_min": "129.00",
+     "tags": [
+      "Long Sleeve Shirt",
+      "Shirts",
+      "Topwear",
+      "Women",
+      "women-new"
+     ],
+     "title": "Women's Long Sleeve Shirt",
+     "type": "Shirts",
+     "url": "/products/womens-long-sleeve-shirt-black?_pos=2&_psq=women+dress&_psid=38fd49954&_ss=e",
+     "variants": [],
+     "vendor": "Nautica",
+     "featured_image": {
+      "alt": "Women's Long Sleeve Shirt",
+      "aspect_ratio": 0.8,
+      "height": 2304,
+      "url": "https://cdn.shopify.com/s/files/1/0566/4355/1369/files/NALST001_Black_3.jpg?v=1784787362",
+      "width": 1843
+     }
+    },
+    {
+     "available": true,
+     "body": "",
+     "compare_at_price_max": "279.00",
+     "compare_at_price_min": "279.00",
+     "handle": "womens-trouser-navy",
+     "id": 8744530215049,
+     "image": "https://cdn.shopify.com/s/files/1/0566/4355/1369/files/NATR001_Navy_1.jpg?v=1784787367",
+     "price": "139.00",
+     "price_max": "139.00",
+     "price_min": "139.00",
+     "tags": [
+      "Bottomwear",
+      "Trousers",
+      "Women",
+      "women-new"
+     ],
+     "title": "Women's Trouser",
+     "type": "Trousers",
+     "url": "/products/womens-trouser-navy?_pos=3&_psq=women+dress&_psid=38fd49954&_ss=e",
+     "variants": [],
+     "vendor": "Nautica",
+     "featured_image": {
+      "alt": "Women's Trouser",
+      "aspect_ratio": 0.75,
+      "height": 2304,
+      "url": "https://cdn.shopify.com/s/files/1/0566/4355/1369/files/NATR001_Navy_1.jpg?v=1784787367",
+      "width": 1728
+     }
+    },
+    {
+     "available": true,
+     "body": "",
+     "compare_at_price_max": "199.00",
+     "compare_at_price_min": "199.00",
+     "handle": "womens-sleeveless-top-navy",
+     "id": 8744530313353,
+     "image": "https://cdn.shopify.com/s/files/1/0566/4355/1369/files/NAWT001_Navy_3.jpg?v=1784787367",
+     "price": "99.00",
+     "price_max": "99.00",
+     "price_min": "99.00",
+     "tags": [
+      "Sleeveless top",
+      "Topwear",
+      "Women",
+      "women-new"
+     ],
+     "title": "Women's Sleeveless top",
+     "type": "Sleeveless top",
+     "url": "/products/womens-sleeveless-top-navy?_pos=4&_psq=women+dress&_psid=38fd49954&_ss=e",
+     "variants": [],
+     "vendor": "Nautica",
+     "featured_image": {
+      "alt": "Women's Sleeveless top",
+      "aspect_ratio": 0.75,
+      "height": 2304,
+      "url": "https://cdn.shopify.com/s/files/1/0566/4355/1369/files/NAWT001_Navy_3.jpg?v=1784787367",
+      "width": 1728
+     }
+    },
+    {
+     "available": true,
+     "body": "",
+     "compare_at_price_max": "249.00",
+     "compare_at_price_min": "249.00",
+     "handle": "womens-long-sleeve-shirt-white",
+     "id": 8744529952905,
+     "image": "https://cdn.shopify.com/s/files/1/0566/4355/1369/files/NALST001_White_3.jpg?v=1784787368",
+     "price": "129.00",
+     "price_max": "129.00",
+     "price_min": "129.00",
+     "tags": [
+      "Long Sleeve Shirt",
+      "Shirts",
+      "Topwear",
+      "Women",
+      "women-new"
+     ],
+     "title": "Women's Long Sleeve Shirt",
+     "type": "Shirts",
+     "url": "/products/womens-long-sleeve-shirt-white?_pos=5&_psq=women+dress&_psid=38fd49954&_ss=e",
+     "variants": [],
+     "vendor": "Nautica",
+     "featured_image": {
+      "alt": "Women's Long Sleeve Shirt",
+      "aspect_ratio": 0.75,
+      "height": 2304,
+      "url": "https://cdn.shopify.com/s/files/1/0566/4355/1369/files/NALST001_White_3.jpg?v=1784787368",
+      "width": 1728
+     }
+    },
+    {
+     "available": true,
+     "body": "",
+     "compare_at_price_max": "249.00",
+     "compare_at_price_min": "249.00",
+     "handle": "womens-long-sleeve-shirt-beige",
+     "id": 8744529854601,
+     "image": "https://cdn.shopify.com/s/files/1/0566/4355/1369/files/NALST001_Beige_3.jpg?v=1784787363",
+     "price": "129.00",
+     "price_max": "129.00",
+     "price_min": "129.00",
+     "tags": [
+      "Long Sleeve Shirt",
+      "Shirts",
+      "Topwear",
+      "Women",
+      "women-new"
+     ],
+     "title": "Women's Long Sleeve Shirt",
+     "type": "Shirts",
+     "url": "/products/womens-long-sleeve-shirt-beige?_pos=6&_psq=women+dress&_psid=38fd49954&_ss=e",
+     "variants": [],
+     "vendor": "Nautica",
+     "featured_image": {
+      "alt": "Women's Long Sleeve Shirt",
+      "aspect_ratio": 0.75,
+      "height": 2304,
+      "url": "https://cdn.shopify.com/s/files/1/0566/4355/1369/files/NALST001_Beige_3.jpg?v=1784787363",
+      "width": 1728
+     }
+    },
+    {
+     "available": true,
+     "body": "",
+     "compare_at_price_max": "279.00",
+     "compare_at_price_min": "279.00",
+     "handle": "womens-trouser-black",
+     "id": 8744530182281,
+     "image": "https://cdn.shopify.com/s/files/1/0566/4355/1369/files/NATR001_Black_1.jpg?v=1784787351",
+     "price": "139.00",
+     "price_max": "139.00",
+     "price_min": "139.00",
+     "tags": [
+      "Bottomwear",
+      "Trousers",
+      "Women",
+      "women-new"
+     ],
+     "title": "Women's Trouser",
+     "type": "Trousers",
+     "url": "/products/womens-trouser-black?_pos=7&_psq=women+dress&_psid=38fd49954&_ss=e",
+     "variants": [],
+     "vendor": "Nautica",
+     "featured_image": {
+      "alt": "Women's Trouser",
+      "aspect_ratio": 0.8,
+      "height": 2304,
+      "url": "https://cdn.shopify.com/s/files/1/0566/4355/1369/files/NATR001_Black_1.jpg?v=1784787351",
+      "width": 1843
+     }
+    },
+    {
+     "available": true,
+     "body": "",
+     "compare_at_price_max": "199.00",
+     "compare_at_price_min": "199.00",
+     "handle": "womens-sleeveless-top-white",
+     "id": 8744530346121,
+     "image": "https://cdn.shopify.com/s/files/1/0566/4355/1369/files/NAWT001_White_3.jpg?v=1784787367",
+     "price": "99.00",
+     "price_max": "99.00",
+     "price_min": "99.00",
+     "tags": [
+      "Sleeveless top",
+      "Topwear",
+      "Women",
+      "women-new"
+     ],
+     "title": "Women's Sleeveless top",
+     "type": "Sleeveless top",
+     "url": "/products/womens-sleeveless-top-white?_pos=8&_psq=women+dress&_psid=38fd49954&_ss=e",
+     "variants": [],
+     "vendor": "Nautica",
+     "featured_image": {
+      "alt": "Women's Sleeveless top",
+      "aspect_ratio": 0.75,
+      "height": 2304,
+      "url": "https://cdn.shopify.com/s/files/1/0566/4355/1369/files/NAWT001_White_3.jpg?v=1784787367",
+      "width": 1728
+     }
+    },
+    {
+     "available": true,
+     "body": "",
+     "compare_at_price_max": "199.00",
+     "compare_at_price_min": "199.00",
+     "handle": "womens-sleeveless-top-black",
+     "id": 8744530280585,
+     "image": "https://cdn.shopify.com/s/files/1/0566/4355/1369/files/NAWT001_Black_3.jpg?v=1784787363",
+     "price": "99.00",
+     "price_max": "99.00",
+     "price_min": "99.00",
+     "tags": [
+      "Sleeveless top",
+      "Topwear",
+      "Women",
+      "women-new"
+     ],
+     "title": "Women's Sleeveless top",
+     "type": "Sleeveless top",
+     "url": "/products/womens-sleeveless-top-black?_pos=9&_psq=women+dress&_psid=38fd49954&_ss=e",
+     "variants": [],
+     "vendor": "Nautica",
+     "featured_image": {
+      "alt": "Women's Sleeveless top",
+      "aspect_ratio": 0.8,
+      "height": 2304,
+      "url": "https://cdn.shopify.com/s/files/1/0566/4355/1369/files/NAWT001_Black_3.jpg?v=1784787363",
+      "width": 1843
+     }
+    },
+    {
+     "available": true,
+     "body": "",
+     "compare_at_price_max": "199.00",
+     "compare_at_price_min": "199.00",
+     "handle": "womens-sleeveless-top-beige",
+     "id": 8744530247817,
+     "image": "https://cdn.shopify.com/s/files/1/0566/4355/1369/files/NAWT001_Beige_3.jpg?v=1784787360",
+     "price": "99.00",
+     "price_max": "99.00",
+     "price_min": "99.00",
+     "tags": [
+      "Sleeveless top",
+      "Topwear",
+      "Women",
+      "women-new"
+     ],
+     "title": "Women's Sleeveless top",
+     "type": "Sleeveless top",
+     "url": "/products/womens-sleeveless-top-beige?_pos=10&_psq=women+dress&_psid=38fd49954&_ss=e",
+     "variants": [],
+     "vendor": "Nautica",
+     "featured_image": {
+      "alt": "Women's Sleeveless top",
+      "aspect_ratio": 0.75,
+      "height": 2304,
+      "url": "https://cdn.shopify.com/s/files/1/0566/4355/1369/files/NAWT001_Beige_3.jpg?v=1784787360",
+      "width": 1728
+     }
+    }
+   ]
+  }
+ }
+}

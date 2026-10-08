@@ -1,0 +1,23 @@
+# Bazza Alzouman: a Kuwaiti evening-gown label on Shopify (single brand, vendor "Bazza Alzouman").
+# Prices are in Kuwaiti dinars with three decimals ("245.000"); the response has no currency, so
+# KWD is pinned here. The app shows the dinar price and an approximate dirham figure (ADR 0006).
+# Data path: Shopify's public predictive search, /search/suggest.json, which robots.txt leaves open.
+# Evidence: docs/store-qualification/bazza-alzouman.md. Quirks and what would break this file:
+# docs/store-notes/bazza-alzouman.md
+id: bazza-alzouman
+name: Bazza Alzouman
+country: KW             # Kuwait is searched too through `extra_store_countries: [KW]` in config/settings.yaml
+currency: KWD           # the suggest response has no currency field; KWD is store-level (product page JSON-LD priceCurrency, Shopify.currency)
+search_url_template: "https://bazzaalzouman.com/search/suggest.json?q={query}&resources[type]=product&resources[limit]=10"
+allowed_hosts:
+  - bazzaalzouman.com   # product links; the apex answered directly, no redirect
+  - cdn.shopify.com     # product images
+extraction:
+  strategies:
+    - name: shopify
+genders:
+  - women               # evening gowns and dresses only: 17 of 17 records seen; no field names a gender, so this rests on the range and the brand
+categories:
+  - dresses             # type is "Dresses", "Dress" or "Gown" on all 17 records seen (strapless, off-shoulder and halter gowns, ball gowns); no tops, trousers, shoes or jackets (docs/store-qualification/bazza-alzouman.md)
+tier_hint: luxury       # KWD 206-380, about AED 2,500-4,600: nothing here is budget or mid-range
+enabled: true          # the live smoke test passed on 2026-10-08 (tests/stores/bazza-alzouman); every record has one price, so the default price is the gown's

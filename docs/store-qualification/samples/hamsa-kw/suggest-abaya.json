@@ -1,0 +1,184 @@
+{
+ "resources": {
+  "results": {
+   "products": [
+    {
+     "available": true,
+     "body": "<p>S-20-005</p>\n<p>Abaya with Pocket</p>",
+     "compare_at_price_max": "385.000",
+     "compare_at_price_min": "385.000",
+     "handle": "fire-works-abaya",
+     "id": 4667433025617,
+     "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-005-2.jpg?v=1596723938",
+     "price": "20.000",
+     "price_max": "80.000",
+     "price_min": "20.000",
+     "tags": [
+      "ABAYA"
+     ],
+     "title": "Fire Works Abaya",
+     "type": "ABAYA",
+     "url": "/products/fire-works-abaya?_pos=1&_psq=abaya&_psid=ac439cbf0&_ss=e&variant=32521524314193",
+     "variants": [
+      {
+       "available": true,
+       "compare_at_price": "385.000",
+       "id": 32521524314193,
+       "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-005-2.jpg?v=1596723938",
+       "price": "80.000",
+       "title": "Black-Gold / Free Size / Abaya",
+       "url": "/products/fire-works-abaya?variant=32521524314193&_pos=1&_psq=abaya&_psid=ac439cbf0&_ss=e",
+       "featured_image": {
+        "alt": "Fire Works Abaya",
+        "aspect_ratio": 0.666,
+        "height": 1600,
+        "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-005-2.jpg?v=1596723938",
+        "width": 1066
+       }
+      }
+     ],
+     "vendor": "Hamsakw",
+     "featured_image": {
+      "alt": null,
+      "aspect_ratio": 0.666,
+      "height": 1600,
+      "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-005-2.jpg?v=1596723938",
+      "width": 1066
+     }
+    },
+    {
+     "available": true,
+     "body": "<p>S-20-001       -  Abaya</p>\n<p>Scarf-20-001 -  Head Scarf</p>",
+     "compare_at_price_max": "350.000",
+     "compare_at_price_min": "95.000",
+     "handle": "stardust-abaya",
+     "id": 4665397215313,
+     "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-001-1.jpg?v=1596448650",
+     "price": "35.000",
+     "price_max": "95.000",
+     "price_min": "35.000",
+     "tags": [
+      "ABAYA"
+     ],
+     "title": "Stardust Abaya",
+     "type": "ABAYA",
+     "url": "/products/stardust-abaya?_pos=2&_psq=abaya&_psid=ac439cbf0&_ss=e&variant=32511409422417",
+     "variants": [
+      {
+       "available": true,
+       "compare_at_price": "350.000",
+       "id": 32511409422417,
+       "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-001-1.jpg?v=1596448650",
+       "price": "95.000",
+       "title": "Abaya / Black-Silver / Free Size",
+       "url": "/products/stardust-abaya?variant=32511409422417&_pos=2&_psq=abaya&_psid=ac439cbf0&_ss=e",
+       "featured_image": {
+        "alt": "Stardust Abaya",
+        "aspect_ratio": 0.666,
+        "height": 1600,
+        "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-001-1.jpg?v=1596448650",
+        "width": 1066
+       }
+      }
+     ],
+     "vendor": "Hamsakw",
+     "featured_image": {
+      "alt": null,
+      "aspect_ratio": 0.666,
+      "height": 1600,
+      "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-001-1.jpg?v=1596448650",
+      "width": 1066
+     }
+    },
+    {
+     "available": true,
+     "body": "<p>S-20-004</p>\n<p>Abaya</p>\n<p>By Order ( 5 days )</p>",
+     "compare_at_price_max": "435.000",
+     "compare_at_price_min": "95.000",
+     "handle": "collage-abaya",
+     "id": 4667440070737,
+     "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-004-2.jpg?v=1612020006",
+     "price": "35.000",
+     "price_max": "130.000",
+     "price_min": "35.000",
+     "tags": [
+      "ABAYA"
+     ],
+     "title": "Collage Abaya",
+     "type": "ABAYA",
+     "url": "/products/collage-abaya?_pos=3&_psq=abaya&_psid=ac439cbf0&_ss=e&variant=32521566650449",
+     "variants": [
+      {
+       "available": true,
+       "compare_at_price": "435.000",
+       "id": 32521566650449,
+       "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-004-2.jpg?v=1612020006",
+       "price": "130.000",
+       "title": "Black-Gold / Free Size / Abaya",
+       "url": "/products/collage-abaya?variant=32521566650449&_pos=3&_psq=abaya&_psid=ac439cbf0&_ss=e",
+       "featured_image": {
+        "alt": "Collage Abaya",
+        "aspect_ratio": 0.666,
+        "height": 1600,
+        "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-004-2.jpg?v=1612020006",
+        "width": 1066
+       }
+      }
+     ],
+     "vendor": "Hamsakw",
+     "featured_image": {
+      "alt": null,
+      "aspect_ratio": 0.666,
+      "height": 1600,
+      "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-004-2.jpg?v=1612020006",
+      "width": 1066
+     }
+    },
+    {
+     "available": true,
+     "body": "<p>S-20-006</p>\n<p>Abaya with Pocket</p>",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "handle": "shooting-star-abaya",
+     "id": 4667437318225,
+     "image": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-006-1.jpg?v=1596724839",
+     "price": "95.000",
+     "price_max": "365.000",
+     "price_min": "95.000",
+     "tags": [
+      "ABAYA"
+     ],
+     "title": "Shooting Star Abaya",
+     "type": "ABAYA",
+     "url": "/products/shooting-star-abaya?_pos=4&_psq=abaya&_psid=ac439cbf0&_ss=e&variant=32521548234833",
+     "variants": [
+      {
+       "available": true,
+       "compare_at_price": null,
+       "id": 32521548234833,
+       "image": null,
+       "price": "365.000",
+       "title": "Black-Gold / Free Size / Abaya",
+       "url": "/products/shooting-star-abaya?variant=32521548234833&_pos=4&_psq=abaya&_psid=ac439cbf0&_ss=e",
+       "featured_image": {
+        "alt": null,
+        "aspect_ratio": null,
+        "height": null,
+        "url": null,
+        "width": null
+       }
+      }
+     ],
+     "vendor": "Hamsakw",
+     "featured_image": {
+      "alt": "Shooting Star Abaya",
+      "aspect_ratio": 0.666,
+      "height": 1600,
+      "url": "https://cdn.shopify.com/s/files/1/0107/8453/8705/products/S-20-006-1.jpg?v=1596724839",
+      "width": 1066
+     }
+    }
+   ]
+  }
+ }
+}

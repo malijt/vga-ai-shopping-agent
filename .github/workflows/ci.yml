@@ -1,0 +1,116 @@
+# Continuous integration: lint, types, the critical tests, dependency audit and secret scan.
+#
+# Three separate jobs so each is its own required status check on `main`:
+#   test        ruff, mypy and the CRITICAL test suite (pytest -m critical)
+#   pip-audit   known-vulnerability scan of every locked dependency, including the `ml` group
+#   gitleaks    secret scan of the full git history
+#
+# What CI runs, and what it no longer runs. CI minutes cost money, so CI does not run the complete
+# suite (about 8,450 tests, 3 to 4 minutes). It runs the critical suite: about 140 tests, under a
+# minute, the ones whose failure would mean a broken product rule or a broken demo. They are named
+# in one reviewable list, tests/critical_suite.txt, and tests/foundation/test_critical_suite.py
+# fails if that list rots. `-m critical` replaces the `-m 'not live'` of the pytest config, so that
+# test also fails if a critical test is marked `live`; live tests never run in CI.
+#
+# A green CI therefore does NOT mean the complete suite passes. Run the complete suite on your own
+# machine before a push or a merge:
+#   uv run pytest              the complete suite, about 4 minutes (opt-in pre-push hook:
+#                              see .pre-commit-config.yaml)
+#   uv run pytest -m critical  the same tests CI runs, under a minute
+# or have GitHub run it: Actions > CI > Run workflow, then set "full_suite" to true. That is the
+# only way the complete suite runs here; nothing is scheduled.
+#
+# Each commit is checked once: by the pull request run, or by the push to `main` after a merge.
+# A push to a branch that has an open pull request starts no run of its own.
+#
+# Actions are pinned to full commit SHAs (the comment gives the tag) so a moved tag cannot change
+# what runs. Nothing here needs a secret: live store and OpenAI tests never run in CI.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      full_suite:
+        description: "Run the complete test suite (about 4 minutes) instead of the critical one"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_VERSION: "0.12.9"
+  GITLEAKS_VERSION: "8.30.1"
+  GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+      # --locked fails if uv.lock is out of date with pyproject.toml.
+      - name: Install (Python 3.12 from .python-version, runtime + dev groups)
+        run: uv sync --locked
+      - name: Lint
+        run: uv run ruff check
+      - name: Types
+        run: uv run mypy src
+      - name: Tests, the critical suite (no network, no live tests)
+        if: ${{ !inputs.full_suite }}
+        run: uv run pytest -m critical
+      # Only a manual run with "full_suite" set to true gets here. The complete suite includes the
+      # critical tests, so that run does not repeat them. The pytest config still skips `live`.
+      - name: Tests, the complete suite (only when asked for by hand)
+        if: ${{ inputs.full_suite }}
+        run: uv run pytest
+
+  pip-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+      - name: Install audit tool
+        run: uv sync --locked
+      # Audit the lock file, not just what is installed, so the optional `ml` group
+      # (torch, open_clip) is covered without installing its ~1 GB of wheels.
+      - name: Export every locked dependency
+        run: uv export --locked --all-groups --no-emit-project --no-hashes -o audit-requirements.txt
+      - name: Audit for known vulnerabilities
+        run: uv run pip-audit -r audit-requirements.txt --no-deps --disable-pip
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # scan the whole history, not only the tip
+          persist-credentials: false
+      - name: Install gitleaks (pinned release, checksum verified)
+        run: |
+          curl -sSfL -o gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  gitleaks.tar.gz" | sha256sum --check -
+          tar -xzf gitleaks.tar.gz gitleaks
+      - name: Scan for secrets
+        run: ./gitleaks git --redact --verbose --exit-code 1 .

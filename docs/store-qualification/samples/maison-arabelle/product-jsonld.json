@@ -1,0 +1,14 @@
+{
+ "@id": "/products/zahra-gold-dress-with-cape?variant=49106555699437#variant",
+ "@type": "Product",
+ "image": "https://maisonarabelle.com/cdn/shop/files/1_a8d39461-1441-4733-8f6c-556c6b9d9db3.jpg?v=1767167958&width=1920",
+ "name": "ZAHRA GOLD DRESS WITH CAPE - Gold / XS",
+ "offers": {
+  "@id": "/products/zahra-gold-dress-with-cape?variant=49106555699437#offer",
+  "@type": "Offer",
+  "availability": "http://schema.org/InStock",
+  "price": "1600.00",
+  "priceCurrency": "AED",
+  "url": "https://maisonarabelle.com/products/zahra-gold-dress-with-cape?variant=49106555699437"
+ }
+}

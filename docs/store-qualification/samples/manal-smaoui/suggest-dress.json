@@ -1,0 +1,108 @@
+{
+ "resources": {
+  "results": {
+   "products": [
+    {
+     "available": true,
+     "body": "<p><meta charset=\"utf-8\">The Belle dress blends refined simplicity with timeless elegance, designed with a smooth, structured fit that drapes with effortless grace combined with the cutest mini jacket. It creates a polished, flattering silhouette perfect for special occasions and memorable moments.<",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "handle": "the-belle-dress-black-limited-edition",
+     "id": 10359593894181,
+     "image": "https://cdn.shopify.com/s/files/1/0682/5885/7253/files/0S5A7692.jpg?v=1772664477",
+     "price": "55.000",
+     "price_max": "55.000",
+     "price_min": "55.000",
+     "tags": [],
+     "title": "THE BELLE DRESS - BLACK (LIMITED EDITION)",
+     "type": "EID COLLECTION",
+     "url": "/products/the-belle-dress-black-limited-edition?_pos=1&_psq=dress&_psid=5867978b1&_ss=e",
+     "variants": [],
+     "vendor": "MANAL SMAOUI",
+     "featured_image": {
+      "alt": "THE BELLE DRESS - BLACK (LIMITED EDITION)",
+      "aspect_ratio": 0.667,
+      "height": 2551,
+      "url": "https://cdn.shopify.com/s/files/1/0682/5885/7253/files/0S5A7692.jpg?v=1772664477",
+      "width": 1701
+     }
+    },
+    {
+     "available": true,
+     "body": "<div dir=\"auto\">\n<div>\n<div>\n<p dir=\"auto\">The Belle dress blends refined simplicity with timeless elegance, designed with a smooth, structured fit that drapes with effortless grace combined with the cutest mini jacket. It creates a polished, flattering silhouette perfect for special occasions and m",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "handle": "the-belle-dress-white-limited-edition",
+     "id": 10359593500965,
+     "image": "https://cdn.shopify.com/s/files/1/0682/5885/7253/files/0S5A7936.jpg?v=1772665055",
+     "price": "55.000",
+     "price_max": "55.000",
+     "price_min": "55.000",
+     "tags": [],
+     "title": "THE BELLE DRESS - WHITE (LIMITED EDITION)",
+     "type": "EID COLLECTION",
+     "url": "/products/the-belle-dress-white-limited-edition?_pos=2&_psq=dress&_psid=5867978b1&_ss=e",
+     "variants": [],
+     "vendor": "MANAL SMAOUI",
+     "featured_image": {
+      "alt": "THE BELLE DRESS - WHITE (LIMITED EDITION)",
+      "aspect_ratio": 0.667,
+      "height": 3871,
+      "url": "https://cdn.shopify.com/s/files/1/0682/5885/7253/files/0S5A7936.jpg?v=1772665055",
+      "width": 2582
+     }
+    },
+    {
+     "available": true,
+     "body": "<p><meta charset=\"utf-8\"><span>Our sought-after simple statement trousers highlight a striking wide leg, offering both comfort and style. Their versatility in pairing with any other item of the same color in the collection is a key feature. Whether you're dressing up for a special occasion or keepin",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "handle": "the-muse-pants-black",
+     "id": 10036064551205,
+     "image": "https://cdn.shopify.com/s/files/1/0682/5885/7253/files/manal_smaoui4876.jpg?v=1759220678",
+     "price": "29.000",
+     "price_max": "29.000",
+     "price_min": "29.000",
+     "tags": [],
+     "title": "THE MUSE PANTS - BLACK",
+     "type": "BLACK SETS",
+     "url": "/products/the-muse-pants-black?_pos=3&_psq=dress&_psid=5867978b1&_ss=e",
+     "variants": [],
+     "vendor": "MANAL SMAOUI",
+     "featured_image": {
+      "alt": "THE MUSE PANTS - BLACK",
+      "aspect_ratio": 0.8,
+      "height": 5610,
+      "url": "https://cdn.shopify.com/s/files/1/0682/5885/7253/files/manal_smaoui4876.jpg?v=1759220678",
+      "width": 4488
+     }
+    },
+    {
+     "available": true,
+     "body": "<p>Our sought-after simple statement trousers highlight a striking wide leg, offering both comfort and style. Their versatility in pairing with any other item of the same color in the collection is a key feature. Whether you're dressing up for a special occasion or keeping it casual for a day out, t",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "handle": "the-f-w-pants-only-baby-pink",
+     "id": 8935281721637,
+     "image": "https://cdn.shopify.com/s/files/1/0682/5885/7253/files/manal_smaoui4389_26dc3a7b-99f7-48ad-bc05-6215a18421be.jpg?v=1759235405",
+     "price": "29.000",
+     "price_max": "29.000",
+     "price_min": "29.000",
+     "tags": [],
+     "title": "THE MUSE PANTS - BABY PINK",
+     "type": "BABY PINK SETS",
+     "url": "/products/the-f-w-pants-only-baby-pink?_pos=4&_psq=dress&_psid=5867978b1&_ss=e",
+     "variants": [],
+     "vendor": "MANAL SMAOUI",
+     "featured_image": {
+      "alt": "THE MUSE PANTS - BABY PINK",
+      "aspect_ratio": 0.8,
+      "height": 5610,
+      "url": "https://cdn.shopify.com/s/files/1/0682/5885/7253/files/manal_smaoui4389_26dc3a7b-99f7-48ad-bc05-6215a18421be.jpg?v=1759235405",
+      "width": 4488
+     }
+    }
+   ]
+  }
+ }
+}

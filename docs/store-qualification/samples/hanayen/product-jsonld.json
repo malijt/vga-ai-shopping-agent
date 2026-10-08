@@ -1,0 +1,83 @@
+{
+ "@context": "https://schema.org",
+ "@type": "Product",
+ "@id": "https://hanayen.com/products/modern-sheer-summer-dress-2022#product_sp_schemaplus",
+ "mainEntityOfPage": {
+  "@type": "WebPage",
+  "@id": "https://hanayen.com/products/modern-sheer-summer-dress-2022#webpage_sp_schemaplus",
+  "sdDatePublished": "2022-06-28T18:41:57Z",
+  "sdPublisher": {
+   "@context": "https://schema.org",
+   "@type": "Organization",
+   "@id": "https://schemaplus.io",
+   "name": "SchemaPlus App",
+   "url": "https://schemaplus.io"
+  }
+ },
+ "additionalProperty": [
+  {
+   "@type": "PropertyValue",
+   "name": "Tags",
+   "value": [
+    "Abaya",
+    "Promotions"
+   ]
+  }
+ ],
+ "brand": {
+  "@type": "Brand",
+  "name": "Hanayen",
+  "url": "https://hanayen.com/collections/vendors?q=Hanayen"
+ },
+ "category": "Abaya",
+ "itemCondition": "https://schema.org/NewCondition",
+ "offers": {
+  "@type": "Offer",
+  "validFrom": "2022-06-28T18:41:57+0400",
+  "@id": "https://hanayen.com/products/modern-sheer-summer-dress-2022#offer",
+  "availability": "https://schema.org/InStock",
+  "inventoryLevel": {
+   "@type": "QuantitativeValue",
+   "value": "25"
+  },
+  "price": 3800.0,
+  "priceSpecification": [
+   {
+    "@type": "UnitPriceSpecification",
+    "price": 3800.0,
+    "priceCurrency": "AED"
+   }
+  ],
+  "priceCurrency": "AED",
+  "priceValidUntil": "2030-12-21",
+  "shippingDetails": [
+   {
+    "@type": "OfferShippingDetails",
+    "@id": "https://hanayen.com/products/modern-sheer-summer-dress-2022#shippingPolicy_schemaplus_1"
+   }
+  ],
+  "seller": {
+   "@type": "Organization",
+   "name": "Hanayen",
+   "@id": "https://hanayen.com#organization_sp_schemaplus"
+  }
+ },
+ "productID": "7728849289470",
+ "sku": "04_01_01_01_012341",
+ "mpn": "04_01_01_01_012341",
+ "weight": {
+  "@type": "QuantitativeValue",
+  "unitCode": "KGM",
+  "value": "0.5"
+ },
+ "description": "\nType: \nFit Type: Regular, Custom\nLength: Floor-Length\nInner Included\nPackage Content: One Dress | Worn By The Model\nItem Fabric: French Dantel, Lace, Tulle and Texture Chiffon\nSheila Included: No\nDelivery: Free in UAE, Worldwide Free Shipping For Above AED 850/$231\n\nGarment Care: Dry clean or Hand ",
+ "image": [
+  "https://hanayen.com/cdn/shop/products/modern-sheer-summer-dress-2022-hanayen-abaya-luxury-abaya-online-39219453133054.jpg?v=1723891097&width=1200",
+  "https://hanayen.com/cdn/shop/products/modern-sheer-summer-dress-2022-hanayen-abaya-luxury-abaya-online-39219453231358.jpg?v=1723905509&width=1200",
+  "https://hanayen.com/cdn/shop/products/modern-sheer-summer-dress-2022-hanayen-abaya-luxury-abaya-online-39219449004286.jpg?v=1723889493&width=1200",
+  "https://hanayen.com/cdn/shop/products/modern-sheer-summer-dress-2022-hanayen-abaya-luxury-abaya-online-39219449037054.jpg?v=1723905860&width=1200",
+  "https://hanayen.com/cdn/shop/products/modern-sheer-summer-dress-2022-hanayen-abaya-luxury-abaya-online-39219449102590.jpg?v=1723905863&width=1200"
+ ],
+ "name": "Modern Sheer Summer Dress 2022",
+ "url": "https://hanayen.com/products/modern-sheer-summer-dress-2022"
+}

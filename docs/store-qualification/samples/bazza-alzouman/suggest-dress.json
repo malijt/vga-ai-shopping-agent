@@ -1,0 +1,127 @@
+{
+ "resources": {
+  "results": {
+   "products": [
+    {
+     "available": true,
+     "body": "<ul>\n<li>Color:<strong> </strong>Black<span></span>\n</li>\n</ul>\n<ul>\n<li>\n<span>Fabric: </span><span>100% Polyester</span>\n</li>\n</ul>",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "handle": "slim-cut-crepe-gown-with-gathered-tulle-illusion-neckline-and-sleeve",
+     "id": 15705966772305,
+     "image": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/bazza_260438R.jpg?v=1771762772",
+     "price": "260.000",
+     "price_max": "260.000",
+     "price_min": "260.000",
+     "tags": [
+      "full sleeves",
+      "PF26",
+      "skinny gown",
+      "tulle sleeve"
+     ],
+     "title": "Slim Cut Crepe Gown With Gathered Tulle Illusion Neckline And Sleeve",
+     "type": "Dresses",
+     "url": "/products/slim-cut-crepe-gown-with-gathered-tulle-illusion-neckline-and-sleeve?_pos=1&_psq=dress&_psid=1b5362f2a&_ss=e",
+     "variants": [],
+     "vendor": "Bazza Alzouman",
+     "featured_image": {
+      "alt": "Slim Cut Crepe Gown With Gathered Tulle Illusion Neckline And Sleeve",
+      "aspect_ratio": 0.667,
+      "height": 6000,
+      "url": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/bazza_260438R.jpg?v=1771762772",
+      "width": 4000
+     }
+    },
+    {
+     "available": true,
+     "body": "<div>Mikado gown with oversized puff sleeve and gazaar drape</div>\n<ul>\n<li>Color: Nude</li>\n<li>Fabric: 100% Polyester, Lining - 100% Polyester</li>\n</ul>\n<p>*Please note that all sale items are final sale</p>",
+     "compare_at_price_max": "345.000",
+     "compare_at_price_min": "345.000",
+     "handle": "mikado-gown-with-oversized-puff-sleeve-and-gazaar-drape",
+     "id": 7622200983633,
+     "image": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/BazzaAlzouman15_02.jpg?v=1735477752",
+     "price": "242.000",
+     "price_max": "242.000",
+     "price_min": "242.000",
+     "tags": [
+      "AW24",
+      "sale",
+      "skinny gown"
+     ],
+     "title": "Mikado Gown with Oversized Puff Sleeve and Gazaar Drape",
+     "type": "Dress",
+     "url": "/products/mikado-gown-with-oversized-puff-sleeve-and-gazaar-drape?_pos=2&_psq=dress&_psid=1b5362f2a&_ss=e",
+     "variants": [],
+     "vendor": "Bazza Alzouman",
+     "featured_image": {
+      "alt": "Mikado Gown with Oversized Puff Sleeve and Gazaar Drape",
+      "aspect_ratio": 0.667,
+      "height": 2772,
+      "url": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/BazzaAlzouman15_02.jpg?v=1735477752",
+      "width": 1848
+     }
+    },
+    {
+     "available": true,
+     "body": "<p dir=\"ltr\"><span>Pleated cape gown with sheer illusion sleeves and a softly gathered skirt.</span></p>\n<p dir=\"ltr\"><span>Color: Cream</span></p>\n<p dir=\"ltr\"><span>Fabric: 100% Crepe</span></p>",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "handle": "pleated-cape-bodice-gown-and-illusion-sleeve",
+     "id": 7747985440849,
+     "image": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/4_4ad91f7f-7105-44b6-83e8-a71b45bca877.jpg?v=1741683603",
+     "price": "285.000",
+     "price_max": "285.000",
+     "price_min": "285.000",
+     "tags": [
+      "AW25",
+      "flowy dress",
+      "full sleeves",
+      "tulle sleeve"
+     ],
+     "title": "Pleated Cape Bodice Gown And Illusion Sleeve",
+     "type": "Dresses",
+     "url": "/products/pleated-cape-bodice-gown-and-illusion-sleeve?_pos=3&_psq=dress&_psid=1b5362f2a&_ss=e",
+     "variants": [],
+     "vendor": "Bazza Alzouman",
+     "featured_image": {
+      "alt": "Pleated Cape Bodice Gown And Illusion Sleeve",
+      "aspect_ratio": 0.8,
+      "height": 5000,
+      "url": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/4_4ad91f7f-7105-44b6-83e8-a71b45bca877.jpg?v=1741683603",
+      "width": 4000
+     }
+    },
+    {
+     "available": true,
+     "body": "<p dir=\"ltr\"><span>Seashell-toned off-shoulder gown with contoured paneling, fitted sleeves, and a flared hem finished with an asymmetric train.</span></p>\n<p dir=\"ltr\"><span>Color : Seashell</span></p>\n<p dir=\"ltr\"><span>Fabric : 100% Crepe</span></p>",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "handle": "off-shoulder-mermaid-gown-and-asymmetric-train",
+     "id": 7720340291665,
+     "image": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/3_56080d02-8989-4373-857f-e1e3bc5e8a36.jpg?v=1737884454",
+     "price": "330.000",
+     "price_max": "330.000",
+     "price_min": "330.000",
+     "tags": [
+      "mermaid gown",
+      "Off-shoulder",
+      "PF25",
+      "skinny gown"
+     ],
+     "title": "Off Shoulder Mermaid Gown and Asymmetric Train",
+     "type": "Dresses",
+     "url": "/products/off-shoulder-mermaid-gown-and-asymmetric-train?_pos=4&_psq=dress&_psid=1b5362f2a&_ss=e",
+     "variants": [],
+     "vendor": "Bazza Alzouman",
+     "featured_image": {
+      "alt": "Off Shoulder Mermaid Gown and Asymmetric Train",
+      "aspect_ratio": 0.8,
+      "height": 5000,
+      "url": "https://cdn.shopify.com/s/files/1/0244/0753/9793/files/3_56080d02-8989-4373-857f-e1e3bc5e8a36.jpg?v=1737884454",
+      "width": 4000
+     }
+    }
+   ]
+  }
+ }
+}

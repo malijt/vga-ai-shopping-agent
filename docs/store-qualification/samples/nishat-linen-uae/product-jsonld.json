@@ -1,0 +1,16 @@
+{
+ "@id": "/products/as26-92?variant=52668895133989#variant",
+ "@type": "Product",
+ "gtin": "62431610",
+ "image": "https://www.nishatlinenuae.com/cdn/shop/files/AS26-92--_1_c7f72b47-9b8b-47af-a5f1-f5ddfd952b5d.jpg?v=1783423779&width=1920",
+ "name": "Printed Dress - AS26-92 - XS",
+ "offers": {
+  "@id": "/products/as26-92?variant=52668895133989#offer",
+  "@type": "Offer",
+  "availability": "http://schema.org/InStock",
+  "price": "79.50",
+  "priceCurrency": "AED",
+  "url": "https://www.nishatlinenuae.com/products/as26-92?variant=52668895133989"
+ },
+ "sku": "62431610"
+}
