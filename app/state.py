@@ -12,6 +12,12 @@ that used it has finished the page drops it: the uploader is given a new key, so
 of the old widget and the file with it (BRD Rule 4, plan 15.1.2). What stays for a search again is
 the response, which carries the photo's embedding (a list of numbers, assumption A8) and never the
 photo.
+
+One exception, decided by the owner on 2026-10-08 (ADR 0005, update): a small preview of the photo
+(``app.photo_preview``: at most 512 pixels, a new JPEG with no metadata) stays here while the
+results it belongs to are on the page, so the shopper sees what they searched with. It goes when a
+new search brings its own photo or none, when the results are dropped, and with the session on a
+page refresh. The original upload is still let go of after its search.
 """
 
 from dataclasses import dataclass
@@ -33,7 +39,8 @@ _RESPONSE = "response"
 _ERROR = "last_error"
 _ACTIVE_REQUEST_ID = "active_request_id"
 _PHOTO_GENERATION = "photo_generation"
-_PHOTO_RELEASED = "photo_released"
+_RESULTS_USED_PHOTO = "results_used_photo"
+_PHOTO_PREVIEW = "photo_preview"
 _GENDER_DISMISSED = "gender_question_dismissed"
 _CHIPS_GENERATION = "chips_generation"
 _GENDER_CHOSEN = "gender_chosen_on_page"
@@ -121,8 +128,10 @@ def drop_response() -> None:
     clear_chip_state()
     reopen_gender_question()
     forget_gender_choices()
-    # The note says the photo was used for the results on the page; there are none any more.
-    set_photo_released(False)
+    # The note and the summary say the photo was used for the results on the page; there are none
+    # any more, and the preview belongs to them.
+    set_results_used_photo(False)
+    drop_photo_preview()
 
 
 def gender_question_dismissed() -> bool:
@@ -224,10 +233,28 @@ def release_photo() -> None:
     st.session_state.pop(old_key, None)
 
 
-def set_photo_released(released: bool) -> None:
-    """Remember whether the results on the page came from a photo that has since been removed."""
-    st.session_state[_PHOTO_RELEASED] = released
+def set_results_used_photo(used: bool) -> None:
+    """Remember whether the results on the page came from a search that used a photo."""
+    st.session_state[_RESULTS_USED_PHOTO] = used
 
 
-def photo_released() -> bool:
-    return st.session_state.get(_PHOTO_RELEASED) is True
+def results_used_photo() -> bool:
+    return st.session_state.get(_RESULTS_USED_PHOTO) is True
+
+
+# --- The photo preview (owner's decision 2026-10-08, ADR 0005 update) ------------------------
+
+
+def keep_photo_preview(preview: bytes) -> None:
+    """Keep the small preview of the photo the results on the page came from, replacing any
+    earlier one. ``preview`` is the re-encoded copy from ``app.photo_preview``, never the upload."""
+    st.session_state[_PHOTO_PREVIEW] = preview
+
+
+def photo_preview() -> bytes | None:
+    value = st.session_state.get(_PHOTO_PREVIEW)
+    return value if isinstance(value, bytes) else None
+
+
+def drop_photo_preview() -> None:
+    st.session_state.pop(_PHOTO_PREVIEW, None)

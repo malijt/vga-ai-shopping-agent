@@ -12,12 +12,40 @@ APP_TITLE = "AI Fashion Shopping Agent"
 # Trust notes (plan 10.1.1 and 10.1.2). Worded as the plan words them.
 NOTE_DEMO = "Demo: results link to the store's own site."
 NOTE_AI = "Matching is AI-assisted and can be wrong."
-NOTE_PHOTO = "Your photo is sent to OpenAI for analysis and is not stored by us."
+# The photo's lifetime (owner's decision 2026-10-08, ADR 0005 update): the upload is let go of after
+# its search, and a small copy stays on the page until it is refreshed or a new search starts.
+NOTE_PHOTO = (
+    "Your photo is sent to OpenAI for analysis. "
+    "A small copy stays on this page until you refresh the page or start a new search. "
+    "We do not save your photo."
+)
 
 # Words for the buttons: each says what it does.
 BUTTON_SEARCH = "Search stores"
 BUTTON_APPLY_CHIPS = "Apply changes and search again"
 BUTTON_RESET_CHIPS = "Reset to detected"
+
+# The summary of what the AI read from a photo, under the input panel after a photo search. It says
+# plainly that this is the AI's reading, which can be wrong. The labels below are used by
+# app.components.search_summary to build one line per garment.
+SUMMARY_HEADING = "What the AI saw in your photo"
+SUMMARY_INTRO = (
+    "This is what the AI understood from your photo. It can be wrong. "
+    "Check it, and change anything that is wrong under Detected by AI below."
+)
+SUMMARY_PHOTO_CAPTION = "The photo you searched with (a small copy)"
+# Streamlit does not turn a caption into the picture's text alternative, so the alternative is its
+# own sentence: it says what the picture is, for a screen reader.
+SUMMARY_PHOTO_ALT = "A small copy of the photo you searched with"
+SUMMARY_NO_PHOTO_COPY = "A small copy of your photo could not be made, so it is not shown here."
+SUMMARY_LABEL_COLOUR = "Colour"
+SUMMARY_LABEL_STYLE = "Style"
+SUMMARY_LABEL_MATERIAL = "Material"
+SUMMARY_LABEL_GENDER_STATED = "For"
+SUMMARY_LABEL_GENDER_GUESSED = "Likely for"
+SUMMARY_GUESS_NOT_APPLIED = "a guess, not applied"
+SUMMARY_LABEL_BUDGET = "Budget"
+SUMMARY_LABEL_EDITS = "Changes you asked for"
 
 EXAMPLE_QUERIES: tuple[str, ...] = (
     "black oversized blazer for men under 400 AED",
