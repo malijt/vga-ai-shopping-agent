@@ -3,10 +3,13 @@
 A node's text is what the shopper can read: element text, widget labels and button labels.
 """
 
+import re
 from collections.abc import Iterator
 from typing import Any
 
 from streamlit.testing.v1 import AppTest
+
+from tests.ui.browser import shown_number, shown_option, shown_text
 
 SEARCH_BUTTON = "search_button"
 TEXT_BOX = "query_text"
@@ -75,6 +78,56 @@ def photo_key(at: AppTest) -> str:
     the photo (``app.state.photo_key``)."""
     generation = at.session_state.get("photo_generation", 0)
     return PHOTO if generation == 0 else f"{PHOTO}_{generation}"
+
+
+# --- The chips ----------------------------------------------------------------------------------
+# The chip widgets are found by what they are (item and field), not by the exact key, so the tests
+# say what the shopper sees and do not depend on how the page names the widgets.
+
+
+def _chip(widgets: Any, suffix: str) -> Any:
+    matches = [w for w in widgets if re.fullmatch(rf"chip_(g\d+_)?{suffix}", w.key or "")]
+    assert len(matches) == 1, f"expected one chip '{suffix}', found {[w.key for w in matches]}"
+    return matches[0]
+
+
+def chip_category(at: AppTest, index: int = 0) -> Any:
+    return _chip(at.selectbox, f"{index}_category")
+
+
+def chip_colour(at: AppTest, index: int = 0) -> Any:
+    return _chip(at.text_input, f"{index}_colour")
+
+
+def chip_gender(at: AppTest, index: int = 0) -> Any:
+    return _chip(at.selectbox, f"{index}_gender")
+
+
+def chip_budget(at: AppTest) -> Any:
+    return _chip(at.number_input, "budget")
+
+
+def chip_count(at: AppTest) -> int:
+    return len([w for w in at.selectbox if re.fullmatch(r"chip_(g\d+_)?\d+_category", w.key or "")])
+
+
+def chips_shown(at: AppTest) -> list[tuple[str | None, str, str | None]]:
+    """What each item's chips show now, in words: (category, colour, gender) per item, in order,
+    for example ``("Dresses and ethnic wear", "red", "Not set")``. With a browser tab
+    (``tests/ui/browser.py``) it is what the browser holds, which is what the shopper reads."""
+    return [
+        (
+            shown_option(at, chip_category(at, i)),
+            shown_text(at, chip_colour(at, i)),
+            shown_option(at, chip_gender(at, i)),
+        )
+        for i in range(chip_count(at))
+    ]
+
+
+def budget_shown(at: AppTest) -> float | None:
+    """What the budget chip shows: the number, or ``None`` when the box is empty."""
+    return shown_number(at, chip_budget(at))
 
 
 def holds_bytes(value: object, needle: bytes, _seen: set[int] | None = None) -> bool:

@@ -10,8 +10,11 @@ page; a shopper can also state one in the request text. Two rules matter here:
   keeps the detected value. "Reset to detected" puts every chip back to what the current results
   were built from.
 
-The widgets hold their own values under keys that start with ``chip_``. ``state.store_response``
-clears those keys when a new response arrives, so the chips always start from the newest detection.
+The widgets hold their own values under keys that start with ``chip_`` and carry the generation
+of the chips (``state.chip_key``). When a new response arrives, or the shopper presses "Reset to
+detected", the generation goes up and every chip is a new widget, so the chips always start from
+the detection on the page. Deleting the old keys would not do it: a browser keeps the value it
+holds for a widget id, and the id comes from the key.
 """
 
 from collections.abc import Sequence
@@ -41,7 +44,6 @@ from vga.models import (
 
 APPLY_KEY = "chips_apply"
 RESET_KEY = "chips_reset"
-BUDGET_KEY = "chip_budget"
 MAX_COLOUR_CHARS = 60  # same limit as ItemIntent.colour
 BUDGET_MAX = 1_000_000.0
 GENDER_UNSET = "unset"
@@ -50,15 +52,19 @@ GENDER_UNSET = "unset"
 
 
 def category_key(index: int) -> str:
-    return f"chip_{index}_category"
+    return state.chip_key(f"{index}_category")
 
 
 def colour_key(index: int) -> str:
-    return f"chip_{index}_colour"
+    return state.chip_key(f"{index}_colour")
 
 
 def gender_key(index: int) -> str:
-    return f"chip_{index}_gender"
+    return state.chip_key(f"{index}_gender")
+
+
+def budget_key() -> str:
+    return state.chip_key("budget")
 
 
 @dataclass(frozen=True)
@@ -135,7 +141,7 @@ def chip_edits_from_state(understood: UnderstandResult) -> ChipEdits:
             )
         )
     detected_price = understood.budget.max_price if understood.budget else None
-    return build_chip_edits(understood, values, st.session_state.get(BUDGET_KEY, detected_price))
+    return build_chip_edits(understood, values, st.session_state.get(budget_key(), detected_price))
 
 
 def _apply_changes() -> None:
@@ -214,8 +220,9 @@ def _render_budget(budget: Budget | None, *, disabled: bool) -> None:
     # The detected budget is put in the box through its state, and the widget's own default stays
     # empty. Streamlit answers a cleared number box with the widget's default, so a box created
     # with a default of 400 could never say "no budget".
-    if BUDGET_KEY not in st.session_state:
-        st.session_state[BUDGET_KEY] = budget.max_price if budget else None
+    key = budget_key()
+    if key not in st.session_state:
+        st.session_state[key] = budget.max_price if budget else None
     st.number_input(
         f"Budget in {currency} (optional)",
         min_value=1.0,
@@ -224,7 +231,7 @@ def _render_budget(budget: Budget | None, *, disabled: bool) -> None:
         step=10.0,
         format="%g",
         placeholder="No budget",
-        key=BUDGET_KEY,
+        key=key,
         disabled=disabled,
     )
 

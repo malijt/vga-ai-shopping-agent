@@ -35,6 +35,7 @@ _ACTIVE_REQUEST_ID = "active_request_id"
 _PHOTO_GENERATION = "photo_generation"
 _PHOTO_RELEASED = "photo_released"
 _GENDER_DISMISSED = "gender_question_dismissed"
+_CHIPS_GENERATION = "chips_generation"
 
 
 @dataclass(frozen=True)
@@ -149,8 +150,26 @@ def record_error(message: str) -> bool:
     return was_searching
 
 
+def chips_generation() -> int:
+    value = st.session_state.get(_CHIPS_GENERATION, 0)
+    return value if isinstance(value, int) else 0
+
+
+def chip_key(name: str) -> str:
+    """The widget key of one chip, for the chips that are on the page now: ``chip_g2_0_colour``.
+
+    The number after ``g`` is the generation of the chips. Streamlit gives a keyed widget an id
+    made from its key, and a browser keeps the value it holds for an id, whatever default the
+    page gives the widget later. Deleting the key from the session state does not change that.
+    The only way to make the chips show a new detection is to give them new ids: every time the
+    chips are to start again, the generation goes up, so every chip is a new widget."""
+    return f"{CHIP_KEY_PREFIX}g{chips_generation()}_{name}"
+
+
 def clear_chip_state() -> None:
-    """Forget the values in the chip widgets so they show what the response detected."""
+    """Start the chips again from what the response on the page detected: a new generation, so
+    new widgets (see ``chip_key``), and the old generation's values are dropped."""
+    st.session_state[_CHIPS_GENERATION] = chips_generation() + 1
     for key in [k for k in st.session_state if str(k).startswith(CHIP_KEY_PREFIX)]:
         del st.session_state[key]
 

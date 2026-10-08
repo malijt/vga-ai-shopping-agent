@@ -8,7 +8,7 @@ from streamlit.testing.v1 import AppTest
 
 from app import runner
 from tests.ui.conftest import InstallLive
-from tests.ui.helpers import search
+from tests.ui.helpers import chip_colour, search
 from vga.models import MixPreset
 from vga.pipeline import SearchPipeline
 from vga.settings import Settings
@@ -72,7 +72,7 @@ class TestTheModelIsLoadedOnceWhenThePageFirstOpens:
         search(at)
         search(at, "black oversized blazer for women")
         at.sidebar.radio(key="mix_preset").set_value(MixPreset.LUXURY_FIRST).run()
-        at.text_input(key="chip_0_colour").set_value("navy").run()
+        chip_colour(at, 0).set_value("navy").run()
         at.button(key="chips_apply").click().run()
 
         assert not at.exception
