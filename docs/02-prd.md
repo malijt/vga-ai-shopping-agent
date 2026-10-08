@@ -18,7 +18,7 @@ photo and/or text
 4. Show         top 30 split into Budget / Mid / Premium / Luxury by your % mix, max 6 per store, link to store page
 ```
 
-**Key point:** we visit up to 13 store **search pages**, not 60 product pages. A search page already lists 20-50 products with price, image and link.
+**Key point:** we visit up to 19 store **search pages**, not 60 product pages. A search page already lists 20-50 products with price, image and link.
 
 ## Inputs
 
@@ -99,7 +99,7 @@ photo and/or text
 | Step | Expected |
 |---|---|
 | Understand (LLM) | 1-3 s |
-| Search up to 13 stores in parallel | 3-8 s |
+| Search up to 19 stores in parallel | 3-8 s |
 | Rank (incl. image similarity on about 30-50 thumbnails) | 2-8 s |
 | Price ranges and mix | under 0.1 s |
 | **Total** | **about 10-20 s** (limit for the demo: 30 s) |

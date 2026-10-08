@@ -27,4 +27,4 @@ genders:
 categories:
   - dresses             # `type` is "Dress" (27) or "Kaftan" (1) on all 28 products seen; 18 titles say kaftan, 8 say dress (one says both). One jumpsuit and one "Sherwal" are filed as Dress too; no tops, trousers, shoes or jackets as such (docs/store-qualification/daraat.md)
 tier_hint: budget       # KWD 8-29 seen, median 19, about AED 95-346 (median 226) at the fixed rate; 16 of 28 are marked down from KWD 20-69
-enabled: false          # off until the live smoke test passes (tests/stores/daraat); the orchestrator enables it afterwards
+enabled: true           # the live smoke test passed on 2026-10-08 (tests/stores/daraat)

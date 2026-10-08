@@ -1,6 +1,7 @@
 # Al Jazeera Clothing: store notes
 
-Adapter notes for plan module 12.18. Written 2026-10-08, before the live smoke test.
+Adapter notes for plan module 12.18. Written 2026-10-08, before the live smoke test; updated the same
+day with the smoke test's result.
 
 - Store id `al-jazeera-clothing`, shown to shoppers as "Al Jazeera Clothing". Storefront
   `https://aljazeera-clothing.com/`. A Kuwaiti label of traditional menswear, no relation to the news
@@ -12,9 +13,8 @@ Adapter notes for plan module 12.18. Written 2026-10-08, before the live smoke t
   wear pass it belongs to: `docs/store-qualification/modest-ethnic-wear-discovery.md`.
 - Currency decision: `docs/adr/0006-second-currency-fixed-rate.md`. Price rule:
   `docs/adr/0012-drop-records-with-several-prices.md`.
-- **Status: not enabled yet; live smoke test pending.** The file says `enabled: false`. It is enabled
-  after one live run of `tests/stores/al-jazeera-clothing`, and only if the address with `/en/` in it
-  answers (see the next section).
+- **Status: enabled** (live smoke test passed 2026-10-08, through the project's own engine, on the
+  address with `/en/` in it; the table is in "Observed live"). The file says `enabled: true`.
 - **How thin this store is for the demo.** Three adult dishdashas were seen (KWD 9 each, about AED 107)
   in 30 distinct records over four queries. The other 27 records are 18 children's dishdashas and 9
   men's underwear, nightwear and multipacks. A search for a men's thobe will mostly bring back boys'
@@ -129,25 +129,27 @@ sent to the store (it would only bring back pyjamas and undershirts), and a dres
   Winter Dishdasha by Al Jazeera" and "Men's Winter Dishdasha by Al Jazeera". After the price rule the
   store contributes 21 distinct products to the offline test: 10 children's, 3 men's dishdashas, 8 other
   men's records. The offline test needs 20, so the margin is one product.
-- **The children's filter has gaps (ranker, not this adapter).** On the committed lexicon,
-  `is_childrens_title` recognised 14 of the 18 children's titles (those with "boys", "kids"). Three
-  say "Youth" and one "Newborn" with no boys or kids word, and `type` ("Apparel for kids") names no
-  gender, so those four passed as unknown. The lexicon was being extended in the same worktree while this
-  note was written (an uncommitted change adding "youth" and "newborn" to the children's words; with
-  it all 18 are recognised and no adult record is). Re-check after it lands. Separately, the filter drops
-  children's items only when the shopper stated a gender (`gender_source` explicit): with an inferred or
-  no gender they stay in the results, and 10 of the 21 valid products are children's.
+- **The children's filter (ranker, not this adapter).** Before "youth" and "newborn" were added to the
+  children's words in `src/vga/rank/lexicon.py`, `is_childrens_title` recognised 14 of the 18 children's
+  titles (those with "boys", "kids"). Three say "Youth" and one "Newborn" with no boys or kids word,
+  and `type` ("Apparel for kids") names no gender, so those four passed as unknown. The two words are
+  in the lexicon now, in the same branch as this store; when this note was written, with them all 18
+  were recognised and no adult record was. That count was not repeated after the change was committed.
+  Separately, the filter drops children's items only when the shopper stated a gender (`gender_source`
+  explicit): with an inferred or no gender they stay in the results, and 10 of the 21 valid products
+  are children's.
 - **"Sleeping" dishdashas are nightwear.** Two children's records are named "... Sleeping Dishdasha"
   (tag `home`), and the home page's data shows two adult men's ones
   (`men-s-half-sleeve-stripes-summer-sleeping-dishdasha-by-al-jazeera`,
   `men-s-stripes-half-sleeve-v-neck-summer-sleeping-dishdasha-by-al-jazeera`). The ranker's out-of-scope
-  words include "nightwear" and "sleepwear" but not "sleeping", so once "dishdasha" is in the dresses
-  list a sleeping dishdasha would rank as a dress. None of the adult ones was a search record.
-- **"Dishdasha" as a category word.** On the committed lexicon the three adult titles
-  ("Men's Summer Dishdasha by Al Jazeera") name no garment word and have no category, so they are kept
-  for every request without a category bonus. With the uncommitted change (dishdasha, thawb, kandura and
-  more folded into "thobe" and listed under dresses) they are dresses. This adapter does not depend on
-  either: `categories: [dresses]` already decides which searches reach the store.
+  words include "nightwear" and "sleepwear" but not "sleeping", and "dishdasha" is now in the dresses
+  list, so a sleeping dishdasha ranks as a dress. None of the adult ones was a search record.
+- **"Dishdasha" as a category word.** Before the lexicon change the three adult titles ("Men's Summer
+  Dishdasha by Al Jazeera") named no garment word and had no category, so they were kept for every request
+  without a category bonus. Now dishdasha, thawb, kandura and more are folded into "thobe" and listed
+  under dresses, so they are dresses, and a thobe request also matches a dishdasha or kandura title. This
+  adapter does not depend on either: `categories: [dresses]` already decides which searches reach the
+  store.
 - **Handles do not always match titles.** "Boys' Beige Summer Dishdasha" is
   `/en/products/beige-dishdasha-al-jazeera-for-kids-ramadan-edition-with-name-embroidery`; "Boys' Beige
   Soft Winter Dishdasha" is `boys-beige-light-winter-dishdasha-by-al-jazeera` ("Soft" against "light").
@@ -196,11 +198,24 @@ working. Two routes exist and neither is built: the HTML search page `https://al
 (robots.txt allows it; never requested) and the store's agent endpoint named in robots.txt (planned as
 Phase 17).
 
-## Observed live (qualification pass, 2026-10-08; the live smoke test is pending)
+## Observed live (2026-10-08)
 
-No run through `StoreSearchEngine` has happened yet. What was seen is from the qualification script's
-requests (all HTTP 200 on the `/en/` address, no redirect, no challenge, CAPTCHA or login wall; all
-through Cloudflare WARP, see the qualification report):
+**The live smoke test passed.** It ran through `StoreSearchEngine` on the `/en/` address between 14:35
+and 14:38 local time, one store at a time with 15 s between stores, through Cloudflare WARP (see
+"Unverified"). Three requests went to this store: `robots.txt` and two searches. Every answer was HTTP
+200, with no block or challenge.
+
+| Query | Status | Products kept | Seconds |
+|---|---|---|---|
+| dishdasha | ok | 7 (3 dropped, reported as `missing_price`: the price rule `max_price_spread: 1`) | 1.56 |
+| thobe | ok | 8 (2 dropped the same way) | 0.89 |
+
+The slowest request took 1.56 s, against the global 6 s timeout. The kept counts are the same as the
+saved answers gave offline (7 and 8). Response sizes were not recorded in the live run.
+
+What was seen earlier the same day is from the qualification script's requests (all HTTP 200 on the
+`/en/` address, no redirect, no challenge, CAPTCHA or login wall; all through Cloudflare WARP, see the
+qualification report):
 
 | Query | Status | Records returned | Kept after the price rule and validation | Seconds | Response |
 |---|---|---|---|---|---|
@@ -211,16 +226,15 @@ through Cloudflare WARP, see the qualification report):
 | dishdasha, thobe, men on the plain address | 417 | none | none | 0.2 | 86 bytes |
 
 - robots.txt: 200, 3,656 bytes, the same bytes every time. Every `/en/` search URL was allowed.
-- Requests to the store for this adapter: 12 in total, all in the qualification pass (4 robots.txt,
-  3 refused plain-address searches, 1 home page, 4 `/en/` searches). Four of the 12 (the three
+- Requests to the store for this adapter: 12 in the qualification pass (4 robots.txt,
+  3 refused plain-address searches, 1 home page, 4 `/en/` searches), plus 3 in the live smoke test
+  (`robots.txt` and the two searches above). Four of the 12 (the three
   refused plain-address searches and the home page) were wasted by the orchestrator's script, which did
   not stop at the first 417 and fetched the home page where a product page was meant. No product page and no thumbnail was fetched.
 - **Gender:** `genders: [men]`. Evidence: 12 of 30 distinct records are men's (`type` "Apparel for men"),
   18 are children's, none is women's. See "Gender".
 - **Categories:** `categories: [dresses]`. Evidence: 3 of the 12 men's records are dishdashas, 9 are
   underwear and nightwear. See "Categories".
-- When the live smoke test has run, replace this section with its table (query, status, products,
-  seconds, size) and the request count.
 
 ## robots.txt comment addressed to AI agents (data, not acted on)
 
@@ -251,7 +265,8 @@ Phase 17.
 - Per-size stock.
 - The dinar rate: a fixed approximation from 2026-10-07 (ADR 0006), refreshed by hand.
 - Behaviour from the machine's own network: from about 13:00 on 2026-10-08 its path to Shopify timed
-  out on connect, and every request here went through Cloudflare WARP.
+  out on connect, and every request here went through Cloudflare WARP, the live smoke test included.
+- Response sizes in the live run (not recorded).
 
 ## Terms of use
 

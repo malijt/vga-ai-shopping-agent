@@ -5,7 +5,7 @@
 
 # --- Search -------------------------------------------------------------------------------
 country: AE                     # ISO country code of the home market (UAE first). Enabled stores in it are used.
-extra_store_countries: [KW]     # Also use the enabled stores of these countries (Kuwait: Bazza Alzouman, Hamsa, Manal Smaoui).
+extra_store_countries: [KW]     # Also use the enabled stores of these countries (Kuwait: Bazza Alzouman, Hamsa, Manal Smaoui, Daraat, Shadow, Her Highness Q8, Veil Essentials, Al Jazeera Clothing).
 stores: []                      # Store ids to use. Empty = every enabled store in `country` and `extra_store_countries`.
 results: 30                     # Results for a normal request (PRD R13).
 max_per_store: 6                # No store may supply more than this many results (PRD R9).
@@ -16,7 +16,7 @@ max_image_bytes: 8000000        # Largest photo the app accepts, in bytes (the U
 # --- Fetching (be polite: BRD Rule 2) -----------------------------------------------------
 timeout_s: 6                    # Per store request (PRD R5).
 rps_per_store: 1                # Requests per second per store (BRD Rule 2).
-rps_per_platform: 2             # Requests per second to all the stores of one platform together (all 13 are Shopify): the platform counts per client, not per shop.
+rps_per_platform: 2             # Requests per second to all the stores of one platform together (all 19 are Shopify): the platform counts per client, not per shop.
 rps_images_per_host: 5          # Thumbnail downloads per second per image host (assumption A5).
 second_variant_below: 5         # A store gets a garment's second keyword variant only if its first returned fewer usable products than this. Never a third. 0 = never a second.
 store_cache_ttl_s: 600          # Identical store searches within this time are served from memory.

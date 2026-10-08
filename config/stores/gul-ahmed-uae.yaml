@@ -35,4 +35,4 @@ categories:
   - dresses      # kurtas (10 of 32 distinct products) and the "Suits" (shalwar kameez, 9) that have no garment word in the title; the ranker reads a kurta as a dress and a "Suits" title as no category, so both stay for a dresses search
   - tops         # the women's kurtis are titled "Printed Shirt" (12 of 32), which the ranker reads as tops and drops from a dresses search: without this line a women's kurti is never shown. Not seen: trousers, jackets, shoes (one men's waistcoat, titled "Waist Coat", is read as outerwear and is not searched for; add outerwear if waistcoats are wanted)
 tier_hint: budget      # AED 41.50-149 seen, median 91.25; most men's kurtas (41.50-101.50) and suits (83.50-113.50) are about 40% off today; women's kurtis 79-149. The saved product page also lists women's 2 and 3 piece suits at AED 89-329 (in no search answer)
-enabled: false         # the live smoke test is pending (tests/stores/gul-ahmed-uae); the orchestrator enables the store after it passes
+enabled: true           # the live smoke test passed on 2026-10-08 (tests/stores/gul-ahmed-uae)

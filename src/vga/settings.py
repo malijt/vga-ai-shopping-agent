@@ -131,7 +131,7 @@ class Settings(VgaModel):
     timeout_s: float = Field(default=6.0, gt=0, le=60)
     rps_per_store: float = Field(default=1.0, gt=0, le=5)
     rps_per_platform: float = Field(default=2.0, gt=0, le=5)
-    """Requests per second to ALL the stores of one storefront platform together (the thirteen
+    """Requests per second to ALL the stores of one storefront platform together (the nineteen
     shipped stores are all Shopify). Each shop is still held to ``rps_per_store``; the platform
     in front of the shops counts per client, not per shop, so this is the limit that matters
     (see ``vga.fetch.platform``). A store on no known platform is its own platform."""

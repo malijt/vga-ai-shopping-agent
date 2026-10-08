@@ -26,4 +26,4 @@ genders:
 categories:
   - dresses             # jilbabs and abayas, plus khimars (head coverings) and khimar-and-abaya sets: no shoes, trousers, tops or jackets in the 30 records seen (docs/store-qualification/veil-essentials-kw.md). The ranker gives a khimar title no category, so it is kept (docs/store-notes/veil-essentials-kw.md)
 tier_hint: budget       # jilbabs and abayas KWD 10-26, about AED 119-310 (median KWD 12.9, about AED 154); khimars and sets KWD 7.55-33.5. Abayas here start near AED 142, under the AED 600 where Hanayen's start
-enabled: false          # not enabled yet: the live smoke test (tests/stores/veil-essentials-kw) has not been run
+enabled: true           # the live smoke test passed on 2026-10-08 (tests/stores/veil-essentials-kw)

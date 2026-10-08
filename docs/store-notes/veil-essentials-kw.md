@@ -1,15 +1,16 @@
 # Veil Essentials: store notes
 
-Adapter notes for plan module 12.17. Written 2026-10-08, before the live smoke test.
+Adapter notes for plan module 12.17. Written 2026-10-08, before the live smoke test; updated the same
+day with the smoke test's result.
 
 - Store id `veil-essentials-kw`, shown to shoppers as "Veil Essentials". Storefront
   `https://veilessentialskw.com/`.
 - Config: `config/stores/veil-essentials-kw.yaml`. Tests and fixtures: `tests/stores/veil-essentials-kw/`.
 - Qualification (2026-10-08): `docs/store-qualification/veil-essentials-kw.md`.
 - Currency decision: `docs/adr/0006-second-currency-fixed-rate.md`.
-- **Status: not enabled yet; live smoke test pending.** The file says `enabled: false`. The offline
-  tests pass; `tests/stores/veil-essentials-kw/test_veil_essentials_kw_live.py` has not been run. When
-  it passes, set `enabled: true` and put the date and test path in the comment on that line.
+- **Status: enabled** (live smoke test passed 2026-10-08, through the project's own engine; the table
+  is in "Observed live"). The file says `enabled: true`, with the date and test path in the comment on
+  that line. The live test is `tests/stores/veil-essentials-kw/test_veil_essentials_kw_live.py`.
 
 ## Data path
 
@@ -122,14 +123,26 @@ working. Two routes exist and neither is built: the HTML search page `https://ve
 (allowed by robots.txt per protego, never requested), and the store's agent endpoint named in robots.txt
 (planned as Phase 17).
 
-## Observed live (qualification run, 2026-10-08)
+## Observed live (2026-10-08)
 
-The live smoke test has not been run. What follows is from the qualification run, which used
+**The live smoke test passed.** It ran through `StoreSearchEngine` between 14:35 and 14:38 local time, one
+store at a time with 15 s between stores, through Cloudflare WARP (see "Unverified"). Three requests went
+to this store: `robots.txt` and two searches. Every answer was HTTP 200, with no block or challenge.
+
+| Query | Status | Products kept | Seconds |
+|---|---|---|---|
+| abaya | ok | 10 | 1.45 |
+| jilbab | ok | 10 | 0.96 |
+
+The slowest request took 1.45 s, against the global 6 s timeout. Response sizes were not recorded in the
+live run.
+
+What follows is from the qualification run earlier the same day, which used
 `scripts/qualify_store.py` (User-Agent `vga-shopping-agent-demo/0.1 (store-qualification research)`),
 not the engine. Every response was HTTP 200, no redirect, no challenge, CAPTCHA or login wall. All
 requests went through Cloudflare WARP (see "Unverified").
 
-| Query | Status | Products returned | Seconds | Response |
+| Query (qualification run) | Status | Products returned | Seconds | Response |
 |---|---|---|---|---|
 | jilbab | 200 | 10 | 0.5 | 20,343 bytes |
 | abaya | 200 | 10 | 0.4 | 26,906 bytes |
@@ -164,14 +177,15 @@ stated preference for the agent endpoint is for the terms review and for Phase 1
 
 ## Unverified
 
-- **The machine's own network.** All qualification requests were sent on 2026-10-08 between about 14:10
-  and 14:45 local time (PKT) by the orchestrator with `scripts/qualify_store.py` (robots.txt first, at
+- **The machine's own network.** All qualification requests were sent on 2026-10-08 between about 14:07
+  and 14:14 local time (PKT) by the orchestrator with `scripts/qualify_store.py` (robots.txt first, at
   least 1 s apart, one store at a time). From about 13:00 the machine's own path to Shopify's addresses
   timed out on connect (no refusal was ever received; a Cloudflare Community thread reports the same
   kind of time-out from Pakistani providers that week). The user then enabled Cloudflare WARP and the
   requests went through it. The User-Agent and every other rule were unchanged, and the store did not
-  refuse. Behaviour from the machine's own network is untested.
-- The live smoke test through the real engine (honest app User-Agent, one request a second).
+  refuse. The live smoke test, on the same afternoon (14:35 to 14:38), also went through WARP.
+  Behaviour from the machine's own network is untested.
+- Response sizes in the live run (not recorded).
 - Words other than `jilbab`, `abaya` and `khimar`, and what the store returns for one it does not sell.
 - Pagination and `limit` above 10.
 - Whether the thumbnail host `cdn.shopify.com` serves the `width=400` image to the honest client (no

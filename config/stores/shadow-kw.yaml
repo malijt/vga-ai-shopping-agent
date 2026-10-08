@@ -27,5 +27,5 @@ genders:
   - women               # abayas, sheilas and caps only: 26 of 26 distinct records seen; no field names a gender, so this rests on the range and the brand
 categories:
   - dresses             # 20 of the 26 distinct records are abayas (type "ABAYA SET"); the other 6 are sheilas and taqiyah caps (accessories). No shoes, trousers, tops or jackets seen; "kaftan" and "dress" returned no kaftan or dress (docs/store-qualification/shadow-kw.md)
-tier_hint: mid_range    # abayas KWD 39-180, median 59, about AED 465-2,146, median 703; 6 of 20 abayas are under AED 600, the thin spot the README names
-enabled: false          # the live smoke test has not run yet (tests/stores/shadow-kw); the orchestrator enables it after the test passes
+tier_hint: mid_range    # abayas KWD 39-180, median 59, about AED 465-2,146, median 703; 6 of 20 abayas are under AED 600
+enabled: true           # the live smoke test passed on 2026-10-08 (tests/stores/shadow-kw)

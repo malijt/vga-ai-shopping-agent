@@ -33,4 +33,4 @@ genders:
 categories:
   - dresses             # 14 of 21 distinct records are daraas, kaftans or dresses (by title or description); the other 7 are 3 blazer-and-trousers suits (description only), 1 top ("Sahara Oversized Top") and 3 with no garment named. So a search for tops, blazers or trousers is not sent here (docs/store-qualification/her-highness-q8.md). No shoes seen
 tier_hint: mid_range    # KWD 28.5-85 seen, median 45 (adult pieces KWD 35-85), about AED 340-1,013, median 536; the same level as Manal Smaoui
-enabled: false          # not enabled yet: the live smoke test (tests/stores/her-highness-q8) has not been run
+enabled: true           # the live smoke test passed on 2026-10-08 (tests/stores/her-highness-q8)

@@ -1,8 +1,8 @@
 # VGA AI Shopping Agent
 
-A demo that lets a shopper search many fashion stores at once. You give it a **photo, a few words (English or Arabic), or both**. It works out what you are after, asks 13 stores in the UAE and Kuwait through their own search, ranks what comes back, and shows the best 30 products in four **price ranges**: Budget, Mid-range, Premium and Luxury. Every result links to the product page on the store's own website.
+A demo that lets a shopper search many fashion stores at once. You give it a **photo, a few words (English or Arabic), or both**. It works out what you are after, asks 19 stores in the UAE and Kuwait through their own search, ranks what comes back, and shows the best 30 products in four **price ranges**: Budget, Mid-range, Premium and Luxury. Every result links to the product page on the store's own website.
 
-> **Status (2026-10-08).** The demo is built and runs end to end: the Streamlit page, the search pipeline, 13 store adapters, the guard tests and the acceptance harness are all in place. **The recorded acceptance run and the labelling of its results are still to come, so there is no pass or fail verdict yet.** See [Acceptance result](#acceptance-result).
+> **Status (2026-10-08).** The demo is built and runs end to end: the Streamlit page, the search pipeline, 19 store adapters, the guard tests and the acceptance harness are all in place. **The recorded acceptance run and the labelling of its results are still to come, so there is no pass or fail verdict yet.** See [Acceptance result](#acceptance-result).
 
 If you have never seen this project, read in this order: this README, then [business requirements](docs/01-business-requirements.md) (why), the [PRD](docs/02-prd.md) (what), and the [implementation plan](docs/plans/2026-10-07-vga-ai-shopping-agent-implementation-plan.md) (how). Engineering rules for people and AI agents working in the repo are in [CLAUDE.md](CLAUDE.md).
 
@@ -31,9 +31,9 @@ If you have never seen this project, read in this order: this README, then [busi
 - Ranks the products by how well the title matches, how close the picture is to your photo (when you gave one), and how well the price fits.
 - Shows the top 30 results (12 per garment for an outfit photo), split into four price ranges by a mix you choose, with at most 6 results from any one store.
 
-**The five garment categories:** tops, outerwear, bottoms, shoes, and **dresses and ethnic wear** (dresses, gowns, kaftans, abayas, jalabiyas, kurtas and similar one-piece or ethnic garments; added 2026-10-08). Accessories (bags, belts, jewellery, scarves, sheilas and hijabs), jumpsuits, swimwear and nightwear are out of scope.
+**The five garment categories:** tops, outerwear, bottoms, shoes, and **dresses and ethnic wear** (dresses, gowns, kaftans, abayas, jalabiyas, daraas, burqas, kurtas and similar one-piece or ethnic garments, and the men's robe sold as a thobe, dishdasha or kandura; added 2026-10-08). Accessories (bags, belts, jewellery, scarves, sheilas and hijabs), jumpsuits, swimwear and nightwear are out of scope.
 
-**The 13 stores.** All are small or mid-sized online shops built on Shopify (a hosted shop platform), and all are read through the same public search address, `/search/suggest.json`, which each store's `robots.txt` leaves open. `robots.txt` is the file where a website says which pages automated tools may visit. The large GCC retailers could not be read by an honest client: of 34 sites checked, nine sit behind a bot challenge, fourteen forbid search in `robots.txt`, and one serves an empty page ([details](docs/store-qualification/SUMMARY.md)). They were dropped, not worked around.
+**The 19 stores.** All are small or mid-sized online shops built on Shopify (a hosted shop platform), and all are read through the same public search address, `/search/suggest.json`, which each store's `robots.txt` leaves open. `robots.txt` is the file where a website says which pages automated tools may visit. The large GCC retailers could not be read by an honest client: of 34 sites checked, nine sit behind a bot challenge, fourteen forbid search in `robots.txt`, and one serves an empty page ([details](docs/store-qualification/SUMMARY.md)). They were dropped, not worked around.
 
 | Store | Market and currency | Sells (as configured) | Searched for |
 |---|---|---|---|
@@ -47,11 +47,17 @@ If you have never seen this project, read in this order: this README, then [busi
 | Maison Arabelle | UAE, AED | women | dresses only |
 | Nishat Linen UAE | UAE, AED | everyone (women's wear, men's kurtas) | dresses only |
 | Signature Studio | UAE, AED | everyone (women's wear, men's kurta sets) | dresses only |
+| Gul Ahmed UAE | UAE, AED | everyone (men's shalwar kameez and kurtas, women's kurtis) | dresses and tops |
 | Bazza Alzouman | Kuwait, KWD | women | dresses only |
 | Hamsa | Kuwait, KWD | women | dresses only |
 | Manal Smaoui | Kuwait, KWD | women | all five |
+| Daraat | Kuwait, KWD | women | dresses only |
+| Shadow | Kuwait, KWD | women | dresses only |
+| Her Highness Q8 | Kuwait, KWD | women | dresses only |
+| Veil Essentials | Kuwait, KWD | women | dresses only |
+| Al Jazeera Clothing | Kuwait, KWD | men | dresses only |
 
-A store is only asked for what it sells: a search for shoes is never sent to Hanayen, and a men's search is never sent to a women-only store. The Kuwaiti stores price in dinars (KWD); the page shows the dinar price and an approximate dirham (AED) figure, and the price ranges and budgets go by the dirham figure ([ADR 0006](docs/adr/0006-second-currency-fixed-rate.md)). To add a store, follow [How to add a store](docs/how-to-add-a-store.md).
+A store is only asked for what it sells: a search for shoes is never sent to Hanayen, and a men's search is never sent to a women-only store. Eleven of the stores are in the UAE (prices in AED) and eight in Kuwait (prices in KWD). The Kuwaiti stores price in dinars (KWD); the page shows the dinar price and an approximate dirham (AED) figure, and the price ranges and budgets go by the dirham figure ([ADR 0006](docs/adr/0006-second-currency-fixed-rate.md)). To add a store, follow [How to add a store](docs/how-to-add-a-store.md).
 
 **What it is not**
 
@@ -85,7 +91,7 @@ uv sync
 uv run pytest
 ```
 
-This needs no network and no key. At the time of writing it takes about three minutes and ends with `8386 passed, 13 skipped, 40 deselected`. The skips are expected: nine need the image-model packages (step 4) and four are contract checks that do not apply to every image ranker. The 40 deselected tests are the `live` ones (see [Tests](#tests)). The other gates that CI also runs:
+This needs no network and no key. At the time of writing it takes about three minutes and ends with `8813 passed, 13 skipped, 46 deselected`. The skips are expected: nine need the image-model packages (step 4) and four are contract checks that do not apply to every image ranker. The 46 deselected tests are the `live` ones (see [Tests](#tests)). The other gates that CI also runs:
 
 ```bash
 uv run ruff check        # lint, including security rules
@@ -127,7 +133,7 @@ Then open `.env` and replace the placeholder `OPENAI_API_KEY=sk-your-key-here` w
 uv run streamlit run app/main.py --server.address localhost
 ```
 
-Opening the page in this mode already contacts the stores: it reads each store's `robots.txt` once (13 requests) and loads the image model, showing "Getting ready" while it does. A missing API key or model name is reported on the page. Settings are read when the page starts: after editing `config/settings.yaml` or a store file, restart the page. The OpenAI model is `gpt-6-luna`; each search sends one request to OpenAI (two at most if the first answer must be corrected), and the page shows the tokens used.
+Opening the page in this mode already contacts the stores: it reads each store's `robots.txt` once (19 requests) and loads the image model, showing "Getting ready" while it does. A missing API key or model name is reported on the page. Settings are read when the page starts: after editing `config/settings.yaml` or a store file, restart the page. The OpenAI model is `gpt-6-luna`; each search sends one request to OpenAI (two at most if the first answer must be corrected), and the page shows the tokens used.
 
 ### 7. Search from the command line
 
@@ -169,7 +175,7 @@ uv run pytest -m live tests/stores/hanayen   # ONE store's live smoke test (real
 
 **What the default suite covers.** Many fast unit tests (price ranges and rounding, filters, scores, price parsing, validation, word lists), contract tests that make sure each fake behaves like the real thing, integration tests that run the *real* pipeline, fetch engine, extractors, ranker and price-range shaper with only the three outside boundaries faked (store HTTP, OpenAI, the image model) from `tests/fakes.py`, and Streamlit `AppTest` tests of the page. Each store has an offline test over real recorded answers. Default tests never read your real `.env` or see your credentials: `tests/conftest.py` points the loader away from `.env` and removes every `OPENAI_*` and `VGA_*` variable from the environment for any test not marked `live` (a test that needs one sets it itself). There is no coverage percentage target; the risky logic comes first. A bug fix needs a test that fails without it.
 
-**What `live` means.** Tests marked `live` talk to the real stores or the real OpenAI API. They need keys, cost money or make real store requests, and **never run in CI**. The default run skips them (`-m 'not live'`). There are 40: one smoke test per store (Sacoor Brothers has four), and 24 cases of the Understand eval (`uv run pytest -m live tests/understand`, which calls OpenAI and writes `eval/results/understand-live.md`). Do not run `-m live` wholesale: that sends requests to all 13 stores in a row. Run one store at a time, once, and never in a loop. Tune from a recording instead (see [replay](#the-acceptance-harness)).
+**What `live` means.** Tests marked `live` talk to the real stores or the real OpenAI API. They need keys, cost money or make real store requests, and **never run in CI**. The default run skips them (`-m 'not live'`). There are 46: one smoke test per store (Sacoor Brothers has four), and 24 cases of the Understand eval (`uv run pytest -m live tests/understand`, which calls OpenAI and writes `eval/results/understand-live.md`). Do not run `-m live` wholesale: that sends requests to all 19 stores in a row. Run one store at a time, once, and never in a loop. Tune from a recording instead (see [replay](#the-acceptance-harness)).
 
 **The guard suites (`tests/guards/`).** Three suites prove the project's rules against the real pipeline: `scraping` (a 403, 429, challenge or login page gets exactly one request and a cooldown; `robots.txt` is honoured; requests stay under the rate limits; hostile links lead to no request; price words never reach a store), `privacy` (whole requests are run while watching files, logs, memory, outgoing requests and the answer for any trace of the photo, and 23 planted leaks prove the audit can fail), and `injection` (a model that obeys instructions hidden in the request or in store text still cannot put a link, markup or an invented category into a search or an answer). Changing the fetch engine, the pipeline or the Understand step without these passing is not acceptable.
 
@@ -195,7 +201,7 @@ The shipped values are the defaults you get. A bad value stops start-up with a m
 | **Fetching** | | |
 | `timeout_s` | Time allowed for one store request, in seconds. A store file may override it | `6` |
 | `rps_per_store` | Requests a second to one store. Keep it at 1 or lower: a test fails if the shipped settings or a store file ask for more | `1` |
-| `rps_per_platform` | Requests a second to *all* stores on one platform together. All 13 are Shopify, and Shopify counts per client address, not per shop | `2` |
+| `rps_per_platform` | Requests a second to *all* stores on one platform together. All 19 are Shopify, and Shopify counts per client address, not per shop | `2` |
 | `rps_images_per_host` | Picture downloads a second from one image server | `5` |
 | `second_variant_below` | A store is sent a garment's second search-word variant only if its first returned fewer usable products than this. Never a third. `0` means never a second | `5` |
 | `store_cache_ttl_s` | Identical store searches within this many seconds are answered from memory | `600` |
@@ -268,7 +274,7 @@ The stores are real businesses, and this app is a guest on their websites. The r
 - Sends an honest, identifying name (`vga-shopping-agent-demo/0.1 (store search demo)`), never a browser's, and never any personal detail. No cookies, no login, no proxy, no pretending to be a browser.
 - Reads each store's `robots.txt` first and does not visit what it forbids. If a store later forbids search, the store is skipped, not worked around.
 - Sends about **1 request a second to each store** and **2 a second to all Shopify stores together**, because the shared platform limits a client address across all its shops. The first recorded acceptance run was throttled when it sent more: all 13 stores answered "too many requests" within 11 milliseconds of each other.
-- Sends **one search-word variant per store**, and a second only to a store whose first came back with fewer than 5 products. A 13-store text search is about 13 search requests. A photo search also downloads up to 40 product thumbnails from the stores' image servers, politely paced.
+- Sends **one search-word variant per store**, and a second only to a store whose first came back with fewer than 5 products. A text search that reaches all 19 stores is about 19 search requests. A store is searched only for the categories and genders its file allows, so most searches reach fewer than 19. A photo search also downloads up to 40 product thumbnails from the stores' image servers, politely paced.
 - **Never retries** a store request. It does not repeat a request that failed.
 - Stops at the first refusal: a 403, a 429, a challenge page or a login page. A 429 from one Shopify store stops every Shopify store, drops the requests still waiting, and honours the `Retry-After` time if the store gave one.
 
@@ -285,7 +291,7 @@ Other skip messages: "did not answer in time" and "its results could not be read
 
 **Never loop live requests.** Tune ranking from a recording in replay mode, which sends nothing. A live run is for measuring, not for experimenting.
 
-**Keep the laptop awake for a long run.** A full live acceptance run takes about 19 minutes. If the computer sleeps (a closed lid does it), the run stops, times become meaningless, and the app's cooldowns no longer match real time. An earlier build agent seemed to stall for hours this way. Plug in, keep the lid open, and on a Mac you can stop idle sleep for the length of one command:
+**Keep the laptop awake for a long run.** A full live acceptance run takes about 19 minutes (estimated when 13 stores were enabled; not repeated with 19). If the computer sleeps (a closed lid does it), the run stops, times become meaningless, and the app's cooldowns no longer match real time. An earlier build agent seemed to stall for hours this way. Plug in, keep the lid open, and on a Mac you can stop idle sleep for the length of one command:
 
 ```bash
 caffeinate -i uv run --group ml python -m eval.harness --record eval/results/run-1/recording --wiring eval.harness.real:real_wiring
@@ -303,7 +309,7 @@ The harness runs the 10 frozen acceptance queries (`eval/data/queries.yaml`: 3 p
 uv run python -m eval.harness --mock
 ```
 
-**A live recorded run** uses the real pipeline and records what OpenAI and the stores return, so the run can be replayed later without the network. It needs your OpenAI key (step 5 above), ideally the image model (step 4; without it photo queries are ranked on text and price only and the report says so), and the **five private acceptance photos**. The photos are not in the repository (they are git-ignored); copy them into `eval/data/assets/private/` with the exact names listed in [`eval/data/ASSETS.md`](eval/data/ASSETS.md). It sends real requests to all 13 stores, waits 30 seconds between queries (`--pause`) and one link check at most every 2 seconds (`--link-interval`), and takes about 19 minutes. Read [Behaving towards the stores](#behaving-towards-the-stores) first and keep the laptop awake.
+**A live recorded run** uses the real pipeline and records what OpenAI and the stores return, so the run can be replayed later without the network. It needs your OpenAI key (step 5 above), ideally the image model (step 4; without it photo queries are ranked on text and price only and the report says so), and the **five private acceptance photos**. The photos are not in the repository (they are git-ignored); copy them into `eval/data/assets/private/` with the exact names listed in [`eval/data/ASSETS.md`](eval/data/ASSETS.md). It sends real requests to all 19 stores, waits 30 seconds between queries (`--pause`) and one link check at most every 2 seconds (`--link-interval`), and takes about 19 minutes (estimated when 13 stores were enabled; not repeated with 19). Read [Behaving towards the stores](#behaving-towards-the-stores) first and keep the laptop awake.
 
 ```bash
 uv run --group ml python -m eval.harness --record eval/results/run-1/recording --wiring eval.harness.real:real_wiring
@@ -361,14 +367,16 @@ These come from real runs, not guesses. "Not verified" means exactly that.
 
 **Thin spots in store coverage (the biggest risk)**
 
-- **The 13 stores are boutiques and brands, not the big GCC retailers**, which an honest client cannot read. Results depend on what these shops sell, so some requests come back thin. The recorded acceptance run may fail its own pass rule on those queries even when nothing is broken, and the verdict will say so.
+- **The 19 stores are boutiques and brands, not the big GCC retailers**, which an honest client cannot read. Results depend on what these shops sell, so some requests come back thin. The recorded acceptance run may fail its own pass rule on those queries even when nothing is broken, and the verdict will say so.
 - **Menswear is the thinnest.** Giordano, Nautica and Sacoor Brothers carry it (not every category each), and Maison D'Vie only shirts and T-shirts. A real search for a black oversized men's blazer under 400 AED returned 15 results from 3 stores, below the 20-result bar: only Sacoor sells men's blazers, and all are over that budget.
-- **Abayas:** only Hanayen, Maison Arabelle and Hamsa sell them. None sells an everyday abaya below about AED 600, so an abaya search's Budget range fills with other black dresses. Hamsa shows only about half of its abayas (see the price trap below).
-- **Other holes.** Heels come from Oh Polly and Club L London only. Skinny jeans and satin blouses were never searched in any store. `kurta` returns only men's items at Nishat Linen UAE and Signature Studio (women's kurta words were not tried). A "kaftan" search at Hanayen also returns sheilas (head scarves, dropped by the ranker as accessories) and plain under-abaya dresses (kept, because they are dresses).
-- **Repeated and unreliable data.** Giordano repeats one title under several listings, so only 4 to 6 distinct products survive a search. Nishat Linen UAE shows 50% sale prices, so its place in the Budget range will move when the sale ends. Maison Arabelle's "was" price is unreliable, so it is never read. At Club L London shorter search words worked better ("blazer" beat "black blazer").
-- **Hamsa's price trap.** Hamsa's search price is the cheapest variant of a product, which on half its abayas is a head scarf. Those records are dropped rather than shown at a wrong price.
-- **A store can disappear at any time.** Shopify, or the shop, can close its search address or change its `robots.txt`. The store is then skipped, with a plain warning, and the others carry on. Twelve of the 13 stores' `robots.txt` files (all but Maison Arabelle's) also carry a comment telling AI agents to use the store's own agent endpoint; the app treats it as data and does not use it (it is the subject of a later phase).
-- Not verified: behaviour from any other internet connection; paging beyond 10 results per search (Shopify returns at most 10 products per call).
+- **Men's ethnic wear.** The stores added on 2026-10-08 fill most of this: Gul Ahmed UAE sells men's shalwar kameez (titled "Suits") and kurtas, Nishat Linen UAE and Signature Studio sell kurtas, and Al Jazeera Clothing sells dishdashas. **Adult men's thobes are still thin:** three men's dishdashas, all KWD 9 (about AED 107), were seen at one store, Al Jazeera Clothing, and most of what that store returns for a thobe search is boys' dishdashas. The ranker drops children's items only when you have stated or confirmed who the search is for.
+- **Abayas:** Hanayen, Maison Arabelle, Hamsa, Shadow and Veil Essentials sell them. Before 2026-10-08 none sold an everyday abaya below about AED 600. Now Veil Essentials' abayas start near AED 142 (KWD 11.9 to 26) and Shadow's near AED 465 (6 of the 20 seen were under AED 600), so an abaya search can fill its Budget range with abayas; that has not been checked on a real search. Hamsa shows only about half of its abayas (see the price trap below).
+- **Burqas and kurtis.** Nothing is sold as a burqa; the nearest are Veil Essentials' jilbabs and khimars. The ranker counts "burqa" as a dress but leaves "khimar" out (it can be a garment or a head covering, and the owner has yet to decide), so single khimars are kept and can show beside abayas. Women's kurtis are sold by Gul Ahmed UAE but titled "Shirt", so the ranker reads them as tops: they appear for a tops search and not a dresses one, and a "kurti" search there mostly returns men's kurtas ("printed shirt" finds the women's).
+- **Other holes.** Heels come from Oh Polly and Club L London only. Skinny jeans and satin blouses were never searched in any store. `kurta` returns only men's items at Nishat Linen UAE and Signature Studio (women's kurta words were not tried). A "kaftan" search at Hanayen also returns sheilas (head scarves, dropped by the ranker as accessories) and plain under-abaya dresses (kept, because they are dresses). A "kaftan" or "dress" search at Shadow returns sheilas and caps, and no kaftan or dress.
+- **Repeated and unreliable data.** Giordano repeats one title under several listings, so only 4 to 6 distinct products survive a search. Nishat Linen UAE shows 50% sale prices, so its place in the Budget range will move when the sale ends. Maison Arabelle's "was" price is unreliable, so it is never read. At Club L London shorter search words worked better ("blazer" beat "black blazer"). Gul Ahmed UAE gives different garments the same title, and the app collapses the same title at the same price: its four saved answers held 32 distinct products and 20 are left after that rule.
+- **Price traps.** Hamsa's search price is the cheapest variant of a product, which on half its abayas is a head scarf. Those records are dropped rather than shown at a wrong price. Al Jazeera Clothing has the same rule for children's sizes: in the live test 3 of 10 records for `dishdasha` and 2 of 10 for `thobe` were dropped this way. Gul Ahmed UAE has two prices on 5 of 32 products and no such rule (some sizes may be at the sale price and some at the full price; not confirmed), so a size there can cost up to 66% more than the price shown.
+- **A store can disappear at any time.** Shopify, or the shop, can close its search address or change its `robots.txt`. The store is then skipped, with a plain warning, and the others carry on. Eighteen of the 19 stores' `robots.txt` files (all but Maison Arabelle's) also carry a comment telling AI agents to use the store's own agent endpoint; the app treats it as data and does not use it (it is the subject of a later phase).
+- Not verified: behaviour from any other internet connection; paging beyond 10 results per search (Shopify returns at most 10 products per call). The six stores added on 2026-10-08 (Daraat, Shadow, Her Highness Q8, Veil Essentials, Al Jazeera Clothing and Gul Ahmed UAE) were only ever reached through Cloudflare WARP, because the machine's own path to several Shopify addresses timed out on connect from about 13:00 that day; behaviour from the machine's own network is untested, and whether the time-outs were a routing fault is not known.
 
 **The approximate dinar conversion**
 
@@ -383,7 +391,7 @@ These come from real runs, not guesses. "Not verified" means exactly that.
 
 **Speed and the request limit**
 
-- Each search first waits for OpenAI (about 2 to 5 seconds), then for the stores. Because every store request passes through a shared queue of 2 a second, store time for 13 stores is about 6 seconds, up from about 2 before the platform limit. Measured since: "navy linen shirt for men" took 8.4 seconds and returned 23 results from 4 stores; "black abaya for women" 4.8 seconds and 30 results from 8 stores; "black embroidered abaya for women" about 13 seconds on the page.
+- Each search first waits for OpenAI (about 2 to 5 seconds), then for the stores. Because every store request passes through a shared queue of 2 a second, store time for 13 stores was about 6 to 6.5 seconds, up from about 2 before the platform limit. With all 19 stores it is about 9.5 seconds by the same arithmetic (19 search requests at 2 a second); that is not measured yet. A store is searched only for the categories and genders its file allows, so most searches reach fewer than 19. Measured with 13 stores: "navy linen shirt for men" took 8.4 seconds and returned 23 results from 4 stores; "black abaya for women" 4.8 seconds and 30 results from 8 stores; "black embroidered abaya for women" about 13 seconds on the page.
 - Photo searches add image comparison. Before the platform limit, a gown photo took about 19 seconds with the model already loaded, and 29.5 seconds from a cold start (10.4 seconds of that was loading the model). The page loads the model once when it opens. An outfit photo no longer runs image comparison (a whole-person photo is a weak likeness for one garment).
 - A cold four-garment outfit search can reach the 30-second limit; the app then returns what had arrived, with a warning.
 - Not known: whether 2 requests a second is under Shopify's allowance (it must not be probed), and whether one keyword variant per store gives enough results on every query.
@@ -402,7 +410,7 @@ Accepted for this demo, on purpose: no load test beyond the 30-second budget mea
 
 **Before real shoppers use it, all of these are needed:**
 
-1. **Terms of use, store by store.** Product rule 6: someone must read each of the 13 stores' terms and any affiliate rules. Nothing has been reviewed. Re-read Maison Arabelle's content-use line in `robots.txt` (`ai-train=yes, search=yes, ai-retrieval=yes, ai-personalization=no`), and the agent-endpoint comment that 12 of the 13 stores carry. The consolidated per-store checklist is planned (plan 16.2.3); until then each store's note in `docs/store-notes/` has a "Terms of use" entry that says "not reviewed".
+1. **Terms of use, store by store.** Product rule 6: someone must read each of the 19 stores' terms and any affiliate rules. Nothing has been reviewed. Re-read Maison Arabelle's content-use line in `robots.txt` (`ai-train=yes, search=yes, ai-retrieval=yes, ai-personalization=no`), and the agent-endpoint comment that 18 of the 19 stores carry. The per-store checklist is in [`docs/store-notes/SUMMARY.md`](docs/store-notes/SUMMARY.md): it lists what is still owed for each store and leaves a blank "Checked by / date" line. Each store's note in `docs/store-notes/` also has a "Terms of use" entry that says "not reviewed".
 2. **A privacy review.** UAE data protection law (Federal Decree-Law No. 45 of 2021) and, if people in Europe use it, GDPR. A photo of a person is probably personal data. The page's wording about the photo, a way to delete data on request, and photos of other people (children in particular) need a decision. See [docs/privacy.md](docs/privacy.md).
 3. **Zero data retention at OpenAI.** The app asks OpenAI not to store a request, but OpenAI may still keep it for up to 30 days unless the account has "zero data retention". That is an arrangement the account owner must request from OpenAI. It has not been verified for this account. Reword the page's "not stored by us" notice once this is decided.
 4. **The fixed exchange rate.** Refresh `fx_rates` in `config/settings.yaml` with a dated source, or replace it with a rate source you trust.
@@ -444,7 +452,7 @@ Layers: the page calls the pipeline; the pipeline calls the OpenAI step, the sto
 
 ## Where to read more
 
-- [Business requirements](docs/01-business-requirements.md), [PRD](docs/02-prd.md) and the [implementation plan](docs/plans/2026-10-07-vga-ai-shopping-agent-implementation-plan.md) (phases, assumptions A1 to A29, risks, the list of things deliberately left out).
+- [Business requirements](docs/01-business-requirements.md), [PRD](docs/02-prd.md) and the [implementation plan](docs/plans/2026-10-07-vga-ai-shopping-agent-implementation-plan.md) (phases, assumptions A1 to A30, risks, the list of things deliberately left out).
 - Decision records in [docs/adr/](docs/adr/): 0001 live search not an index, 0002 OpenAI and FashionSigLIP, 0003 honest fetching, 0004 weighted score and quartile price ranges, 0005 photo lifetime, 0006 second currency at a fixed rate. Some pre-date later changes (the platform-wide request limit, the model choice); the changelog and the plan hold the current numbers.
 - [Privacy note](docs/privacy.md): what leaves the computer, what is kept, what is removed from the photo. It was written against the command line; where it says the page is not yet connected to the real search, that is out of date.
 - Store files and notes: [How to add a store](docs/how-to-add-a-store.md), [store notes](docs/store-notes/) (one per store: data path, quirks, what would break it), [store qualification](docs/store-qualification/SUMMARY.md) (how each store was checked and the stores that were dropped).

@@ -1,6 +1,7 @@
 # Her Highness Q8: store notes
 
-Adapter notes for plan module 12.16. Written 2026-10-08, before the live smoke test.
+Adapter notes for plan module 12.16. Written 2026-10-08, before the live smoke test; updated the same
+day with the smoke test's result.
 
 - Store id `her-highness-q8`, shown to shoppers as "Her Highness Q8" (the shop's own markup says
   `herhighnessq8`; its policy text says "Her Highness"). Storefront `https://herhighnessq8.com/`.
@@ -9,10 +10,9 @@ Adapter notes for plan module 12.16. Written 2026-10-08, before the live smoke t
   `docs/store-qualification/modest-ethnic-wear-discovery.md`.
 - Currency decision: `docs/adr/0006-second-currency-fixed-rate.md`. Price rule considered and not
   used: `docs/adr/0012-drop-records-with-several-prices.md`. Gender: `docs/adr/0014-product-gender-from-the-stores-own-fields.md`.
-- **Status: not enabled yet; live smoke test pending.** The store file says `enabled: false`. The offline
-  tests pass on the saved answers. Run the live test once, alone
-  (`uv run pytest -m live tests/stores/her-highness-q8 -q`), then switch the flag and fill in
-  "Observed live" below.
+- **Status: enabled** (live smoke test passed 2026-10-08, through the project's own engine; the table
+  is in "Observed live"). The store file says `enabled: true`. The live test is
+  `tests/stores/her-highness-q8/test_her_highness_q8_live.py`.
 
 ## Data path
 
@@ -137,7 +137,7 @@ rendered.
   spaces. A test pins it.
 - **"Dara'a" has an apostrophe.** The title is "Dara'a 2026" and the handle `daraa-2026`. The ranker's
   tokenizer drops the apostrophe, so the word is `daraa`, which is among the dresses words in
-  `src/vga/rank/lexicon.py` (present in the worktree when this was written). A test pins that "Dara'a
+  `src/vga/rank/lexicon.py` (added in the same branch as this store). A test pins that "Dara'a
   2026" is read as a dress; it fails if that word is ever removed.
 - **Titles with an en dash.** "MZIANA – Moroccan" uses a real en dash (U+2013). It is kept as written.
 - **`type`, `tags` and `variants` are almost empty.** `type` is "" (17), "Dress" (3) or "set" (1);
@@ -180,17 +180,22 @@ robots.txt (planned as Phase 17).
 
 ## Observed live
 
-**Not run yet.** The live smoke test (`tests/stores/her-highness-q8/test_her_highness_q8_live.py`,
-queries `daraa` and `kaftan`, at most 3 requests) is for the orchestrator, alone and once. Fill in the
-table below from its output, then set `enabled: true` and **Status: enabled** above.
+**The live smoke test passed on 2026-10-08.** It ran
+(`tests/stores/her-highness-q8/test_her_highness_q8_live.py`, queries `daraa` and `kaftan`) through
+`StoreSearchEngine` between 14:35 and 14:38 local time, one store at a time with 15 s between stores,
+through Cloudflare WARP (see "Unverified"). Three requests went to this store: `robots.txt` and two
+searches. Every answer was HTTP 200, with no block or challenge.
 
-| Query | Status | Products returned | Kept after validation | Seconds | Response |
-|---|---|---|---|---|---|
-| daraa | pending | | | | |
-| kaftan | pending | | | | |
+| Query | Status | Products kept | Seconds |
+|---|---|---|---|
+| daraa | ok | 10 | 1.31 |
+| kaftan | ok | 10 | 0.97 |
 
-What the qualification run saw on 2026-10-08, through the same honest client (not the live test): six
-requests in all (robots.txt twice, three searches, one product page), every one HTTP 200 and none
+The slowest request took 1.31 s, against the global 6 s timeout. Response sizes were not recorded in the
+live run.
+
+What the qualification run saw earlier the same day, through the same honest client (not the live test):
+six requests in all (robots.txt twice, three searches, one product page), every one HTTP 200 and none
 refused, all through Cloudflare WARP:
 
 | Query | Status | Products returned | Response | Time |
@@ -209,7 +214,7 @@ refused, all through Cloudflare WARP:
   seven are 3 suits, 1 top and 3 unnamed. Nothing for shoes. "Not seen" is not "not sold" (three
   queries of 10 products): remove or widen the line if a larger recording shows more.
 - **Behaviour from the machine's own network is untested** (see the qualification report, "Not
-  verified / limits").
+  verified / limits"). The live smoke test also went through Cloudflare WARP.
 
 ## robots.txt comment addressed to AI agents (data, not acted on)
 
@@ -223,7 +228,8 @@ preference for the agent endpoint is for the terms review and for Phase 17.
 
 ## Unverified
 
-- The live smoke test (not run yet), and behaviour from the machine's own network.
+- Behaviour from the machine's own network: the qualification run and the live smoke test both went
+  through Cloudflare WARP. Response sizes in the live run were not recorded.
 - That the three suits are suits (the evidence is the Arabic description), and what "Beige strips Sets",
   "2" and "MZIANA – Moroccan Kids" are (their descriptions are empty).
 - Whether the store sells tops, blazers, trousers or shoes on their own (`dress`, `blazer`, `trousers`,

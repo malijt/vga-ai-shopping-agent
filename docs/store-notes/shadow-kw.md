@@ -1,15 +1,16 @@
 # Shadow: store notes
 
-Adapter notes for plan module 12.15. Written 2026-10-08, before the live smoke test.
+Adapter notes for plan module 12.15. Written 2026-10-08, before the live smoke test; updated the same
+day with the smoke test's result.
 
 - Store id `shadow-kw`, shown to shoppers as "Shadow" (the brand is Shadow KW, a Kuwaiti abaya label).
   Storefront `https://shadow.com.kw/`.
 - Config: `config/stores/shadow-kw.yaml`. Tests and fixtures: `tests/stores/shadow-kw/`.
 - Qualification (2026-10-08): `docs/store-qualification/shadow-kw.md`.
 - Currency decision: `docs/adr/0006-second-currency-fixed-rate.md`.
-- **Status: not enabled yet; live smoke test pending.** The file says `enabled: false`. The offline
-  tests pass on the saved answers; the one-time live test (`tests/stores/shadow-kw/test_shadow_kw_live.py`)
-  has not been run.
+- **Status: enabled** (live smoke test passed 2026-10-08, through the project's own engine; the table
+  is in "Observed live today"). The file says `enabled: true`. The one-time live test is
+  `tests/stores/shadow-kw/test_shadow_kw_live.py`.
 
 ## Data path
 
@@ -113,11 +114,21 @@ extractor), and the store's agent endpoint named in robots.txt (planned as Phase
 
 ## Observed live today (2026-10-08)
 
-**Not run yet.** Only the qualification pass has talked to this store: 8 requests, all HTTP 200, no
-redirect, no challenge, CAPTCHA or login wall (the table is in `docs/store-qualification/shadow-kw.md`).
-After the live smoke test, put its table here (query, status, products, seconds, size), the request
-count (the test uses at most 3: `robots.txt` once and one search for each of `abaya` and `black abaya`)
-and the date, and set `enabled: true` in the store file.
+**The live smoke test passed.** It ran through `StoreSearchEngine` between 14:35 and 14:38 local time, one
+store at a time with 15 s between stores, through Cloudflare WARP (see "Unverified"). Three requests went
+to this store: `robots.txt` once and one search for each of `abaya` and `black abaya`. Every answer was
+HTTP 200, with no block or challenge.
+
+| Query | Status | Products kept | Seconds |
+|---|---|---|---|
+| abaya | ok | 9 (1 collapsed as the same title and price) | 1.46 |
+| black abaya | ok | 9 (1 collapsed as the same title and price) | 0.92 |
+
+The slowest request took 1.46 s, against the global 6 s timeout. Response sizes were not recorded in the
+live run.
+
+Before that, the qualification pass talked to this store: 8 requests, all HTTP 200, no redirect, no
+challenge, CAPTCHA or login wall (the table is in `docs/store-qualification/shadow-kw.md`).
 
 - **Gender:** `genders: [women]`. Evidence: all 34 records (26 distinct) are abayas, sheilas or taqiyah
   caps, which are women's garments; no title, `type` or tag names a gender. The data carries no gender
@@ -143,13 +154,14 @@ the terms review and for Phase 17.
 ## Unverified
 
 - **Behaviour from the machine's own network.** All requests were sent on 2026-10-08 between about
-  14:10 and 14:45 local time (PKT) with `scripts/qualify_store.py` (User-Agent `vga-shopping-agent-demo/0.1
+  14:07 and 14:14 local time (PKT) with `scripts/qualify_store.py` (User-Agent `vga-shopping-agent-demo/0.1
   (store-qualification research)`, `robots.txt` first, at least 1 s apart). From about 13:00 the
   machine's own network path to Shopify's addresses timed out on connect (no refusal was ever
   received; a Cloudflare Community thread reports the same kind of time-out from Pakistani providers
   that week). The user then enabled Cloudflare WARP and the requests went through it. The User-Agent
-  and every other rule were unchanged, and no store answered with a refusal. The live smoke test will
-  run on whichever network is in use then.
+  and every other rule were unchanged, and no store answered with a refusal. The live smoke test, on
+  the same afternoon (14:35 to 14:38), also went through WARP. Behaviour from the machine's own network
+  is untested.
 - Whether a visitor from another country is shown another currency or catalogue (the `/en-kw/` path
   was not searched; the unprefixed path reported KWD to a visitor Shopify classed as "US").
 - Whether "ABAYA SET" always includes a sheila: 16 of 20 descriptions say so, 4 name none.

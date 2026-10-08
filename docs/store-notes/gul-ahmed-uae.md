@@ -1,15 +1,16 @@
 # Gul Ahmed UAE: store notes
 
-Adapter notes for plan module 12.19. Written 2026-10-08, before the live smoke test.
+Adapter notes for plan module 12.19. Written 2026-10-08, before the live smoke test; updated the same
+day with the smoke test's result.
 
 - Store id `gul-ahmed-uae`, shown to shoppers as "Gul Ahmed UAE". Storefront
   `https://uae.gulahmedshop.com/`.
 - Config: `config/stores/gul-ahmed-uae.yaml`. Tests and fixtures: `tests/stores/gul-ahmed-uae/`.
 - Qualification (2026-10-08): `docs/store-qualification/gul-ahmed-uae.md`; the dress and modest-wear
   discovery pass that listed it (row 13, untested there): `docs/store-qualification/dress-store-discovery.md`.
-- **Status: not enabled yet; live smoke test pending.** The file says `enabled: false`. The offline test
-  passes on the saved answers; the live test (`tests/stores/gul-ahmed-uae/test_gul_ahmed_uae_live.py`) has
-  not been run. The orchestrator enables the store after it passes.
+- **Status: enabled** (live smoke test passed 2026-10-08, through the project's own engine; the table
+  is in "Observed live"). The file says `enabled: true`. The live test is
+  `tests/stores/gul-ahmed-uae/test_gul_ahmed_uae_live.py`.
 - Why it matters: the first readable source of men's shalwar kameez, and one of few for men's kurtas and
   women's kurtis. Nothing else enabled sells a men's shalwar kameez.
 
@@ -147,10 +148,23 @@ Phase 17).
 
 ## Observed live
 
-**Not run yet.** The numbers below are from the qualification pass on 2026-10-08, sent by the orchestrator
-with the qualification User-Agent (`vga-shopping-agent-demo/0.1 (store-qualification research)`),
-robots.txt first, at least 1 s apart. They went through Cloudflare WARP, because the machine's own path to
-Shopify timed out that day. Replace this section with the live test's output when it has run.
+**The live smoke test passed on 2026-10-08.** It ran through `StoreSearchEngine` between 14:35 and 14:38
+local time, one store at a time with 15 s between stores, through Cloudflare WARP (see "Unverified"). Three
+requests went to this store: `robots.txt` once, `shalwar kameez` and `printed shirt`. Every answer was HTTP
+200, with no block or challenge.
+
+| Query | Status | Products kept | Seconds |
+|---|---|---|---|
+| shalwar kameez | ok | 8 (2 collapsed as the same title and price) | 1.38 |
+| printed shirt | ok | 5 (5 collapsed as the same title and price) | 0.95 |
+
+The slowest request took 1.38 s, against the global 6 s timeout (`timeout_s` is not overridden). Response
+sizes were not recorded in the live run. The kept counts match the saved answers offline (8 and 5).
+
+The numbers below are from the qualification pass earlier the same day, sent by the orchestrator with the
+qualification User-Agent (`vga-shopping-agent-demo/0.1 (store-qualification research)`), robots.txt first,
+at least 1 s apart. They went through Cloudflare WARP too, because the machine's own path to Shopify timed
+out that day.
 
 | Query | Status | Products returned | Kept after validation | Seconds | Response |
 |---|---|---|---|---|---|
@@ -161,8 +175,8 @@ Shopify timed out that day. Replace this section with the live test's output whe
 
 - robots.txt: 200, 3,648 bytes on all three fetches. Every search URL and the product page were allowed.
 - Requests to the store for the qualification: 8 (robots.txt three times, four searches, one product
-  page). The live test will use at most 3 (robots.txt once, `shalwar kameez` and `printed shirt`), with
-  the global 6 s timeout (`timeout_s` is not overridden).
+  page). The live test used 3 (robots.txt once, `shalwar kameez` and `printed shirt`), with the global
+  6 s timeout (`timeout_s` is not overridden).
 - **Gender:** `genders` unset; `gender_fields: [type, tags]` set explicitly in the store file. Evidence: `type`
   is "Men" on 27 of 40 records (20 of 32 products) and "Women" on 13 (12 products), with tags that agree.
   Both genders are sold, so the store must stay open to both.
@@ -180,7 +194,7 @@ Shopify timed out that day. Replace this section with the live test's output whe
 
   "Not seen" is not "not sold": four queries, 10 products each, all chosen for the core range. Trousers
   (`shalwar`, `trouser`), `waistcoat`, `suit`, `lawn` and `dupatta` were never queried. If the store turns out
-  to sell other garments, edit the line. The orchestrator may prefer another row of the table.
+  to sell other garments, edit the line. The store file uses the first row of the table.
 
 ## robots.txt comment addressed to AI agents (data, not acted on)
 
@@ -194,9 +208,10 @@ The stated preference for the agent endpoint is for the terms review and for Pha
 
 ## Unverified
 
-- Behaviour from the machine's own network: every request went through Cloudflare WARP. The direct path
-  to Shopify timed out from about 13:00 that day, and no store ever answered with a refusal.
-- The live smoke test (not run).
+- Behaviour from the machine's own network: every request went through Cloudflare WARP, the live smoke
+  test included. The direct path to Shopify timed out from about 13:00 that day, and no store ever
+  answered with a refusal.
+- Response sizes in the live run (not recorded).
 - Whether the two-price products are sizes at sale and full price; the variants are not in the answer.
 - Women's 2 and 3 piece suits seen only on the product page, and whether they are unstitched.
 - Queries other than the four: `suit`, `lawn`, `waistcoat`, `shalwar`, `trouser`, `jacket`, `shoes`.

@@ -40,4 +40,4 @@ genders:
 categories:
   - dresses             # the category that holds thobes, dishdashas and kanduras. The 3 adult dishdashas of the 12 men's records are the only adult outer garments seen; the other 9 are underwear and nightwear, which are not returned. A shirt or trousers search is not sent here (docs/store-notes/al-jazeera-clothing.md)
 tier_hint: budget       # a men's dishdasha is KWD 9, about AED 107; everything seen is KWD 2 to 18, about AED 24 to 215
-enabled: false          # the live smoke test has not run yet; the orchestrator enables it after it passes
+enabled: true           # the live smoke test passed on 2026-10-08 (tests/stores/al-jazeera-clothing)

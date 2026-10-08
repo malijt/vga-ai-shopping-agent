@@ -3,7 +3,9 @@
 > Written 2026-10-08 against `develop` at commit `5ee891d` (plan feature 16.2.2). Every statement
 > was checked against the source file named beside it. Nothing here was run against a live store or
 > OpenAI to write it. Speeds quoted from real runs come from `CHANGELOG.md` and say so. Where
-> something was not verified, the text says so.
+> something was not verified, the text says so. The store counts, the speed arithmetic and the
+> coverage note were updated later the same day, when six more stores were enabled; the rest was not
+> re-checked.
 
 This document is the picture of how the system is built. It replaces section 4 of
 [the plan](plans/2026-10-07-vga-ai-shopping-agent-implementation-plan.md), which was written before
@@ -13,13 +15,13 @@ says how the work was ordered. This says what exists.
 ## What the system is
 
 A shopper types a request (English or Arabic), uploads a photo, or does both. One OpenAI call turns
-the request into "what to look for". The app then asks up to thirteen online stores for their
+the request into "what to look for". The app then asks up to nineteen online stores for their
 products, ranks what came back, and shows up to 30 results in four price ranges: Budget, Mid-range,
 Premium and Luxury. Every result links to the store's own product page.
 
-It is one Python process on one laptop. It has no database, no accounts and no hosting. All thirteen
+It is one Python process on one laptop. It has no database, no accounts and no hosting. All nineteen
 enabled stores are Shopify storefronts, read through their public `/search/suggest.json` endpoint
-(10 products at most per call). Ten stores are in the UAE (AED prices) and three are in Kuwait
+(10 products at most per call). Eleven stores are in the UAE (AED prices) and eight are in Kuwait
 (dinar prices, shown with an approximate AED figure). There are five garment categories: tops,
 outerwear, bottoms, shoes, and dresses (which includes gowns, kaftans, abayas and kurtas).
 
@@ -55,7 +57,7 @@ flowchart LR
   pipe -.-> logf
 
   und -->|"HTTPS: text and a re-drawn photo"| openai[("OpenAI<br/>gpt-6-luna")]
-  eng -->|"HTTPS: 1 per second per store,<br/>2 per second per platform"| stores[("13 Shopify stores<br/>and cdn.shopify.com")]
+  eng -->|"HTTPS: 1 per second per store,<br/>2 per second per platform"| stores[("19 Shopify stores<br/>and cdn.shopify.com")]
 
   harness["Acceptance harness<br/>eval/harness"] -->|"runs the 10 queries;<br/>live: records the three boundaries,<br/>replay: serves them from a recording"| pipe
   harness -->|"link check, through the same engine"| eng
@@ -256,7 +258,7 @@ All limits are on the injected clock (`Clock`), so tests do not wait.
 | What is limited | Limit | How |
 |---|---|---|
 | One store | 1 request per second (`rps_per_store`; a store file may set its own `rps`) | One queue per store, shared by every host of the store's own site (the bare domain and `www.`, say), and by its robots.txt. A robots.txt `Crawl-delay` can only slow it down. |
-| One platform | 2 requests per second in total (`rps_per_platform`) | All thirteen stores are Shopify, so they share one queue (`platform:shopify`, `fetch/platform.py`). Only requests to a store's own site count. Slots are handed out in the order they are asked for, so every store gets its first request out before any gets its second. |
+| One platform | 2 requests per second in total (`rps_per_platform`) | All nineteen stores are Shopify, so they share one queue (`platform:shopify`, `fetch/platform.py`). Only requests to a store's own site count. Slots are handed out in the order they are asked for, so every store gets its first request out before any gets its second. |
 | An image host | 5 requests per second (`rps_images_per_host`) | One queue per host, shared by every store that uses it (`cdn.shopify.com`). At most 40 thumbnails per search, at most 10 per store. |
 | Keyword variants | 1 per garment per store; a second only if the first gave fewer than 5 usable products; never a third | `StoreSearchEngine._search_variants`. |
 | OpenAI | At most 2 calls per request, a daily cap of 200 per process | `understand/gateway.py`, `understand/budget.py`. |
@@ -357,8 +359,8 @@ Decisions that cost something, and what they cost.
 | Decision | What it buys | What it costs |
 |---|---|---|
 | **Live search instead of an index** (ADR 0001) | Fresh prices and links. No crawler, no database, nothing stored about the stores. | The app can only be as good as each store's own search. Results depend on a store's endpoint staying open. The shopper waits for the stores. Price ranges come from this search's candidates, not the whole market. Stores that disallow search (most large GCC retailers) cannot be read at all. |
-| **One request a second per store, plus 2 a second per platform** (ADR 0010) | The burst that made all thirteen stores answer "too many requests" within 11 milliseconds on 2026-10-08 should not recur. One real search under the new limit finished with no refusal. | Speed. Asking all thirteen stores costs about 6 to 6.5 seconds of store time, up from about 2. One real text search took 8.4 seconds in all (understanding 4.5, stores 3.8, with some stores not asked). A cold four-garment outfit can reach the 30-second limit and returns what arrived. A full acceptance run under the new limit has not been made. Whether 2 a second is under Shopify's allowance is not known and must not be probed. |
-| **One keyword variant per store** (ADR 0010) | 13 search requests per text search instead of 39. | A store whose first variant returns 5 or more products never sees the second wording, so recall can be lower. Whether one variant gives enough results on every query is not known. |
+| **One request a second per store, plus 2 a second per platform** (ADR 0010) | The burst that made all thirteen stores answer "too many requests" within 11 milliseconds on 2026-10-08 should not recur. One real search under the new limit finished with no refusal. | Speed. Asking all nineteen stores costs about 9.5 seconds of store time by the same arithmetic (19 search requests at 2 a second); that is not measured yet. Thirteen stores cost about 6 to 6.5 seconds, up from about 2. A store is searched only for the categories and genders its file allows, so most searches reach fewer than nineteen. One real text search, with thirteen stores enabled, took 8.4 seconds in all (understanding 4.5, stores 3.8, with some stores not asked). A cold four-garment outfit can reach the 30-second limit and returns what arrived. A full acceptance run under the new limit has not been made. Whether 2 a second is under Shopify's allowance is not known and must not be probed. |
+| **One keyword variant per store** (ADR 0010) | Up to 19 search requests per text search instead of up to 57 (three variants each). | A store whose first variant returns 5 or more products never sees the second wording, so recall can be lower. Whether one variant gives enough results on every query is not known. |
 | **An inferred gender is never applied until the shopper answers** (ADR 0011) | Rule 8: a guess never filters. | The first results show both genders. A women's outfit photo also returns men's shoes until the shopper answers "Women". The answer costs no request, but it is one more thing to click. |
 | **No image comparison for an outfit photo** (ADR 0008) | A real outfit search fell from 30.3 seconds with a timeout to 9.4 seconds. | Outfit results are ranked by text and price only. One photo of a whole outfit would be a weak likeness for one garment's thumbnail anyway. |
 | **A fixed exchange rate** (ADR 0006) | No extra service, no failure mode, the same search gives the same ranges twice. | The AED figure is approximate (good to about 1%) and goes stale. The rate must be refreshed by hand. A shopper pays the store's price in dinars. |
@@ -366,7 +368,7 @@ Decisions that cost something, and what they cost.
 | **A store is searched only for what it sells** (ADR 0007) | No wasted request, and no abaya under "shoes". | The list is written from records seen, and "not seen" is not "not sold". A store that adds a new line is missed until its file is edited. |
 | **A model with no dated snapshot** (ADR 0002) | The model the user chose. | OpenAI can change what `gpt-6-luna` does without notice. The eval must be re-run from time to time. |
 | **All state in memory** | No database, no clean-up, nothing to leak. | A restart loses the re-run cache and cooldowns, and resets the daily OpenAI call count. |
-| **A small, Shopify-only store set** | Every store can be read honestly. | Mostly boutiques, not the large retailers a shopper expects. Menswear comes from three stores. No readable store sells an everyday abaya below about AED 600, so cheap abaya searches fill the Budget range with other dresses. |
+| **A small, Shopify-only store set** | Every store can be read honestly. | Mostly boutiques, not the large retailers a shopper expects. Menswear in the usual categories comes from three stores; men's kurtas, shalwar kameez and dishdashas come from four more (Gul Ahmed UAE, Nishat Linen UAE, Signature Studio and Al Jazeera Clothing), and adult men's thobes are thin. Everyday abayas now come from Veil Essentials (from about AED 142) and Shadow (from about AED 465); that has not been checked on a real search. Nothing is sold as a burqa. |
 
 ## Decisions
 

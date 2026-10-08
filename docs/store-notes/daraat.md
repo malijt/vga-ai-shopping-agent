@@ -1,16 +1,16 @@
 # Daraat: store notes
 
-Adapter notes for plan module 12.14. Written 2026-10-08, before the live smoke test.
+Adapter notes for plan module 12.14. Written 2026-10-08, before the live smoke test; updated the same
+day with the smoke test's result.
 
 - Store id `daraat`, shown to shoppers as "Daraat". Storefront `https://www.daraat.com/`.
 - Config: `config/stores/daraat.yaml`. Tests and fixtures: `tests/stores/daraat/`. No extractor option is
   set (see "The price" and "Quirks seen" for why).
 - Qualification (2026-10-08): `docs/store-qualification/daraat.md`.
 - Currency decision: `docs/adr/0006-second-currency-fixed-rate.md`.
-- **Status: not enabled yet; live smoke test pending.** The file says `enabled: false`. The orchestrator
-  runs `uv run pytest -m live tests/stores/daraat -q` once, alone, and enables the store only if it
-  passes. Nothing in this note comes from a live run of the project's own engine yet; "Observed so far"
-  says what the qualification run showed.
+- **Status: enabled** (live smoke test passed 2026-10-08, through the project's own engine; the table
+  is in "Observed live"). The file says `enabled: true`. The qualification run's numbers are kept in
+  the same section, labelled as such.
 
 ## Data path
 
@@ -126,12 +126,25 @@ working. Two routes exist and neither is built: the HTML search page `https://ww
 (allowed by robots.txt per protego on 2026-10-08, never requested), and the store's agent endpoint named
 in robots.txt (planned as Phase 17).
 
-## Observed so far
+## Observed live
 
-The live smoke test through `StoreSearchEngine` has **not been run**. What exists is the qualification
-run of 2026-10-08, made by the orchestrator's script with the qualification User-Agent (`vga-shopping-agent-demo/0.1
-(store-qualification research)`), robots.txt first, at least a second apart. Every answered response was
-HTTP 200, no redirect, no challenge, CAPTCHA or login wall.
+**The live smoke test passed on 2026-10-08.** It ran through `StoreSearchEngine` between 14:35 and 14:38
+local time, one store at a time with 15 s between stores, through Cloudflare WARP (see "Unverified"). Three
+requests went to this store: `robots.txt` and two searches. Every answer was HTTP 200, with no block or
+challenge.
+
+| Query | Status | Products kept | Seconds |
+|---|---|---|---|
+| kaftan | ok | 10 | 1.41 |
+| dress | ok | 10 | 0.98 |
+
+The slowest request took 1.41 s, against the global 6 s timeout (`timeout_s` is not overridden). Response
+sizes were not recorded in the live run.
+
+What the qualification run saw earlier the same day (not the live test): it was made by the orchestrator's
+script with the qualification User-Agent (`vga-shopping-agent-demo/0.1 (store-qualification research)`),
+robots.txt first, at least a second apart. Every answered response was HTTP 200, no redirect, no challenge,
+CAPTCHA or login wall.
 
 | Query | Status | Products returned | Kept after validation | Seconds | Response |
 |---|---|---|---|---|---|
@@ -146,8 +159,9 @@ HTTP 200, no redirect, no challenge, CAPTCHA or login wall.
   connect; the rest went through Cloudflare WARP (see "Unverified"). The global timeout is 6 s
   (`timeout_s` is not overridden); the slowest answered request took 0.8 s (the 745 KB product page; the
   slowest search took 0.5 s).
-- "Kept after validation" is from replaying the saved answers offline through the real store file and
-  extraction chain (`tests/stores/daraat/`), not from a live engine run.
+- "Kept after validation" in this qualification table is from replaying the saved answers offline through
+  the real store file and extraction chain (`tests/stores/daraat/`), not from a live engine run. The live
+  run's own counts are in the table above.
 - **Gender:** `genders: [women]`. Evidence: all 28 distinct products are kaftans, dresses, one jumpsuit
   and one Sherwal, which are women's garments; no title, type, tag or description (first 300 characters)
   names a gender. The data carries no gender field, so this rests on the range and the brand, as for
@@ -173,12 +187,12 @@ review and for Phase 17.
 
 ## Unverified
 
-- **The live smoke test.** Not run yet.
 - **Behaviour from the machine's own network.** From about 13:00 on 2026-10-08 the machine's own path to
   Shopify's addresses timed out on connect (no refusal was received; a Cloudflare Community thread reports
   the same kind of time-out from Pakistani providers that week), so the user enabled Cloudflare WARP and
-  every answered request here went through it. Behaviour without WARP, and whether the shop's market or
-  currency differs by visitor address, is untested.
+  every answered request here went through it, the live smoke test included. Behaviour without WARP, and
+  whether the shop's market or currency differs by visitor address, is untested.
+- Response sizes in the live run (not recorded), and live queries other than `kaftan` and `dress`.
 - That the cheapest variant is the garment's price on every product (the variant list is empty in the
   search answer, and no product page's variants were read), and whether made-to-measure options exist.
 - Queries other than `kaftan`, `daraa`, `abaya` and `dress`; Arabic words as queries; the `/ar/` pages.
