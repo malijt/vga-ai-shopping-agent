@@ -25,7 +25,8 @@ file as the always-on summary and open the matching doc when you need full depth
   Giordano UAE, Nautica UAE, Sacoor Brothers UAE, Oh Polly UAE, Club L London UAE, Maison D'Vie and,
   since the user raised the limit from six on 2026-10-08 to cover dresses and modest wear, Hanayen,
   Maison Arabelle, Nishat Linen UAE and Signature Studio. A store is enabled only after a live smoke
-  test through the project's own engine. Three more readable stores are in reserve.
+  test through the project's own engine. Four more readable stores are in reserve
+  (`docs/store-notes/SUMMARY.md`).
 - **Second currency (decided by the user 2026-10-08, ADR 0006):** three Kuwaiti designer stores
   (Bazza Alzouman, Hamsa, Manal Smaoui) are enabled too. They price in KWD. A result shows the store's own price plus
   an approximate AED figure from a fixed rate in `config/settings.yaml`; price ranges and budgets use
@@ -57,7 +58,7 @@ file as the always-on summary and open the matching doc when you need full depth
 ## Product Rules (from the BRD, never violate)
 
 1. Every result links to the **original store's product page**, and only to a host on that store's `allowed_hosts`.
-2. Respect robots.txt. No login-walled pages. No CAPTCHA solving. About 1 request/s per store. A store that blocks an honest client is **dropped, never bypassed**, and is not contacted again during its cooldown.
+2. Respect robots.txt. No login-walled pages. No CAPTCHA solving. About 1 request/s per store, and at most 2 requests/s in total to all stores on one storefront platform (every store today is on Shopify, which throttles a client across all its shops). A store that blocks an honest client is **dropped, never bypassed**, and is not contacted again during its cooldown.
 3. Never guess body size from a photo.
 4. Never keep an uploaded photo after the request: not on disk, not in logs, not in the cache.
 5. Only components with commercial-friendly licences (run the licence audit after adding a dependency).
@@ -69,7 +70,8 @@ file as the always-on summary and open the matching doc when you need full depth
 
 ```bash
 uv sync                                        # install (add --group ml for the image model)
-uv run pytest                                  # unit + integration tests (no network)
+uv run pytest                                  # the complete suite (no network); run it before every push or merge
+uv run pytest -m critical                      # the 143 tests CI runs (about 20 s); the list is tests/critical_suite.txt
 uv run pytest -m live                          # live store / OpenAI tests; needs keys, never in CI
 uv run ruff check && uv run mypy src           # lint and types
 VGA_UI_FIXTURE=1 uv run streamlit run app/main.py   # the UI on sample data (run from the repo root)
@@ -183,7 +185,11 @@ docs/adr/             decision records    docs/store-notes/, docs/store-qualific
 - Fake only the boundaries (store HTTP, OpenAI, model weights), from the shared `tests/fakes.py`. Do not mock internal collaborators.
 - Test behavior, one behavior per test, descriptive names, Arrange-Act-Assert, deterministic (inject the clock).
 - Cover the risky logic first: price ranges, filters, guards, validation. No coverage target.
-- A bug fix needs a regression test. CI runs on every PR and blocks merges.
+- A bug fix needs a regression test. CI runs on every PR and blocks merges, but it runs only the
+  **critical suite** (decided by the user on 2026-10-08 to save CI minutes): lint, types and the
+  tests named in `tests/critical_suite.txt`. The complete suite is run locally before a push or a
+  merge, or in CI by hand (Actions, CI, Run workflow, `full_suite`). A test whose failure would mean
+  a broken product rule or a broken demo belongs in that list.
 
 ### Frontend (Streamlit) — partly active
 - Small components in `app/components/`; `app/runner.py` is the only place that calls the pipeline.

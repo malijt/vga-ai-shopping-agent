@@ -468,7 +468,7 @@ Write `docs/store-notes/<id>.md`: what a developer needs when the adapter breaks
 ## 5. Enable it, and check afterwards
 
 1. The live smoke test passed. Edit the store file: `enabled: true`, and put the date and test path in the comment on that line, as the others do (`# the live smoke test passed on <date> (tests/stores/example-boutique)`). Set **Status: enabled** in the note.
-2. Run everything:
+2. Run everything. Do this locally: CI runs only the critical suite (143 tests), so this run is the only one that executes your new store's tests and the full guard suites.
 
    ```bash
    uv run pytest
@@ -559,7 +559,7 @@ For each new store:
 - [ ] `tests/stores/<id>/`: conftest, offline test (at least 20 distinct valid products), live test; trimmed fixtures.
 - [ ] The live smoke test was run once, alone, and passed; its output is in the note.
 - [ ] `docs/store-notes/<id>.md`, with the terms-of-use line.
-- [ ] `uv run pytest`, `uv run ruff check` and `uv run mypy src` pass.
+- [ ] `uv run pytest` (the complete suite, run locally: CI runs only the critical suite), `uv run ruff check` and `uv run mypy src` pass.
 - [ ] If the currency or country is new: `fx_rates` (with source and date) and `extra_store_countries` updated.
 - [ ] `CHANGELOG.md` entry; README store table and other store counts updated.
 - [ ] No secret, no personal data in any User-Agent, and no real shopper photo in the commit.

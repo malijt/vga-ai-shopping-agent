@@ -24,6 +24,7 @@ Format: grouped by date, then by Added / Changed / Fixed / Decided / Found. "Fou
 - This changelog is maintained from now on (user request).
 
 **Added**
+- ADR 0015 (CI runs a critical suite; the complete suite runs locally), a "How it is tested, and what CI runs" section in `docs/architecture.md`, a note in the plan's test strategy and in the add-a-store guide, how to handle a gitleaks false alarm in the README, and `AGENTS.md` brought in line with `CLAUDE.md` on these points.
 - **The critical test list** (`tests/critical_suite.txt`): 143 tests under fifteen headings (store access, links and hosts, price words, photo privacy, untrusted text, secrets and errors, the gender rule, contracts, understanding, store data, ranking, price ranges, the pipeline, the page, the harness). `uv run pytest -m critical` runs them. A guard fails if a listed test is renamed or removed, if one is marked `live`, or if the count drifts.
 - CI checks each commit once (pull requests, and pushes to `main`), where a push to `develop` with an open pull request used to run every job twice; a manual "Run workflow" with `full_suite` runs the complete suite. An opt-in pre-push hook runs the complete suite locally.
 - `.gitleaksignore` with one accepted finding: a made-up `api_key` value in the test that proves the logger hides secrets. gitleaks was installed locally; the full history has no other finding, and the real key is in no tracked file.

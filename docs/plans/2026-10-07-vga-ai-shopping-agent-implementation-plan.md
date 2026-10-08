@@ -881,6 +881,7 @@ The user chose route A for the demo and asked for the other three routes to be p
 | End to end (few) | Replay of a recorded run offline; live smoke per store; the 10 acceptance queries | Phases 11, 12, 16 |
 
 - Live tests are marked `live`, never run in CI, and never loop against stores. Tuning uses replay.
+- **Since 2026-10-08 CI runs a critical suite, not everything** (the user's decision, to save CI minutes; section 12.3 and ADR 0015). CI runs lint, types and the 143 tests named in `tests/critical_suite.txt` (`uv run pytest -m critical`, about 20 seconds): the tests whose failure would mean a broken product rule or a broken demo. The complete suite (`uv run pytest`, about 8,450 tests) is run locally before a push or a merge, or in CI by hand. A regression outside the list is caught only by the local run.
 - Priority for coverage is the risky logic: price ranges, filters, guards, validation. No coverage percentage target.
 - A bug fix is not done until a test guards it.
 

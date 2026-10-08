@@ -350,6 +350,34 @@ and writes a report and a labelling sheet. The demo passes if at least 7 of the 
   search. The 30-second limit is checked against the first search alone.
 - **Links** are checked through the store engine, so the check is as polite as the search.
 
+## How it is tested, and what CI runs
+
+There are two suites, and they answer different questions.
+
+- **The complete suite** (`uv run pytest`): about 8,450 tests, three to four minutes, no network and
+  no key. It fakes only the outside world: store HTTP, the OpenAI client, the image-model weights
+  and the clock. It is run **locally**, before a push or a merge.
+- **The critical suite** (`uv run pytest -m critical`): 143 of those tests, about 20 seconds. These
+  are the tests whose failure would mean a broken product rule or a broken demo. **This is what CI
+  runs**, with `ruff` and `mypy`, on every pull request and on every push to `main`. The dependency
+  audit (`pip-audit`) and the secret scan (`gitleaks`) run beside it.
+
+The critical tests are named in one file, `tests/critical_suite.txt`, under fifteen headings: store
+access, links and hosts, price words, photo privacy, untrusted text, secrets and errors, the gender
+rule, contracts, understanding, store data, ranking, price ranges, the pipeline, the page and the
+acceptance harness. A hook in `tests/conftest.py` marks them, and
+`tests/foundation/test_critical_suite.py` fails if the list names a test that no longer exists.
+
+Three guard suites under `tests/guards/` run whole requests through the real pipeline: store access
+(`scraping/`), photo privacy (`privacy/`) and prompt injection (`injection/`). The critical suite
+takes the strongest few from each.
+
+Tests marked `live` talk to the real stores or the real OpenAI API. They never run in CI and are
+run by hand, one at a time. The complete suite can also be run in CI by hand (Actions, CI, Run
+workflow, `full_suite`). The decision and its cost are in
+[ADR 0015](adr/0015-ci-runs-a-critical-suite.md): a regression outside the critical list is caught
+only by the local run.
+
 ## Trade-offs
 
 Decisions that cost something, and what they cost.
@@ -386,6 +414,7 @@ Decisions that cost something, and what they cost.
 | [0012](adr/0012-drop-records-with-several-prices.md) | A record whose variants differ in price is dropped, not corrected. |
 | [0013](adr/0013-one-deadline-partial-results.md) | One 30-second deadline. A late store costs only its own answer. |
 | [0014](adr/0014-product-gender-from-the-stores-own-fields.md) | Who a product is for is read from the store's own fields, then the title. |
+| [0015](adr/0015-ci-runs-a-critical-suite.md) | CI runs a critical suite of 143 tests; the complete suite runs locally. |
 
 ## Where this differs from the plan
 
