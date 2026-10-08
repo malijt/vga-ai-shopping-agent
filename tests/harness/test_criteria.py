@@ -17,6 +17,7 @@ from eval.harness.criteria import (
     failure_rows,
     price_range_problems,
 )
+from eval.harness.links import LinkCheck
 from eval.harness.runner import DurationSource, PipelineFailure, QueryRun
 from tests.factories import make_store_report
 from tests.harness.helpers import labels_for, make_group, make_query, make_response, ok_links
@@ -390,6 +391,36 @@ class TestLinks:
         result = evaluate_query(run_of(response), link_checks=links).result(Criterion.LINKS)
 
         assert result.status is Status.FAIL
+
+
+class TestLinksAStoreTurnedAway:
+    def unchecked(self, link: LinkCheck) -> LinkCheck:
+        return link.model_copy(
+            update={"ok": False, "not_checked": True, "problems": ["not checked: blocked"]}
+        )
+
+    def test_a_link_nobody_looked_at_leaves_the_query_undecided_not_failed(self) -> None:
+        response = make_response()
+        links = ok_links(response)
+        links[3] = self.unchecked(links[3])
+
+        result = evaluate_query(run_of(response), link_checks=links).result(Criterion.LINKS)
+
+        assert result.status is Status.PENDING
+        assert result.cell == "29/30 (1 not checked: the store was blocked or in cooldown)"
+        assert result.cause is None
+
+    def test_a_link_that_is_really_broken_still_fails_beside_an_unchecked_one(self) -> None:
+        response = make_response()
+        links = ok_links(response)
+        links[3] = self.unchecked(links[3])
+        links[4] = links[4].model_copy(update={"ok": False, "problems": ["HTTP 404, not 200"]})
+
+        result = evaluate_query(run_of(response), link_checks=links).result(Criterion.LINKS)
+
+        assert result.status is Status.FAIL
+        assert links[4].url in result.evidence
+        assert links[3].url not in result.evidence
 
 
 class TestGoodAtTen:

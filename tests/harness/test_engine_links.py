@@ -214,6 +214,31 @@ class TestTheRulesOfTheFetchEngineApply:
         assert waiting.error.startswith("store_cooldown")
         assert (first.call_count, second.call_count) == (1, 0)  # no request, no retry
 
+    async def test_a_link_a_store_turned_away_is_marked_throttled_not_broken(
+        self, fetch: EngineLinkFetch, router: respx.MockRouter
+    ) -> None:
+        router.get(PRODUCT).mock(return_value=html("Too many requests", 429))
+
+        blocked = await fetch(PRODUCT)
+        in_cooldown = await fetch(f"{PRODUCT}-2")
+
+        assert blocked.throttled is True  # turned away just now
+        assert in_cooldown.throttled is True  # not asked, because the store is cooling down
+
+    async def test_other_failures_are_not_marked_throttled(
+        self, fetch: EngineLinkFetch, router: respx.MockRouter
+    ) -> None:
+        router.get(f"https://{HOST}/robots.txt").mock(
+            return_value=text("User-agent: *\nDisallow: /products/denied\n")
+        )
+        router.get(PRODUCT).mock(return_value=html("<title>x</title>", 404))
+
+        missing = await fetch(PRODUCT)
+        denied = await fetch(f"https://{HOST}/products/denied")
+        unknown = await fetch("https://www.unknown-store.example/products/a")
+
+        assert (missing.throttled, denied.throttled, unknown.throttled) == (False, False, False)
+
     async def test_a_host_that_belongs_to_no_store_is_not_requested(
         self, fetch: EngineLinkFetch, router: respx.MockRouter
     ) -> None:
@@ -265,6 +290,26 @@ class TestTheRulesOfTheFetchEngineApply:
 
         assert clock.monotonic() - before >= 1.0  # it really did wait
         assert second.elapsed_s == pytest.approx(0.0, abs=0.01)
+
+    async def test_a_crawl_delay_in_robots_txt_still_applies_through_the_metered_limiter(
+        self, fetch: EngineLinkFetch, router: respx.MockRouter, clock: FakeClock
+    ) -> None:
+        # The robots.txt check hands its Crawl-delay to the limiter with a `source=` keyword. The
+        # metered limiter used to refuse that keyword (a TypeError on the first link of a store
+        # whose robots.txt asked for a delay), so every one of that store's links failed.
+        router.get(f"https://{HOST}/robots.txt").mock(
+            return_value=text("User-agent: *\nCrawl-delay: 5\nDisallow:\n")
+        )
+        router.get(PRODUCT).mock(return_value=html(product_page()))
+        router.get(f"{PRODUCT}-2").mock(return_value=html(product_page()))
+
+        first = await fetch(PRODUCT)
+        before = clock.monotonic()
+        second = await fetch(f"{PRODUCT}-2")
+
+        assert first.status == 200
+        assert second.status == 200
+        assert clock.monotonic() - before >= 5.0  # the store asked for a request every 5 s
 
     async def test_a_slow_store_is_timed_by_the_time_it_took(
         self, fetch: EngineLinkFetch, router: respx.MockRouter, clock: FakeClock

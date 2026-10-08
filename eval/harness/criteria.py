@@ -48,6 +48,9 @@ class Status(StrEnum):
     PASS = "pass"  # noqa: S105  (a status word, not a password)
     FAIL = "fail"
     PENDING = "pending"
+    NOT_RUN = "not run"
+    """The query was not run (its stores were not available, or it was never sent): neither a
+    pass nor a fail."""
 
 
 class Cause(StrEnum):
@@ -111,6 +114,8 @@ class QueryEvaluation:
     @property
     def status(self) -> Status:
         states = {result.status for result in self.criteria}
+        if Status.NOT_RUN in states:
+            return Status.NOT_RUN
         if Status.FAIL in states:
             return Status.FAIL
         if Status.PENDING in states:
@@ -340,11 +345,19 @@ def check_links(
         return CriterionResult(Criterion.LINKS, Status.PENDING, "not checked")
 
     good = [check for check in link_checks if check.ok]
-    bad = [check for check in link_checks if not check.ok]
+    unchecked = [check for check in link_checks if check.not_checked]
+    bad = [check for check in link_checks if not check.ok and not check.not_checked]
     cell = f"{len(good)}/{len(link_checks)}"
     if bad:
         evidence = _shown([f"{c.url} ({c.store}): {'; '.join(c.problems)}" for c in bad])
         return CriterionResult(Criterion.LINKS, Status.FAIL, cell, Cause.STORE, evidence)
+    if unchecked:
+        # A store that turned the request away said nothing about the link: undecided, not broken.
+        return CriterionResult(
+            Criterion.LINKS,
+            Status.PENDING,
+            f"{cell} ({len(unchecked)} not checked: the store was blocked or in cooldown)",
+        )
     if wanted <= {check.url for check in link_checks}:
         return CriterionResult(Criterion.LINKS, Status.PASS, cell)
     return CriterionResult(
@@ -458,6 +471,11 @@ def _failed_run_criteria(run: QueryRun, config: CriteriaConfig) -> tuple[Criteri
     return tuple(results[criterion] for criterion in Criterion)
 
 
+def _not_run_criteria() -> tuple[CriterionResult, ...]:
+    """A query that was not run has no verdict on any criterion."""
+    return tuple(CriterionResult(criterion, Status.NOT_RUN, "not run") for criterion in Criterion)
+
+
 def evaluate_query(
     run: QueryRun,
     *,
@@ -467,6 +485,8 @@ def evaluate_query(
 ) -> QueryEvaluation:
     """Judge one query against every criterion."""
     config = config or CriteriaConfig()
+    if run.not_run is not None:
+        return QueryEvaluation(run, _not_run_criteria())
     response = run.response
     if response is None:
         return QueryEvaluation(run, _failed_run_criteria(run, config))

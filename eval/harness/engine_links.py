@@ -11,7 +11,8 @@ client:
 - the URL and every redirect hop must be https on the store's ``allowed_hosts``, at most 3
   redirects, and a redirect to another registered domain is not followed;
 - a store that turned an earlier request away is in cooldown and is not asked again: its remaining
-  links fail with the reason, they are not retried or worked around;
+  links are marked ``throttled`` (not checked, and not a broken link), they are not retried or
+  worked around;
 - no retries.
 
 What the engine does not tell us, this class works out for ``LinkResult``:
@@ -36,7 +37,7 @@ from vga.fetch import FetchError, PoliteClient, RateLimiter, registered_domain
 from vga.fetch.blocking import looks_like_html
 from vga.fetch.client import FetchPolicy, FetchResponse
 from vga.interfaces import Clock
-from vga.models import StoreConfig
+from vga.models import StoreConfig, StoreStatus
 from vga.stores import StoreSearchEngine
 
 LINK_PAGE_MAX_BYTES = 5_000_000
@@ -60,8 +61,8 @@ class MeteredLimiter(RateLimiter):
         self._inner = inner
         self.waited_s = 0.0
 
-    def set_min_interval(self, host: str, seconds: float) -> None:
-        self._inner.set_min_interval(host, seconds)
+    def set_min_interval(self, key: str, seconds: float, *, source: str | None = None) -> None:
+        self._inner.set_min_interval(key, seconds, source=source)
 
     async def acquire(self, host: str, rps: float) -> float:
         waited = await self._inner.acquire(host, rps)
@@ -130,7 +131,10 @@ class EngineLinkFetch:
             response = await self._client.fetch(url, store, self._policy(store))
             took = self._client.clock.monotonic() - started
         except FetchError as exc:
-            return LinkResult(url=url, error=_problem(exc))
+            # A store that turned the request away (or is cooling down after it did) has not
+            # said anything about this link: it was not looked at, so it is not a broken link.
+            throttled = exc.store_status in (StoreStatus.BLOCKED, StoreStatus.COOLDOWN)
+            return LinkResult(url=url, error=_problem(exc), throttled=throttled)
         waited = self._meter.waited_s - waited_before
         moved = response.url != url
         return LinkResult(
