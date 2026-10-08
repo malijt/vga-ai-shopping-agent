@@ -1,0 +1,108 @@
+{
+ "resources": {
+  "results": {
+   "products": [
+    {
+     "available": true,
+     "body": "<p>مقاس المودل : S</p>\n<p>طول الدراعة ٥٥ إنش </p>\n<p>حابه طول معين كتبيه بالملاحظات </p>\n<p>الغسيل: دراي كلين </p>",
+     "compare_at_price_max": "39.500",
+     "compare_at_price_min": "39.500",
+     "featured_image": {
+      "alt": "Burgundy Kaftan",
+      "aspect_ratio": 1.0,
+      "height": 1080,
+      "url": "https://cdn.shopify.com/s/files/1/0695/4631/1733/files/9B131A0E-A5AF-413B-A6D6-277F7CC3A77E.png?v=1763823662",
+      "width": 1080
+     },
+     "handle": "burgundy-kaftan",
+     "id": 8000159088693,
+     "image": "https://cdn.shopify.com/s/files/1/0695/4631/1733/files/9B131A0E-A5AF-413B-A6D6-277F7CC3A77E.png?v=1763823662",
+     "price": "36.500",
+     "price_max": "36.500",
+     "price_min": "36.500",
+     "tags": [],
+     "title": "Burgundy Kaftan",
+     "type": "",
+     "url": "/products/burgundy-kaftan?_pos=1&_psq=kaftan&_psid=e911813cf&_ss=e",
+     "variants": [],
+     "vendor": "herhighnessq8"
+    },
+    {
+     "available": true,
+     "body": "<p dir=\"rtl\" class=\"p1\"><span class=\"s1\">طول الدراعة ٥٥ إنش ..</span></p>\n<p dir=\"rtl\" class=\"p1\"><span class=\"s1\">اذا حابه طول معين كتبيه بالملاحظات …</span></p>\n<p dir=\"rtl\" class=\"p1\"><span class=\"s1\">جدول المقاسات موجود بالهالايت ..</span></p>",
+     "compare_at_price_max": "48.000",
+     "compare_at_price_min": "48.000",
+     "featured_image": {
+      "alt": "Plum Kaftan",
+      "aspect_ratio": 0.667,
+      "height": 5168,
+      "url": "https://cdn.shopify.com/s/files/1/0695/4631/1733/files/EZZ03573.jpg?v=1764066240",
+      "width": 3448
+     },
+     "handle": "plum-kaftan",
+     "id": 8001199734837,
+     "image": "https://cdn.shopify.com/s/files/1/0695/4631/1733/files/EZZ03573.jpg?v=1764066240",
+     "price": "42.000",
+     "price_max": "42.000",
+     "price_min": "42.000",
+     "tags": [],
+     "title": "Plum Kaftan",
+     "type": "",
+     "url": "/products/plum-kaftan?_pos=2&_psq=kaftan&_psid=e911813cf&_ss=e",
+     "variants": [],
+     "vendor": "herhighnessq8"
+    },
+    {
+     "available": true,
+     "body": "",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Kids Olive  Kaftan",
+      "aspect_ratio": 1.0,
+      "height": 1080,
+      "url": "https://cdn.shopify.com/s/files/1/0695/4631/1733/files/C9F925FB-CE0A-4B2E-95E2-6DF2C1CF518D.png?v=1763828874",
+      "width": 1080
+     },
+     "handle": "untitled-nov22_19-25",
+     "id": 8000170262581,
+     "image": "https://cdn.shopify.com/s/files/1/0695/4631/1733/files/C9F925FB-CE0A-4B2E-95E2-6DF2C1CF518D.png?v=1763828874",
+     "price": "28.500",
+     "price_max": "28.500",
+     "price_min": "28.500",
+     "tags": [],
+     "title": "Kids Olive  Kaftan",
+     "type": "",
+     "url": "/products/untitled-nov22_19-25?_pos=3&_psq=kaftan&_psid=e911813cf&_ss=e",
+     "variants": [],
+     "vendor": "herhighnessq8"
+    },
+    {
+     "available": true,
+     "body": "",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Kids Burgundy Kaftan",
+      "aspect_ratio": 1.0,
+      "height": 1080,
+      "url": "https://cdn.shopify.com/s/files/1/0695/4631/1733/files/A72180C4-2B9F-4F70-AF14-DB2FDFE17EDD.png?v=1763824800",
+      "width": 1080
+     },
+     "handle": "kids-burgundy-kaftan",
+     "id": 8000160137269,
+     "image": "https://cdn.shopify.com/s/files/1/0695/4631/1733/files/A72180C4-2B9F-4F70-AF14-DB2FDFE17EDD.png?v=1763824800",
+     "price": "28.500",
+     "price_max": "28.500",
+     "price_min": "28.500",
+     "tags": [],
+     "title": "Kids Burgundy Kaftan",
+     "type": "",
+     "url": "/products/kids-burgundy-kaftan?_pos=4&_psq=kaftan&_psid=e911813cf&_ss=e",
+     "variants": [],
+     "vendor": "herhighnessq8"
+    }
+   ]
+  }
+ }
+}

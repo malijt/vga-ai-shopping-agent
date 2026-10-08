@@ -1,0 +1,352 @@
+{
+ "resources": {
+  "results": {
+   "products": [
+    {
+     "available": true,
+     "body": "<p data-end=\"245\" data-start=\"0\">An elegant winter dishdasha, combining warmth, sophistication, and comfort. Made from premium fabric that ensures a refined look and cozy wear throughout the colder months.</p>\n<ul>\n<li data-end=\"288\" data-start=\"248\">Premium warm fabric for winter comfort</li>\n<li d",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": null,
+      "aspect_ratio": 0.73,
+      "height": 1184,
+      "url": "https://cdn.shopify.com/s/files/1/0960/9602/6936/files/Dishdash-3180208-Gray_1_3e066b63-072d-41e1-8c4f-705702e2c153.jpg?v=1764503372",
+      "width": 864
+     },
+     "handle": "elegant-winter-dishdasha-al-jazeera-for-men",
+     "id": 10271426478392,
+     "image": "https://cdn.shopify.com/s/files/1/0960/9602/6936/files/Dishdash-3180208-Gray_1_3e066b63-072d-41e1-8c4f-705702e2c153.jpg?v=1764503372",
+     "price": "9.000",
+     "price_max": "9.000",
+     "price_min": "9.000",
+     "tags": [
+      "A/W men",
+      "Batch 5",
+      "dishdasha",
+      "men"
+     ],
+     "title": "Men’s Elegant Winter Dishdasha by Al Jazeera",
+     "type": "Apparel for men",
+     "url": "/en/products/elegant-winter-dishdasha-al-jazeera-for-men?_pos=1&_psq=winter&_psid=a05f5f065&_ss=e&variant=51425468154168",
+     "variants": [
+      {
+       "available": true,
+       "compare_at_price": "0.000",
+       "featured_image": {
+        "alt": "Men’s Elegant Winter Dishdasha by Al Jazeera",
+        "aspect_ratio": 0.73,
+        "height": 1184,
+        "url": "https://cdn.shopify.com/s/files/1/0960/9602/6936/files/Dishdash-3180208-Gray_1_3e066b63-072d-41e1-8c4f-705702e2c153.jpg?v=1764503372",
+        "width": 864
+       },
+       "id": 51425468154168,
+       "image": "https://cdn.shopify.com/s/files/1/0960/9602/6936/files/Dishdash-3180208-Gray_1_3e066b63-072d-41e1-8c4f-705702e2c153.jpg?v=1764503372",
+       "price": "9.000",
+       "title": "Gray / M / 52",
+       "url": "/en/products/elegant-winter-dishdasha-al-jazeera-for-men?variant=51425468154168&_pos=1&_psq=winter&_psid=a05f5f065&_ss=e"
+      }
+     ],
+     "vendor": "JAZEERA"
+    },
+    {
+     "available": true,
+     "body": "<p data-start=\"0\" data-end=\"261\">A stylish winter dishdasha designed for boys, featuring a deep tone that reflects warmth and elegance. Made from premium fabric to ensure comfort, durability, and a polished look during the colder season.</p>\n<ul>\n<li data-start=\"264\" data-end=\"299\">Premium warm fabr",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Boys' Beige Soft Winter Dishdasha by Al Jazeera",
+      "aspect_ratio": 0.746,
+      "height": 1600,
+      "url": "https://cdn.shopify.com/s/files/1/0960/9602/6936/files/WBGE.jpg?v=1770712970",
+      "width": 1194
+     },
+     "handle": "boys-beige-light-winter-dishdasha-by-al-jazeera",
+     "id": 10419365577016,
+     "image": "https://cdn.shopify.com/s/files/1/0960/9602/6936/files/WBGE.jpg?v=1770712970",
+     "price": "6.000",
+     "price_max": "7.000",
+     "price_min": "6.000",
+     "tags": [
+      "A/W boys",
+      "Batch 5",
+      "dishdasha",
+      "kids",
+      "xembroidery"
+     ],
+     "title": "Boys' Beige Soft Winter Dishdasha by Al Jazeera",
+     "type": "Apparel for kids",
+     "url": "/en/products/boys-beige-light-winter-dishdasha-by-al-jazeera?_pos=2&_psq=winter&_psid=a05f5f065&_ss=e",
+     "variants": [],
+     "vendor": "JAZEERA"
+    },
+    {
+     "available": true,
+     "body": "<p>A warm, traditional dishdasha in deep, rich hues designed to provide comfort and style during colder months, blending tradition with seasonal practicality. for ultimate comfort in cold weather. Its crisp, clean design offers a cool and elegant look for everyday wear.</p>\n<ul>\n<li>Lightweight and ",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Men’s Winter Dishdasha by Al Jazeera",
+      "aspect_ratio": 0.73,
+      "height": 1184,
+      "url": "https://cdn.shopify.com/s/files/1/0960/9602/6936/files/Dishdash-3180208-dark-Grey_1.jpg?v=1762435925",
+      "width": 864
+     },
+     "handle": "winter-dishdasha-al-jazeera-for-men-with-name-embroidery",
+     "id": 10183005864248,
+     "image": "https://cdn.shopify.com/s/files/1/0960/9602/6936/files/Dishdash-3180208-dark-Grey_1.jpg?v=1762435925",
+     "price": "9.000",
+     "price_max": "9.000",
+     "price_min": "9.000",
+     "tags": [
+      "A/W men",
+      "dishdasha",
+      "men",
+      "xembroidery"
+     ],
+     "title": "Men’s Winter Dishdasha by Al Jazeera",
+     "type": "Apparel for men",
+     "url": "/en/products/winter-dishdasha-al-jazeera-for-men-with-name-embroidery?_pos=3&_psq=winter&_psid=a05f5f065&_ss=e",
+     "variants": [],
+     "vendor": "JAZEERA"
+    },
+    {
+     "available": true,
+     "body": "<p data-start=\"0\" data-end=\"261\">A stylish winter dishdasha designed for boys, featuring a deep tone that reflects warmth and elegance. Made from premium fabric to ensure comfort, durability, and a polished look during the colder season.</p>\n<ul>\n<li data-start=\"264\" data-end=\"299\">Premium warm fabr",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": null,
+      "aspect_ratio": 0.892,
+      "height": 1004,
+      "url": "https://cdn.shopify.com/s/files/1/0960/9602/6936/files/Dishdasha-Boys--4842-Brown_1_e2ae5e9c-f15a-4ae3-93a3-e8e47aac45be.jpg?v=1764235656",
+      "width": 896
+     },
+     "handle": "al-jazeera-winter-dishdasha-for-boys-with-name-embroidery",
+     "id": 10183000391992,
+     "image": "https://cdn.shopify.com/s/files/1/0960/9602/6936/files/Dishdasha-Boys--4842-Brown_1_e2ae5e9c-f15a-4ae3-93a3-e8e47aac45be.jpg?v=1764235656",
+     "price": "6.000",
+     "price_max": "6.000",
+     "price_min": "6.000",
+     "tags": [
+      "A/W boys",
+      "Batch 5",
+      "dishdasha",
+      "kids",
+      "xembroidery"
+     ],
+     "title": "Boys'  Winter Dishdasha by Al Jazeera",
+     "type": "Apparel for kids",
+     "url": "/en/products/al-jazeera-winter-dishdasha-for-boys-with-name-embroidery?_pos=4&_psq=winter&_psid=a05f5f065&_ss=e&variant=51413554725176",
+     "variants": [
+      {
+       "available": true,
+       "compare_at_price": "0.000",
+       "featured_image": {
+        "alt": "Boys'  Winter Dishdasha by Al Jazeera",
+        "aspect_ratio": 0.892,
+        "height": 1004,
+        "url": "https://cdn.shopify.com/s/files/1/0960/9602/6936/files/Dishdasha-Boys--4842-Brown_1_e2ae5e9c-f15a-4ae3-93a3-e8e47aac45be.jpg?v=1764235656",
+        "width": 896
+       },
+       "id": 51413554725176,
+       "image": "https://cdn.shopify.com/s/files/1/0960/9602/6936/files/Dishdasha-Boys--4842-Brown_1_e2ae5e9c-f15a-4ae3-93a3-e8e47aac45be.jpg?v=1764235656",
+       "price": "6.000",
+       "title": "Brown / 6 Months (18 Inch)",
+       "url": "/en/products/al-jazeera-winter-dishdasha-for-boys-with-name-embroidery?variant=51413554725176&_pos=4&_psq=winter&_psid=a05f5f065&_ss=e"
+      }
+     ],
+     "vendor": "JAZEERA"
+    },
+    {
+     "available": true,
+     "body": "<p data-start=\"0\" data-end=\"261\">A stylish winter dishdasha designed for boys, featuring a deep tone that reflects warmth and elegance. Made from premium fabric to ensure comfort, durability, and a polished look during the colder season.</p>\n<ul>\n<li data-start=\"264\" data-end=\"299\">Premium warm fabr",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Boys' Dark Beige Soft Winter Dishdasha by Al Jazeera",
+      "aspect_ratio": 0.746,
+      "height": 1600,
+      "url": "https://cdn.shopify.com/s/files/1/0960/9602/6936/files/WDBGE.jpg?v=1770712970",
+      "width": 1194
+     },
+     "handle": "boys-dark-beige-light-winter-dishdasha-by-al-jazeera",
+     "id": 10419376423224,
+     "image": "https://cdn.shopify.com/s/files/1/0960/9602/6936/files/WDBGE.jpg?v=1770712970",
+     "price": "6.000",
+     "price_max": "7.000",
+     "price_min": "6.000",
+     "tags": [
+      "A/W boys",
+      "Batch 5",
+      "dishdasha",
+      "kids",
+      "xembroidery"
+     ],
+     "title": "Boys' Dark Beige Soft Winter Dishdasha by Al Jazeera",
+     "type": "Apparel for kids",
+     "url": "/en/products/boys-dark-beige-light-winter-dishdasha-by-al-jazeera?_pos=5&_psq=winter&_psid=a05f5f065&_ss=e",
+     "variants": [],
+     "vendor": "JAZEERA"
+    },
+    {
+     "available": true,
+     "body": "<p>A warm, traditional dishdasha in deep, rich hues designed to provide comfort and style during colder months, blending tradition with seasonal practicality. for ultimate comfort in cold weather. Its crisp, clean design offers a cool and elegant look for everyday wear.</p>\n<ul>\n<li>Lightweight and ",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Youth Winter Dishdasha by Al Jazeera",
+      "aspect_ratio": 0.73,
+      "height": 1184,
+      "url": "https://cdn.shopify.com/s/files/1/0960/9602/6936/files/Dishdash-3180208-dark-Navy_6aa3e61b-2024-43be-b048-d45f337af8de.jpg?v=1764234580",
+      "width": 864
+     },
+     "handle": "youth-winter-dishdasha-by-al-jazeera",
+     "id": 10269216801080,
+     "image": "https://cdn.shopify.com/s/files/1/0960/9602/6936/files/Dishdash-3180208-dark-Navy_6aa3e61b-2024-43be-b048-d45f337af8de.jpg?v=1764234580",
+     "price": "7.000",
+     "price_max": "7.000",
+     "price_min": "7.000",
+     "tags": [
+      "A/W boys",
+      "Batch 7",
+      "dishdasha",
+      "kids",
+      "xembroidery"
+     ],
+     "title": "Youth Winter Dishdasha by Al Jazeera",
+     "type": "Apparel for kids",
+     "url": "/en/products/youth-winter-dishdasha-by-al-jazeera?_pos=6&_psq=winter&_psid=a05f5f065&_ss=e",
+     "variants": [],
+     "vendor": "JAZEERA"
+    },
+    {
+     "available": true,
+     "body": "<p data-start=\"0\" data-end=\"261\">A stylish winter dishdasha designed for boys, featuring a deep tone that reflects warmth and elegance. Made from premium fabric to ensure comfort, durability, and a polished look during the colder season.</p>\n<ul>\n<li data-start=\"264\" data-end=\"299\">Premium warm fabr",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Boys' Dark Grey Soft Winter Dishdasha by Al Jazeera",
+      "aspect_ratio": 0.746,
+      "height": 1600,
+      "url": "https://cdn.shopify.com/s/files/1/0960/9602/6936/files/WDGRY.jpg?v=1770712970",
+      "width": 1194
+     },
+     "handle": "boys-dark-grey-light-winter-dishdasha-by-al-jazeera",
+     "id": 10419434684728,
+     "image": "https://cdn.shopify.com/s/files/1/0960/9602/6936/files/WDGRY.jpg?v=1770712970",
+     "price": "6.000",
+     "price_max": "7.000",
+     "price_min": "6.000",
+     "tags": [
+      "A/W boys",
+      "Batch 5",
+      "dishdasha",
+      "kids",
+      "xembroidery"
+     ],
+     "title": "Boys' Dark Grey Soft Winter Dishdasha by Al Jazeera",
+     "type": "Apparel for kids",
+     "url": "/en/products/boys-dark-grey-light-winter-dishdasha-by-al-jazeera?_pos=7&_psq=winter&_psid=a05f5f065&_ss=e",
+     "variants": [],
+     "vendor": "JAZEERA"
+    },
+    {
+     "available": true,
+     "body": "<p data-start=\"0\" data-end=\"261\">A stylish winter dishdasha designed for boys, featuring a deep tone that reflects warmth and elegance. Made from premium fabric to ensure comfort, durability, and a polished look during the colder season.</p>\n<ul>\n<li data-start=\"264\" data-end=\"299\">Premium warm fabr",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Boys' Light Grey Soft Winter Dishdasha by Al Jazeera",
+      "aspect_ratio": 0.746,
+      "height": 1600,
+      "url": "https://cdn.shopify.com/s/files/1/0960/9602/6936/files/WLGRY.jpg?v=1770712970",
+      "width": 1194
+     },
+     "handle": "boys-light-grey-light-winter-dishdasha-by-al-jazeera",
+     "id": 10419424198968,
+     "image": "https://cdn.shopify.com/s/files/1/0960/9602/6936/files/WLGRY.jpg?v=1770712970",
+     "price": "6.000",
+     "price_max": "7.000",
+     "price_min": "6.000",
+     "tags": [
+      "A/W boys",
+      "Batch 5",
+      "dishdasha",
+      "kids",
+      "xembroidery"
+     ],
+     "title": "Boys' Light Grey Soft Winter Dishdasha by Al Jazeera",
+     "type": "Apparel for kids",
+     "url": "/en/products/boys-light-grey-light-winter-dishdasha-by-al-jazeera?_pos=8&_psq=winter&_psid=a05f5f065&_ss=e",
+     "variants": [],
+     "vendor": "JAZEERA"
+    },
+    {
+     "available": true,
+     "body": "<p data-end=\"261\" data-start=\"0\">A stylish sleeping dishdasha designed for boys, featuring a deep tone that reflects warmth and elegance. Made from premium fabric to ensure comfort, durability, and a polished look during the colder season.</p>\n<ul>\n<li data-end=\"299\" data-start=\"264\">Premium warm fa",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Boys' Stripes V-Neck Half Sleeve Sleeping Dishdasha by Al Jazeera (Mix Colors)",
+      "aspect_ratio": 0.75,
+      "height": 1195,
+      "url": "https://cdn.shopify.com/s/files/1/0960/9602/6936/files/sugar_VSLPDISH_3_562678cf-ed41-4637-8aef-07e568e28614.jpg?v=1785329313",
+      "width": 896
+     },
+     "handle": "boys-stripes-v-neck-half-sleeve-sleeping-dishdasha-by-al-jazeera-mix-colors",
+     "id": 10789694734648,
+     "image": "https://cdn.shopify.com/s/files/1/0960/9602/6936/files/sugar_VSLPDISH_3_562678cf-ed41-4637-8aef-07e568e28614.jpg?v=1785329313",
+     "price": "2.000",
+     "price_max": "2.250",
+     "price_min": "2.000",
+     "tags": [
+      "A/W boys",
+      "Batch 7",
+      "dishdasha",
+      "home",
+      "kids",
+      "xembroidery"
+     ],
+     "title": "Boys' Stripes V-Neck Half Sleeve Sleeping Dishdasha by Al Jazeera (Mix Colors)",
+     "type": "Apparel for kids",
+     "url": "/en/products/boys-stripes-v-neck-half-sleeve-sleeping-dishdasha-by-al-jazeera-mix-colors?_pos=9&_psq=winter&_psid=a05f5f065&_ss=e",
+     "variants": [],
+     "vendor": "JAZEERA"
+    },
+    {
+     "available": true,
+     "body": "<p data-end=\"261\" data-start=\"0\">A stylish sleeping dishdasha designed for boys, featuring a deep tone that reflects warmth and elegance. Made from premium fabric to ensure comfort, durability, and a polished look during the colder season.</p>\n<ul>\n<li data-end=\"299\" data-start=\"264\">Premium warm fa",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Youth' Stripes V-Neck Half Sleeve Sleeping Dishdasha by Al Jazeera (Mix Colors)",
+      "aspect_ratio": 0.75,
+      "height": 1195,
+      "url": "https://cdn.shopify.com/s/files/1/0960/9602/6936/files/light_blue_VSLPDISH_4.jpg?v=1785329262",
+      "width": 896
+     },
+     "handle": "youth-stripes-v-neck-half-sleeve-sleeping-dishdasha-by-al-jazeera-mix-colors",
+     "id": 10789699486008,
+     "image": "https://cdn.shopify.com/s/files/1/0960/9602/6936/files/light_blue_VSLPDISH_4.jpg?v=1785329262",
+     "price": "2.500",
+     "price_max": "2.500",
+     "price_min": "2.500",
+     "tags": [
+      "A/W boys",
+      "Batch 7",
+      "dishdasha",
+      "home",
+      "kids",
+      "xembroidery"
+     ],
+     "title": "Youth' Stripes V-Neck Half Sleeve Sleeping Dishdasha by Al Jazeera (Mix Colors)",
+     "type": "Apparel for kids",
+     "url": "/en/products/youth-stripes-v-neck-half-sleeve-sleeping-dishdasha-by-al-jazeera-mix-colors?_pos=10&_psq=winter&_psid=a05f5f065&_ss=e",
+     "variants": [],
+     "vendor": "JAZEERA"
+    }
+   ]
+  }
+ }
+}

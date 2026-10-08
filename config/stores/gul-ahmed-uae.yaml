@@ -1,0 +1,38 @@
+# Gul Ahmed UAE: the UAE storefront of a Pakistani clothing house on Shopify (single brand, "Ideas").
+# Men's shalwar kameez suits, kurtas and waistcoats; women's kurtis (titled "Shirt") and co-ord sets.
+# Data path: Shopify's public predictive search, /search/suggest.json, which robots.txt leaves open.
+# Evidence: docs/store-qualification/gul-ahmed-uae.md. Quirks and what would break this file:
+# docs/store-notes/gul-ahmed-uae.md
+id: gul-ahmed-uae
+name: Gul Ahmed UAE
+country: AE
+currency: AED          # the suggest response has no currency field; AED is store-level (the product page has no JSON-LD: Shopify.currency {"active":"AED"} and the variant prices, currencyCode "AED")
+search_url_template: "https://uae.gulahmedshop.com/search/suggest.json?q={query}&resources[type]=product&resources[limit]=10"
+allowed_hosts:
+  - uae.gulahmedshop.com   # product links; this host answered with no redirect (a CNAME to shops.myshopify.com)
+  - cdn.shopify.com        # product images
+extraction:
+  strategies:
+    - name: shopify
+      options:
+        # `type` is "Men" or "Women" on all 40 records seen (27 and 13), so it decides who a product is
+        # for (ADR 0014). The tags agree on every record ("Men Suits", "Men Kurta", "Mens Kurta",
+        # "Men Waistcoat", "Women Co-Ords"); the women's kurti tag "Kurti" names no gender, so the
+        # tags can only back `type` up, never contradict it. The title says nothing ("UAE-Regular Fit
+        # Styling Kurta"), so without these fields every product here would be unknown.
+        gender_fields: [type, tags]
+        # max_price_spread is left OFF on purpose. 7 of the 40 records (5 of 32 distinct products) have
+        # variants at two prices (price 53.50, price_max 89.00; 101.50 and 169.00), but this is not the
+        # Hamsa trap (ADR 0012). On all 5 the higher figure equals compare_at_price_max, the pre-sale
+        # price of the SAME garment, and the ratio of the two is 0.601, as on all 18 products that are
+        # on sale. It reads as some sizes at the sale price and some still at the full price (the
+        # search answer lists no variants, so this is not confirmed). `price`, the cheapest, is then
+        # the garment's own lowest price, not an add-on's. Setting the option to 1 or 1.25 would drop
+        # those 7 records and leave 18 distinct products, below the 20 the plan wants; 1.7 or more
+        # keeps all 40. The cost of leaving it off: a size can cost up to 66% more than the price shown.
+# genders is left unset on purpose: the store sells for men and for women (20 men's and 12 women's of 32 distinct products seen).
+categories:
+  - dresses      # kurtas (10 of 32 distinct products) and the "Suits" (shalwar kameez, 9) that have no garment word in the title; the ranker reads a kurta as a dress and a "Suits" title as no category, so both stay for a dresses search
+  - tops         # the women's kurtis are titled "Printed Shirt" (12 of 32), which the ranker reads as tops and drops from a dresses search: without this line a women's kurti is never shown. Not seen: trousers, jackets, shoes (one men's waistcoat, titled "Waist Coat", is read as outerwear and is not searched for; add outerwear if waistcoats are wanted)
+tier_hint: budget      # AED 41.50-149 seen, median 91.25; most men's kurtas (41.50-101.50) and suits (83.50-113.50) are about 40% off today; women's kurtis 79-149. The saved product page also lists women's 2 and 3 piece suits at AED 89-329 (in no search answer)
+enabled: true           # the live smoke test passed on 2026-10-08 (tests/stores/gul-ahmed-uae)

@@ -7,32 +7,38 @@ file as the always-on summary and open the matching doc when you need full depth
 ## Project Context
 
 - **What it is:** a one-day demo. A shopper gives a photo, text (English or Arabic), or both. One
-  OpenAI call understands the request, the app searches up to 13 GCC fashion stores' own search pages
+  OpenAI call understands the request, the app searches up to 19 GCC fashion stores' own search pages
   live, ranks the products, and shows the top 30 split into Budget / Mid-range / Premium / Luxury.
   Every result links to the store's own product page.
 - **Categories (five):** tops, outerwear, bottoms, shoes and, since 2026-10-08, **dresses** (dresses,
-  gowns, kaftans, abayas, kurtas and similar one-piece or ethnic garments). Accessories stay out
-  of scope.
+  gowns, kaftans, abayas, kurtas and similar one-piece or ethnic garments, and the men's robe sold as
+  a thobe, dishdasha or kandura). Accessories stay out of scope.
 - **Status (2026-10-07):** the implementation plan
   [`docs/plans/2026-10-07-vga-ai-shopping-agent-implementation-plan.md`](./docs/plans/2026-10-07-vga-ai-shopping-agent-implementation-plan.md)
-  is approved (v3). Phases 1 to 15 are merged, thirteen stores are enabled, and real end-to-end
+  is approved (v3). Phases 1 to 15 are merged, nineteen stores are enabled, and real end-to-end
   searches ran on 2026-10-08. Next: Phase 16 (the recorded acceptance run, labelling, tuning, final
   docs and the verdict). **Build only what the plan specifies**, in its phases and waves. Integration
   branch: `develop`.
 - **Stores (decided 2026-10-07):** store qualification found that no large GCC retailer can be read
   by an honest client (see [`docs/store-qualification/SUMMARY.md`](./docs/store-qualification/SUMMARY.md)).
-  The demo therefore searches Shopify storefronts through `/search/suggest.json`. Thirteen are enabled:
+  The demo therefore searches Shopify storefronts through `/search/suggest.json`. Nineteen are enabled:
   Giordano UAE, Nautica UAE, Sacoor Brothers UAE, Oh Polly UAE, Club L London UAE, Maison D'Vie and,
   since the user raised the limit from six on 2026-10-08 to cover dresses and modest wear, Hanayen,
   Maison Arabelle, Nishat Linen UAE and Signature Studio. A store is enabled only after a live smoke
-  test through the project's own engine. Four more readable stores are in reserve
-  (`docs/store-notes/SUMMARY.md`).
+  test through the project's own engine. Readable stores held in reserve are listed in
+  `docs/store-notes/SUMMARY.md`.
 - **Second currency (decided by the user 2026-10-08, ADR 0006):** three Kuwaiti designer stores
   (Bazza Alzouman, Hamsa, Manal Smaoui) are enabled too. They price in KWD. A result shows the store's own price plus
   an approximate AED figure from a fixed rate in `config/settings.yaml`; price ranges and budgets use
   the AED figure. There is no live exchange-rate call. Reaching big retailers is
   planned as later Phases 17-19 (agent endpoints, store APIs/headless with a terms sign-off, a
   category + sitemap index). Do not start those without the user's go-ahead.
+- **More stores (decided by the user 2026-10-08, plan A30):** the limit is 19. The user named what
+  the demo must find: abayas, kaftans, burqas and kurtis for women; thobes, kurtas and shalwar kameez
+  for men. Six stores were added for it: Daraat, Shadow, Her Highness Q8, Veil Essentials and
+  Al Jazeera Clothing (Kuwait, KWD) and Gul Ahmed UAE (AED). The user also opened work on stores
+  that are not on Shopify, for dishdasha and everyday-abaya sources; Ambrose Abayas (WooCommerce) is
+  the first, on its own branch. Record: `docs/store-qualification/modest-ethnic-wear-discovery.md`.
 - **What it is not (yet):** not multi-tenant, no accounts, no billing or credits, no database, no
   RAG, not hosted. The rules for those domains are dormant (see "Domain applicability"). Do not
   build toward them speculatively.
@@ -115,6 +121,10 @@ docs/adr/             decision records    docs/store-notes/, docs/store-qualific
   go/no-go, changes to the plan or contracts) run on **Opus 5.5**.
 - Work from the plan: one phase or module per assignment, staying inside its owned paths. One
   branch and one small PR per assignment; merge only with CI green and a review.
+- **Branches (user rule, 2026-10-08):** every feature or fix starts on a new branch cut from
+  `develop` (`feature/<name>` or `fix/<name>`) and is built in its own git worktree under
+  `.claude/worktrees/`. Never commit feature or fix work directly on `develop` or `main`; it
+  reaches `develop` only through a merge.
 - Contracts in `models.py`, `interfaces.py` and `errors.py` are frozen after Phase 1. Changing one
   is its own PR that updates every user.
 - When a task touches a domain, consult that domain's doc in `docs/Best Practices/` and apply it by

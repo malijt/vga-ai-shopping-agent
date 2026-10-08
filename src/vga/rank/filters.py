@@ -6,7 +6,7 @@ A product is dropped when
 - its category is known and differs from the one requested (a dress is dropped for a request for
   shirts, and a shirt for a request for dresses),
 - the request names a gender explicitly (men or women) and its title marks a children's product
-  ("Boys Crew Neck T-shirt", kids, baby, toddler, infant, junior), or
+  ("Boys Crew Neck T-shirt", kids, baby, toddler, infant, junior, youth, newborn), or
 - the request names a gender explicitly and the product is clearly for the other one.
 
 "Clearly for the other one" is what the store's own data says (``Product.gender``, read from its

@@ -1,0 +1,108 @@
+{
+ "resources": {
+  "results": {
+   "products": [
+    {
+     "available": true,
+     "body": "<p dir=\"rtl\" class=\"p1\"><span class=\"s1\">طول الدراعة ٥٥ إنش ..</span></p>\n<p dir=\"rtl\" class=\"p1\"><span class=\"s1\">اذا حابه طول معين كتبيه بالملاحظات …</span></p>\n<p dir=\"rtl\" class=\"p1\"><span class=\"s1\">جدول المقاسات موجود بالهالايت ..</span></p>",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Dara'a 2026",
+      "aspect_ratio": 0.563,
+      "height": 4096,
+      "url": "https://cdn.shopify.com/s/files/1/0695/4631/1733/files/6EC0DF1B-6C9E-4BC1-9E45-FCD5D94878BE.jpg?v=1765081866",
+      "width": 2304
+     },
+     "handle": "daraa-2026",
+     "id": 8005804687413,
+     "image": "https://cdn.shopify.com/s/files/1/0695/4631/1733/files/6EC0DF1B-6C9E-4BC1-9E45-FCD5D94878BE.jpg?v=1765081866",
+     "price": "35.000",
+     "price_max": "35.000",
+     "price_min": "35.000",
+     "tags": [],
+     "title": "Dara'a 2026",
+     "type": "",
+     "url": "/products/daraa-2026?_pos=1&_psq=daraa&_psid=e56fb999e&_ss=e",
+     "variants": [],
+     "vendor": "herhighnessq8"
+    },
+    {
+     "available": true,
+     "body": "",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Beige strips Sets",
+      "aspect_ratio": 0.563,
+      "height": 4032,
+      "url": "https://cdn.shopify.com/s/files/1/0695/4631/1733/files/78DD172E-68C6-4144-8B9E-5A438A02284D.jpg?v=1780476207",
+      "width": 2268
+     },
+     "handle": "beige-strips-sets",
+     "id": 8151081517109,
+     "image": "https://cdn.shopify.com/s/files/1/0695/4631/1733/files/78DD172E-68C6-4144-8B9E-5A438A02284D.jpg?v=1780476207",
+     "price": "46.800",
+     "price_max": "46.800",
+     "price_min": "46.800",
+     "tags": [],
+     "title": "Beige strips Sets",
+     "type": "",
+     "url": "/products/beige-strips-sets?_pos=2&_psq=daraa&_psid=e56fb999e&_ss=e",
+     "variants": [],
+     "vendor": "herhighnessq8"
+    },
+    {
+     "available": true,
+     "body": "",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Sahara Oversized Top",
+      "aspect_ratio": 0.667,
+      "height": 4500,
+      "url": "https://cdn.shopify.com/s/files/1/0695/4631/1733/files/0L3A9964.jpg?v=1777507313",
+      "width": 3001
+     },
+     "handle": "sahara-oversized-top",
+     "id": 8124124266549,
+     "image": "https://cdn.shopify.com/s/files/1/0695/4631/1733/files/0L3A9964.jpg?v=1777507313",
+     "price": "38.750",
+     "price_max": "38.750",
+     "price_min": "38.750",
+     "tags": [],
+     "title": "Sahara Oversized Top",
+     "type": "",
+     "url": "/products/sahara-oversized-top?_pos=3&_psq=daraa&_psid=e56fb999e&_ss=e",
+     "variants": [],
+     "vendor": "herhighnessq8"
+    },
+    {
+     "available": true,
+     "body": "<p dir=\"rtl\"><span>بدلة أنيقة بلون بيج غامق بتفاصيل كريستال ناعمة تضيف لمعة راقية وفخامة هادئة.</span></p>\n<p dir=\"rtl\"><span>بليزر بقصة مرتبة مع حزام يبرز الخصر، ويأتي معها بنطلون واسع بقصة انسيابية لإطلالة أنثوية راقية تناسب المناسبات .</span></p>",
+     "compare_at_price_max": "0.000",
+     "compare_at_price_min": "0.000",
+     "featured_image": {
+      "alt": "Crystal Dark Beige",
+      "aspect_ratio": 0.667,
+      "height": 4096,
+      "url": "https://cdn.shopify.com/s/files/1/0695/4631/1733/files/0L3A51911.png?v=1772845457",
+      "width": 2732
+     },
+     "handle": "new2-mar-7",
+     "id": 8081836507189,
+     "image": "https://cdn.shopify.com/s/files/1/0695/4631/1733/files/0L3A51911.png?v=1772845457",
+     "price": "50.000",
+     "price_max": "50.000",
+     "price_min": "50.000",
+     "tags": [],
+     "title": "Crystal Dark Beige",
+     "type": "",
+     "url": "/products/new2-mar-7?_pos=4&_psq=daraa&_psid=e56fb999e&_ss=e",
+     "variants": [],
+     "vendor": "herhighnessq8"
+    }
+   ]
+  }
+ }
+}

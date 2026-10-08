@@ -20,7 +20,7 @@ A shopper in the GCC. Text can be English or Arabic.
 
 - Inputs: product photo, outfit photo, text, photo + text ("like this but dark brown, under 300 AED").
 - Categories: tops, outerwear, bottoms, shoes, **and dresses** (dresses, gowns, kaftans, abayas, kurtas and similar one-piece or ethnic garments). Dresses were added on 2026-10-08 by the business: every test photo it supplied shows a dress or ethnic wear.
-- Up to 13 GCC stores, **UAE sites first**. The limit was 6 until 2026-10-08, when the business raised it to 10 (with dresses in scope, six stores cannot cover both menswear and dresses) and then named three Kuwaiti designer stores to add.
+- Up to 19 GCC stores, **UAE sites first**. The limit was 6 until 2026-10-08, when the business raised it to 10 (with dresses in scope, six stores cannot cover both menswear and dresses), then named three Kuwaiti designer stores to add (13), and then raised it to 19 so that the demo can find abayas, kaftans, burqas and kurtis for women, and thobes, kurtas and shalwar kameez for men.
 - A store that does not price in AED shows its own price plus an approximate AED figure from a fixed rate; price ranges and budgets use the AED figure (decided by the business on 2026-10-08).
 - Top 30 results, with price in the store's currency and a link to the store's product page.
 - **Final list split by price into 4 ranges: Budget, Mid-range, Premium, Luxury, with a percentage mix** (for example 25 / 25 / 25 / 25, or value-first 40 / 30 / 20 / 10). The mix is a setting.
@@ -28,7 +28,7 @@ A shopper in the GCC. Text can be English or Arabic.
 
 ## Out of scope
 
-Cart and checkout, accounts, accessories, guessing body size from photos, nightly catalog crawling, score calibration, duplicate merging, more than 13 stores, live exchange rates.
+Cart and checkout, accounts, accessories, guessing body size from photos, nightly catalog crawling, score calibration, duplicate merging, more than 19 stores, live exchange rates.
 
 ## Rules (not negotiable)
 
@@ -48,7 +48,7 @@ On 10 test queries, the system returns **at least 20 results from at least 3 sto
 | # | Question | Default if no answer |
 |---|---|---|
 | 1 | Which country first? | UAE |
-| 2 | Which stores (up to 13)? | Shortlist in the ideas file (unverified); pick the ones that work in the first hour |
+| 2 | Which stores (up to 19)? | Shortlist in the ideas file (unverified); pick the ones that work in the first hour |
 | 3 | Which LLM and API key? | Any hosted multimodal LLM with structured output |
 | 4 | Is a simple web page enough for the demo? | Yes |
 | 5 | Money plan (affiliate links)? | Not in this demo |

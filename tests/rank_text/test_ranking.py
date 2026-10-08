@@ -112,6 +112,51 @@ def test_a_dress_request_ranks_the_requested_garment_above_another_dress_shape()
     assert titles(scored) == ["Black Open Front Abaya", "Black Satin Midi Dress"]
 
 
+def test_a_thobe_request_ranks_a_dishdasha_and_a_kandora_as_the_garment_asked_for() -> None:
+    """Thobe, dishdasha and kandura are the same men's robe under a Saudi, a Kuwaiti and an
+    Emirati name (Al Jazeera Clothing and a UAE thobe store sell it under the last two)."""
+    request = make_item_intent(
+        category=Category.DRESSES, colour=None, style=None, search_keywords=["thobe"]
+    )
+    products = [
+        product("Burgundy Kaftan", 1),
+        product("White Kuwaiti Dishdasha-Mens", 2),
+        product("Khaki Green Emirati Kandora - Men", 3),
+        product("Mens Qatari Thobe 3 Pcs Set", 4),
+    ]
+
+    scored = prefilter_and_score(request, products, None, SETTINGS)
+
+    assert titles(scored)[-1] == "Burgundy Kaftan"
+    assert all(entry.scores.text == pytest.approx(1.0) for entry in scored[:3])
+    assert scored[-1].scores.text < 0.5
+    assert all(entry.product.category is Category.DRESSES for entry in scored)
+
+
+def test_a_kandura_request_ranks_a_thobe_as_the_garment_asked_for() -> None:
+    request = make_item_intent(
+        category=Category.DRESSES, colour=None, style=None, search_keywords=["kandura"]
+    )
+    products = [product("Burgundy Kaftan", 1), product("Mens Qatari Thobe 3 Pcs Set", 2)]
+
+    scored = prefilter_and_score(request, products, None, SETTINGS)
+
+    assert titles(scored) == ["Mens Qatari Thobe 3 Pcs Set", "Burgundy Kaftan"]
+
+
+def test_a_daraa_request_does_not_count_a_kaftan_as_a_daraa() -> None:
+    request = make_item_intent(
+        category=Category.DRESSES, colour=None, style=None, search_keywords=["daraa"]
+    )
+    products = [product("Burgundy Kaftan", 1), product("Dara'a 2026", 2)]
+
+    scored = prefilter_and_score(request, products, None, SETTINGS)
+
+    assert titles(scored) == ["Dara'a 2026", "Burgundy Kaftan"]
+    assert scored[0].scores.text == pytest.approx(1.0)
+    assert scored[1].scores.text < 0.5
+
+
 def test_unknown_stock_and_unknown_category_are_kept() -> None:
     products = [
         product("Black Oversized Blazer", 1, in_stock=None),

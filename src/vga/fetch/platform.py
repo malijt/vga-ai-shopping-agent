@@ -1,6 +1,6 @@
 """Which storefront platform a store runs on, for the limit that every store of one platform shares.
 
-Several of our stores are tenants of one hosted platform (all thirteen shipped stores are Shopify
+Several of our stores are tenants of one hosted platform (all nineteen shipped stores are Shopify
 storefronts). Each store has its own address, and we keep to about one request a second to each of
 them (BRD Rule 2), but the platform in front of them does not count per shop: on 2026-10-08 thirteen
 different shops answered HTTP 429 within 11 milliseconds of each other. The limit is per client

@@ -35,6 +35,7 @@ TOPS, OUTERWEAR, BOTTOMS, SHOES, DRESSES = (
 )
 OOS = OUT_OF_SCOPE
 EN_DASH = chr(0x2013)  # Hanayen writes "Sheila - Custom Size" with a real en dash
+CURLY_QUOTE = chr(0x2019)  # Al Jazeera Clothing writes its apostrophes this way
 
 # (title, expected, where the title comes from)
 REAL_TITLES: list[tuple[str, TitleKind, str]] = [
@@ -132,6 +133,21 @@ REAL_TITLES: list[tuple[str, TitleKind, str]] = [
     ("Embroidered Kurta - NQ26-008", DRESSES, "nishat-linen-uae/suggest-kurta.json"),
     ("ZAH STUDIO - Vela Kaftan & Izaar", DRESSES, "signature-studio/suggest-kaftan.json"),
     ("Black Chiffon Sheila " + EN_DASH + " Custom Size", OOS, "hanayen/suggest-kaftan.json"),
+    # The six stores of the modest and ethnic wear pass (Module 2.7,
+    # docs/store-qualification/modest-ethnic-wear-discovery.md): regional garment names, and two
+    # accessory spellings the list did not have.
+    ("Pink and Black Zigzag Cotton Kaftan", DRESSES, "daraat/suggest-kaftan.json"),
+    ("Sumou Abaya (Linen)", DRESSES, "shadow-kw/suggest-abaya.json"),
+    ("Special Chiffon Crystalized Shaila", OOS, "shadow-kw/suggest-kaftan.json"),
+    ("Cotton Plain Taqiyah Triangle", OOS, "shadow-kw/suggest-kaftan.json"),
+    ("Dara'a 2026", DRESSES, "her-highness-q8/suggest-daraa.json"),
+    ("Ayesha Jilbab", DRESSES, "veil-essentials-kw/suggest-jilbab.json"),
+    (
+        "Men" + CURLY_QUOTE + "s Summer Dishdasha by Al Jazeera",
+        DRESSES,
+        "al-jazeera-clothing/suggest-dishdasha.json",
+    ),
+    ("UAE-Regular Fit Embroidered Kurta", DRESSES, "gul-ahmed-uae/suggest-kurta.json"),
     # "suit" is a South Asian suit at Nishat Linen and a men's suit at Sacoor Brothers; the
     # lexicon leaves the word out, so both stay uncategorised (kept, no category bonus).
     ("2 Piece - Embroidered Suit - FE26-130", None, "nishat-linen-uae/suggest-abaya.json"),
@@ -459,6 +475,80 @@ def test_a_kurta_sold_with_trousers_is_a_set_not_a_pair_of_trousers(title: str) 
 
 def test_a_kurta_with_trousers_after_a_cut_word_is_a_kurta() -> None:
     assert classify_title("Embroidered Kurti with Palazzo") == DRESSES
+
+
+GULF_GARMENT_WORDS = [
+    # (word, plural)
+    ("dishdasha", "dishdashas"),
+    ("dishdashah", "dishdashahs"),
+    ("dishdash", "dishdashes"),
+    ("kandura", "kanduras"),
+    ("kandora", "kandoras"),
+    ("kandoura", "kandouras"),
+    ("thobe", "thobes"),
+    ("thawb", "thawbs"),
+    ("thoub", "thoubs"),
+    ("jubba", "jubbas"),
+    ("jubbah", "jubbahs"),
+    ("daraa", "daraas"),
+    ("burqa", "burqas"),
+    ("burka", "burkas"),
+    ("burkha", "burkhas"),
+]
+
+
+@pytest.mark.parametrize(("word", "plural"), GULF_GARMENT_WORDS)
+def test_a_gulf_garment_name_is_a_dress_in_the_singular_and_the_plural(
+    word: str, plural: str
+) -> None:
+    assert classify_title(word) == DRESSES
+    assert classify_title(plural) == DRESSES
+
+
+# Real titles from the newly qualified Kuwaiti stores and a UAE-made thobe store; the sources are
+# in docs/store-qualification/ (Al Jazeera Clothing, Her Highness Q8, Veil Essentials).
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Men's Summer Dishdasha by Al Jazeera",
+        "Men's Elegant Winter Dishdasha by Al Jazeera",
+        "Boys' Bright White Summer Dishdasha by Al Jazeera",
+        "Youth Summer Dishdasha by Al Jazeera with Elegant Fit",
+        "Newborn White Dishdasha by Al Jazeera",
+        "Kids' Linen Dishdasha by Al Jazeera",
+        "White Kuwaiti Dishdasha-Mens",
+        "Khaki Green Emirati Kandora - Men",
+        "White Emirati Kandora-Babies",
+        "Mens Qatari Thobe 3 Pcs Set",
+        "Dara'a 2026",
+        "Burgundy Kaftan",
+        "Ayesha Jilbab",
+        "Abaya flora",
+    ],
+)
+def test_the_new_kuwaiti_and_gulf_robe_titles_are_dresses(title: str) -> None:
+    assert classify_title(title) == DRESSES
+
+
+def test_a_daraa_written_with_a_curly_apostrophe_is_a_dress() -> None:
+    assert classify_title(f"Dara{CURLY_QUOTE}a 2026") == DRESSES
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Silk Kimono",
+        "2 layer khimar Iqra",
+        "Cotton Shalwar",
+        "Embroidered Salwar",
+        "Sherwal",
+    ],
+)
+def test_words_left_for_the_project_owner_to_decide_stay_uncategorised(title: str) -> None:
+    """Known open decisions, recorded and not solved: whether a khimar is a garment or a head
+    covering, and how a shalwar (salwar, sherwal) on its own should be classed. A kimono is
+    ambiguous in retail use. Each stays without a category: kept, with no category bonus."""
+    assert classify_title(title) is None
 
 
 def test_a_word_that_means_a_south_asian_suit_here_and_a_mens_suit_there_is_left_alone() -> None:

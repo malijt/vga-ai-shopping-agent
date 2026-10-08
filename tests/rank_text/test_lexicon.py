@@ -10,6 +10,7 @@ from vga.rank.lexicon import (
     OUT_OF_SCOPE_WORDS,
     Colour,
     canon,
+    is_childrens_title,
     split_colours,
     title_gender,
     tokenize,
@@ -131,6 +132,14 @@ def test_colour_affinity(wanted: str, found: str, expected: float) -> None:
         pytest.param("Blazer w/ Belt", ["blazer", "w", "belt"], id="slash"),
         pytest.param(f"Jacket {EN_DASH} Black", ["jacket", "black"], id="dash"),
         pytest.param("", [], id="empty"),
+        # Her Highness Q8 (Kuwait) writes the garment with an apostrophe inside the word.
+        pytest.param("Dara'a 2026", ["daraa", "2026"], id="apostrophe inside a word"),
+        pytest.param(f"Dara{CURLY_QUOTE}a 2026", ["daraa", "2026"], id="the same, curly"),
+        pytest.param(
+            "White Kuwaiti Dishdasha-Mens",
+            ["white", "kuwaiti", "dishdasha", "mens"],
+            id="hyphen before a gender word",
+        ),
     ],
 )
 def test_tokenize(text: str, tokens: list[str]) -> None:
@@ -153,6 +162,41 @@ def test_tokenize(text: str, tokens: list[str]) -> None:
 )
 def test_canon_folds_plurals_and_synonyms(a: str, b: str) -> None:
     assert canon(a) == canon(b)
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "dishdasha",
+        "dishdashah",
+        "dishdash",
+        "dishdashes",
+        "kandura",
+        "kandora",
+        "kandoura",
+        "kandoras",
+        "thawb",
+        "thoub",
+        "thobes",
+    ],
+)
+def test_the_regional_names_of_the_mens_gulf_robe_fold_to_thobe(name: str) -> None:
+    assert canon(name) == "thobe"
+
+
+@pytest.mark.parametrize(
+    ("a", "b"),
+    [
+        pytest.param("daraa", "kaftan", id="a daraa is not a kaftan"),
+        pytest.param("daraa", "jalabiya", id="a daraa is not a jalabiya"),
+        pytest.param("kaftan", "jalabiya", id="a kaftan is not a jalabiya"),
+        pytest.param("jubba", "thobe", id="a jubba is left apart from the thobe"),
+        pytest.param("abaya", "thobe", id="an abaya is not a thobe"),
+        pytest.param("kurta", "thobe", id="a kurta is not a thobe"),
+    ],
+)
+def test_garments_that_are_not_the_same_robe_stay_apart(a: str, b: str) -> None:
+    assert canon(a) != canon(b)
 
 
 def test_category_word_lists_do_not_overlap() -> None:
@@ -190,3 +234,61 @@ def test_category_word_lists_do_not_overlap() -> None:
 )
 def test_title_gender_only_reads_clear_cues(title: str, expected: Gender | None) -> None:
     assert title_gender(title) == expected
+
+
+# --------------------------------------------------------------------------------------------
+# Children's titles
+# --------------------------------------------------------------------------------------------
+
+# Real Al Jazeera Clothing (Kuwait) dishdasha titles; the store writes them with a curly quote.
+MENS_DISHDASHA_TITLES = [
+    f"Men{CURLY_QUOTE}s Summer Dishdasha by Al Jazeera",
+    f"Men{CURLY_QUOTE}s Elegant Winter Dishdasha by Al Jazeera",
+    "Men's Summer Dishdasha by Al Jazeera",
+]
+CHILDRENS_DISHDASHA_TITLES = [
+    f"Boys{CURLY_QUOTE} Bright White Summer Dishdasha by Al Jazeera",
+    "Boys' Bright White Summer Dishdasha by Al Jazeera",
+    f"Kids{CURLY_QUOTE} Linen Dishdasha by Al Jazeera",
+    "Youth Summer Dishdasha by Al Jazeera with Elegant Fit",
+    "Newborn White Dishdasha by Al Jazeera",
+]
+
+
+@pytest.mark.parametrize("title", MENS_DISHDASHA_TITLES)
+def test_a_mens_dishdasha_is_not_a_childrens_title(title: str) -> None:
+    assert not is_childrens_title(title)
+
+
+@pytest.mark.parametrize("title", CHILDRENS_DISHDASHA_TITLES)
+def test_a_boys_kids_youth_or_newborn_dishdasha_is_a_childrens_title(title: str) -> None:
+    assert is_childrens_title(title)
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        pytest.param("White Emirati Kandora-Babies", id="babies after a hyphen"),
+        pytest.param("Youths Summer Dishdasha", id="youth in the plural"),
+        pytest.param("Youth' Stripes V-Neck Sleeping Dishdasha by Al Jazeera", id="a stray quote"),
+        pytest.param("Newborns White Dishdasha", id="newborn in the plural"),
+    ],
+)
+def test_a_childrens_marker_is_found_in_its_other_spellings(title: str) -> None:
+    assert is_childrens_title(title)
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        pytest.param("Baby Blue Oxford Shirt", id="baby is a colour"),
+        pytest.param("Baby Doll Cotton Shirt", id="baby doll is a style"),
+        pytest.param("Men's Boyfriend Fit Shirt", id="boyfriend is not a boy"),
+        pytest.param("Kidskin Leather Shirt", id="kidskin is a material"),
+        pytest.param("Youthful Linen Shirt", id="youthful is not youth"),
+        pytest.param("Khaki Green Emirati Kandora - Men", id="a men's kandora"),
+        pytest.param("Mens Qatari Thobe 3 Pcs Set", id="a men's thobe set"),
+    ],
+)
+def test_words_that_only_look_like_a_childrens_marker_are_not_one(title: str) -> None:
+    assert not is_childrens_title(title)
