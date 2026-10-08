@@ -66,8 +66,8 @@ def build_pipeline(
     """The real pipeline for ``settings``.
 
     ``registry`` defaults to the stores in ``config/stores/``; tests pass their own. Call
-    ``await pipeline.warm_up()`` once at start-up to load the image model, and
-    ``await pipeline.aclose()`` when finished.
+    ``await pipeline.warm_up()`` once at start-up to read the stores' robots.txt files and load the
+    image model, and ``await pipeline.aclose()`` when finished.
     """
     time_source = clock or SystemClock()
     stores = registry if registry is not None else StoreRegistry.from_directory()

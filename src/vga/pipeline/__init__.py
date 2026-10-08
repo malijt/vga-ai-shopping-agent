@@ -5,8 +5,9 @@ What other phases import::
     from vga.pipeline import SearchPipeline, build_pipeline, pipeline_factory
 
 - ``build_pipeline(settings)``: the real pipeline (registry from ``config/stores/``, one long-lived
-  store engine, the image ranker, a lazily created OpenAI understander). ``await warm_up()`` loads
-  the image model; ``await aclose()`` releases the HTTP client.
+  store engine, the image ranker, a lazily created OpenAI understander). ``await warm_up()``
+  reads the stores' robots.txt files, then loads the image model; ``await aclose()`` releases the
+  HTTP client.
 - ``SearchPipeline(understander, searcher, image_ranker, stores, clock=...)``: the same pipeline
   from any three boundaries, which is how the tests and the acceptance harness build it.
 - ``pipeline_factory(stores)``: binds the stores so the pipeline fits the harness's

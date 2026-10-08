@@ -98,9 +98,9 @@ class RobotsChecker:
         """Read the robots.txt of ``url``'s host now and remember the verdict, so the first search
         does not have to. It is the very fetch ``ensure_allowed`` would make, through the same
         client (rate limits, platform queue, cooldowns), and the verdict is cached the same way,
-        including "unreadable means disallowed". It never raises for a robots.txt that cannot be
-        read; a block (HTTP 429 and the rest) starts its cooldown as it always does and is
-        logged."""
+        including "unreadable means disallowed" (for a short while only). It never raises for a
+        robots.txt that cannot be read; a block (HTTP 429 and the rest) starts its cooldown as it
+        always does and is logged."""
         host = check_url(url, store.allowed_hosts)
         try:
             await self._verdict(host, store)
