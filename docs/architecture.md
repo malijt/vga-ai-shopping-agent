@@ -79,7 +79,7 @@ How to read it:
 
 | Part | Where | What it does | The rule it must not break |
 |---|---|---|---|
-| Page | `app/` | Takes the photo and text, shows what the AI detected as editable chips, asks "Who is this for?", shows four price ranges of cards, warnings, skipped stores and plain errors. | Never show a string from a store or the shopper as markup or HTML, and never a stack trace. Never keep the photo after its search. Never lose the shopper's input on an error. |
+| Page | `app/` | Takes the photo and text. After a search it shows, top to bottom: what the AI saw in the photo (beside a small copy of it, only after a photo search), the search details (stores searched and skipped, timings and AI use), what the AI detected as editable chips, "Who is this for?", then four price ranges of cards, warnings and plain errors. The buttons that are the main action of their block (Search stores, Apply changes and search again, Women, Men, View product) are filled with the theme's one accent colour. | Never show a string from a store or the shopper as markup or HTML, and never a stack trace. Never keep the uploaded photo after its search: only a small re-encoded preview (512 pixels, no metadata) stays in the session, until the page is refreshed or a new search starts (owner's decision of 2026-10-08, ADR 0005 update). Never lose the shopper's input on an error. |
 | Pipeline | `src/vga/pipeline/` | Runs the steps in order, owns the 30-second deadline, keeps the re-run cache, collects warnings, builds the `SearchResponse`. | No silent fallback. Every one is logged at warning level with the request id and appears in the response's `warnings`. It raises only when there is nothing to search, or nothing to search with. |
 | Understand | `src/vga/understand/` | One OpenAI call (photo and/or text in, structured result out), the versioned prompt, in-code validation of the answer, one corrective retry, the raw-words fallback, the daily call cap, chip edits applied with no call. | The model's answer is untrusted. Nothing it says reaches a store search or the page unless code has re-checked it. A guessed gender is never applied. |
 | Store engine and fetch | `src/vga/stores/`, `src/vga/fetch/` | Reads robots.txt, paces requests, checks every address against the store's allow-list, detects a refusal, runs the Shopify reader, caches answers, fetches thumbnails. The only code that talks to a store. | Never contact anything but an https address on the store's `allowed_hosts`. Never get round a refusal (robots.txt, 401/403/429, challenge page, login): make no second request and leave the store alone for its cooldown. |
@@ -101,6 +101,15 @@ The search button stays off until there is a valid input. The page checks the ph
 bytes and its size, and the text length. That only spares the shopper a round trip; the check that
 counts is step 1. While a search runs, every control is disabled. The page builds a `SearchRequest`
 and calls `runner.run_search`, which runs the pipeline in its own event loop.
+
+When a new search that used a photo finishes, the page lets go of the upload (the uploader gets a
+new key) and keeps a small preview of the photo in the session instead: the photo drawn again from
+its pixels, at most 512 pixels on the long side, with no EXIF, GPS, colour profile or comment
+(`app/photo_preview.py`, which reuses the preparation that is applied before OpenAI). The preview is
+drawn next to the summary of what the AI saw. It stays through any search again, and goes when a
+new search brings another photo or none, when the results are dropped, and on a page refresh. If it
+cannot be made the search still succeeds and the page shows no preview. It is never logged, never
+written to disk, and never part of the response, the cache or a debug dump.
 
 ### 1. Validate (`pipeline/validation.py`)
 
@@ -222,8 +231,9 @@ Only for a product photo or a photo with text. An outfit photo skips this step (
 
 The response lists the stores used and the stores skipped (each with a plain reason), the warnings,
 the token usage, the timings, and the photo's embedding. What can be reused is remembered in the
-re-run cache. Back on the page, the uploader is released so the file is dropped, and "Who is this
-for?" is asked if some garment's gender was guessed or not found (ADR 0011).
+re-run cache. Back on the page, the uploader is released so the upload is dropped, a small preview
+of the photo is kept for display, and "Who is this for?" is asked if some garment's gender was
+guessed or not found (ADR 0011).
 
 ### The deadline
 
@@ -248,6 +258,7 @@ weights, which are downloaded once, ahead of time, into the Hugging Face cache.
 | The daily OpenAI call count | `process_call_budget()` | Until UTC midnight | In memory, so a restart resets it. |
 | The pipeline itself | `st.cache_resource` | Until the process stops | The re-run cache lives on this one instance. |
 | The latest response | Streamlit session state | The browser session | Holds the embedding, never the photo. |
+| The photo preview | Streamlit session state (and Streamlit's in-memory media store while it is drawn) | Until a new search brings another photo or none, the results are dropped, or the page is refreshed | A 512-pixel JPEG made from the photo's pixels, no metadata. The only picture of the shopper's photo the app keeps (owner's decision of 2026-10-08). Never on disk, in a log, in the response or in a cache. |
 | The shopper's photo | The uploader widget only | Until the search that used it finishes | Then the uploader gets a new key and Streamlit lets go of the file. A failed search keeps the photo so the shopper can retry. |
 | Not cached at all | | | The Understand answer, thumbnails, the photo. |
 

@@ -54,9 +54,12 @@ tests/guards/scraping/test_host_and_link_safety.py::test_the_thumbnail_fetcher_m
 tests/guards/scraping/test_price_words_and_kill_switch.py::test_a_price_phrase_and_a_budget_stay_out_of_the_store_urls
 tests/guards/scraping/test_price_words_and_kill_switch.py::test_an_arabic_price_word_the_model_leaves_in_a_keyword_does_not_reach_the_stores
 
-# [4] Photo privacy. After a request nothing of the photo is in a file, a log, memory or a cache,
-# and the photo sent to OpenAI carries no hidden field. The three canaries prove that the audit
-# can fail: without them a clean result could mean a blind instrument.
+# [4] Photo privacy. After a request the pipeline leaves nothing of the photo in a file, a log,
+# memory or a cache, and the photo sent to OpenAI carries no hidden field. The three canaries prove
+# that the audit can fail: without them a clean result could mean a blind instrument. The page keeps
+# one thing, by the owner's decision of 2026-10-08 (ADR 0005, update): a small preview in its own
+# session memory. The last three entries hold that exception to its limits: the upload itself is
+# not kept, the preview carries no hidden field, and it is written to no file.
 tests/guards/privacy/test_no_retention.py::test_a_request_leaves_no_trace_of_the_photo[photo and text / prompts on, dump on]
 tests/guards/privacy/test_no_retention.py::test_a_request_leaves_no_trace_of_the_photo[outfit / prompts on, dump on]
 tests/guards/privacy/test_no_retention.py::test_a_request_leaves_no_trace_of_the_photo[chip edit after a photo / prompts on, dump on]
@@ -69,6 +72,9 @@ tests/guards/privacy/test_canaries.py::test_the_file_check_catches[a shrunk copy
 tests/guards/privacy/test_canaries.py::test_the_log_check_catches[the whole photo in a message]
 tests/guards/privacy/test_canaries.py::test_the_memory_check_catches[the re-run cache]
 tests/guards/privacy/test_cli.py::test_a_search_prints_no_photo_writes_no_photo_and_leaves_the_photo_file_alone
+tests/ui/test_photo_lifetime.py::TestThePreview::test_after_a_photo_search_the_session_holds_a_preview_and_not_the_original
+tests/ui/test_photo_lifetime.py::TestThePreview::test_the_preview_carries_no_exif_gps_profile_or_comment
+tests/ui/test_photo_lifetime.py::TestThePreview::test_it_is_written_to_no_file
 
 # [5] Untrusted text. Injected text in the request cannot reach a store URL or invent a category.
 # No store text ever reaches the model. A hostile store title comes out as plain text.

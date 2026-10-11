@@ -11,6 +11,9 @@ has finished and some garment's gender was guessed or not found, the page asks, 
 - Show both: closes the question. Nothing is applied and nothing is searched again; the results
   stay as they are (``state.dismiss_gender_question``).
 
+"Women" and "Men" are the main actions of the question and are filled with the theme's accent
+colour (`type="primary"`); "Show both" is the quiet way out and stays plain.
+
 The answer goes with whatever the chips already hold. A colour typed in a chip and not yet applied
 is not lost by answering, and the answer wins over a different gender chosen in the chip.
 
@@ -112,6 +115,7 @@ def render_gender_question(response: SearchResponse, *, disabled: bool) -> None:
                 st.button(
                     GENDER_LABELS[gender],
                     key=key,
+                    type="primary",
                     on_click=_answer,
                     args=(gender,),
                     disabled=disabled,

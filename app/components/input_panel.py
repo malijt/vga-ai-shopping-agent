@@ -9,7 +9,8 @@ again at its entry (plan 13.1.1); this check only gives the shopper a message ne
 before anything is sent.
 
 The uploader's key changes each time a finished search lets go of the photo (``state.photo_key``),
-so the file is not kept after its search (plan 15.1.2).
+so the file is not kept after its search (plan 15.1.2). What stays on the page is a small preview,
+drawn with the results (``app.components.search_summary``).
 """
 
 from dataclasses import dataclass
@@ -34,7 +35,9 @@ enough."""
 
 MESSAGE_WRONG_TYPE = "That file is not a PNG, JPG or WebP photo. Choose another file."
 MESSAGE_PHOTO_USED = (
-    "Your photo was used for this search and has been removed. "
+    "Your photo was used for this search. "
+    "Only a small copy stays on this page, until you refresh the page or start a new search. "
+    "Nothing is saved. "
     "You can still change what the AI detected below and search again."
 )
 
@@ -103,7 +106,7 @@ def render_input_panel(
             disabled=disabled,
         )
         st.markdown(NOTE_PHOTO)
-        if uploaded is None and state.photo_released():
+        if uploaded is None and state.results_used_photo():
             st.markdown(MESSAGE_PHOTO_USED)
         photo: bytes | None = None
         photo_error: str | None = None
