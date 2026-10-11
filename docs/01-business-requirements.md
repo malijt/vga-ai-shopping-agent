@@ -35,7 +35,7 @@ Cart and checkout, accounts, accessories, guessing body size from photos, nightl
 1. Every result links to the **original store's product page**.
 2. Respect robots.txt. No login-walled pages. No CAPTCHA solving. Low request rate (about 1 per second per store).
 3. Never guess body size from a photo.
-4. Do not keep uploaded photos after the request.
+4. Do not keep uploaded photos after the request. One exception, decided by the business on 2026-10-08: a small preview of the photo stays on the page, in memory only, so the shopper can see what they searched with. It goes when the page is refreshed or a new search starts. It is never saved, logged or cached.
 5. Use only components with commercial-friendly licences.
 6. This is a **demo**. Before real users, someone checks each store's terms of use and any affiliate programme.
 

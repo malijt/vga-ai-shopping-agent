@@ -5,7 +5,9 @@
 [theme]
 base = "light"
 # The one accent colour. Contrast 5.9:1 against white and 5.4:1 against the grey below, so it is
-# safe for button fills with white text and for link text (WCAG AA needs 4.5:1).
+# safe for button fills with white text and for link text (WCAG AA needs 4.5:1). The buttons that
+# are the main action of their block use type="primary" and so take this fill: Search stores, Apply
+# changes and search again, Women, Men and View product. The others stay plain (secondary).
 primaryColor = "#0E6E7E"
 backgroundColor = "#FFFFFF"
 secondaryBackgroundColor = "#F3F4F6"

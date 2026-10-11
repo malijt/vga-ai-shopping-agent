@@ -161,9 +161,11 @@ uv run pre-commit install                          # once: run ruff and the secr
 3. If the request does not say who the garment is for, the page asks **Who is this for?** (Women, Men, Show both). A gender the AI only guessed is *shown, never applied* until you answer. Women or Men searches again with no OpenAI call and, while the results are less than 10 minutes old, no new store requests.
 4. The sidebar offers the **share of results in each price range** (see [Price-mix presets](#price-mix-presets)). Changing it re-sorts the results already found. The stores are asked again only when those results are more than 10 minutes old.
 5. Results are grouped by price range. Each header shows the real price span and count, for example "Budget · 45-139 AED · 8 results". A card shows the picture, title, store, price, a one-sentence reason and a **View product** link that opens the store's own page. Flags are written in words: "Over your budget", "Few options in this range".
-6. Skipped stores, warnings and token usage are listed under the results. Errors are written in plain words; a failed search keeps your photo so you can retry.
+6. The search details sit at the top, above **Detected by AI**: how many stores were searched, which were skipped and why, and the time per step and token use, in two closed sections. After a search with a photo, **What the AI saw in your photo** comes first, with a small copy of the photo beside a plain summary of what the AI read from it. Errors are written in plain words; a failed search keeps your photo so you can retry.
 
-The page tells you what is AI-inferred and that the photo is sent to OpenAI. After a search the page drops the photo and clears the upload box; what it keeps for chip edits is a list of numbers describing the photo (its "embedding"), not the picture. Details in [docs/privacy.md](docs/privacy.md).
+The main button of each block (Search stores, Apply changes and search again, Women, Men, View product) is filled with the page's one accent colour. The others (Reset to detected, Show both, the examples) stay plain.
+
+The page tells you what is AI-inferred and that the photo is sent to OpenAI. After a search the page clears the upload box and drops the uploaded file. For chip edits it keeps a list of numbers describing the photo (its "embedding"). So that you can see what you searched with, it also keeps a small copy of the photo (at most 512 pixels, with no camera or location data) in the page's memory only. The copy stays until you refresh the page or start a new search. Nothing is saved to disk. Details in [docs/privacy.md](docs/privacy.md).
 
 ## Tests
 
@@ -414,7 +416,7 @@ These come from real runs, not guesses. "Not verified" means exactly that.
 
 - A recorded acceptance run with human labels: none exists yet.
 - A screen reader, and colour contrast beyond the theme's documented values. (A keyboard-only pass worked; there was no sideways scrolling at 375, 768 or 1280 px wide.)
-- Two browser sessions searching at the same moment, and whether Streamlit releases an uploaded photo from its own file store when the upload box is cleared (the page itself holds no photo).
+- Two browser sessions searching at the same moment, and whether Streamlit releases an uploaded photo from its own file store when the upload box is cleared (the page itself holds no copy of the upload, only the small preview).
 - Whether this OpenAI account has zero data retention, and whether a photo's embedding can be turned back into a picture.
 - Each store's terms of use. None has been read.
 
@@ -425,8 +427,8 @@ Accepted for this demo, on purpose: no load test beyond the 30-second budget mea
 **Before real shoppers use it, all of these are needed:**
 
 1. **Terms of use, store by store.** Product rule 6: someone must read each of the 19 stores' terms and any affiliate rules. Nothing has been reviewed. Re-read Maison Arabelle's content-use line in `robots.txt` (`ai-train=yes, search=yes, ai-retrieval=yes, ai-personalization=no`), and the agent-endpoint comment that 18 of the 19 stores carry. The per-store checklist is in [`docs/store-notes/SUMMARY.md`](docs/store-notes/SUMMARY.md): it lists what is still owed for each store and leaves a blank "Checked by / date" line. Each store's note in `docs/store-notes/` also has a "Terms of use" entry that says "not reviewed".
-2. **A privacy review.** UAE data protection law (Federal Decree-Law No. 45 of 2021) and, if people in Europe use it, GDPR. A photo of a person is probably personal data. The page's wording about the photo, a way to delete data on request, and photos of other people (children in particular) need a decision. See [docs/privacy.md](docs/privacy.md).
-3. **Zero data retention at OpenAI.** The app asks OpenAI not to store a request, but OpenAI may still keep it for up to 30 days unless the account has "zero data retention". That is an arrangement the account owner must request from OpenAI. It has not been verified for this account. Reword the page's "not stored by us" notice once this is decided.
+2. **A privacy review.** UAE data protection law (Federal Decree-Law No. 45 of 2021) and, if people in Europe use it, GDPR. A photo of a person is probably personal data. The page's wording about the photo, the small preview that stays on the page (it may show a person), a way to delete data on request, and photos of other people (children in particular) need a decision. See [docs/privacy.md](docs/privacy.md).
+3. **Zero data retention at OpenAI.** The app asks OpenAI not to store a request, but OpenAI may still keep it for up to 30 days unless the account has "zero data retention". That is an arrangement the account owner must request from OpenAI. It has not been verified for this account. Reword the page's photo notice ("Your photo is sent to OpenAI for analysis ... We do not save your photo") once this is decided.
 4. **The fixed exchange rate.** Refresh `fx_rates` in `config/settings.yaml` with a dated source, or replace it with a rate source you trust.
 5. **Hosting.** Today there is no login and the daily OpenAI cap lives in one process. Hosting needs access control, TLS, a cap that survives restarts, and a check of the privacy points above. A Linux GPU machine would also pull NVIDIA packages whose licences are still marked "needs review" in `docs/licences.md`.
 6. **Pin check.** `gpt-6-luna` can change behind its name. Re-run the Understand eval before relying on results.

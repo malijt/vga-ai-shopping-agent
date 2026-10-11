@@ -254,10 +254,13 @@ def render_chips(understood: UnderstandResult, *, disabled: bool) -> None:
         _render_item(index, item, multiple=multiple, disabled=disabled)
     _render_budget(understood.budget, disabled=disabled)
 
+    # The main action of this block is filled with the theme's accent colour; "Reset to detected"
+    # is the quieter way back and stays plain (owner's request 2026-10-08, no custom CSS).
     with st.container(horizontal=True):
         st.button(
             BUTTON_APPLY_CHIPS,
             key=APPLY_KEY,
+            type="primary",
             on_click=_apply_changes,
             disabled=disabled,
         )

@@ -15,6 +15,9 @@ Two kinds of search:
   (assumption A8). The pipeline then asks OpenAI nothing, and asks the stores again only for a
   garment whose searched item changed or whose earlier answers are too old to reuse
   (``store_cache_ttl_s``).
+
+The photo: a new search that used one lets go of the upload when it finishes and keeps a small
+preview in its place (``app.photo_preview``). A search again leaves the preview alone.
 """
 
 import streamlit as st
@@ -22,6 +25,7 @@ import streamlit as st
 from app import runner, state
 from app.components.input_panel import InputState
 from app.components.status import StepProgress
+from app.photo_preview import make_photo_preview
 from vga.errors import InvalidInputError
 from vga.models import RunOverrides, SearchRequest, SearchResponse, SettingsOverride
 
@@ -87,8 +91,25 @@ def run_pending_search(inputs: InputState, settings: SettingsOverride) -> None:
         # nothing was chosen on the page for it yet.
         state.reopen_gender_question()
         state.forget_gender_choices()
-        # A new search used the photo, if there was one. It is done with: let go of it.
-        state.set_photo_released(request.image is not None)
-        if request.image is not None:
+        # A new search used the photo, if there was one. The upload is done with: let go of it.
+        # What stays is a small copy for the page to show next to the results (the owner's
+        # decision of 2026-10-08, ADR 0005 update). A search without a photo has none to show, and
+        # the earlier one belonged to other results.
+        state.set_results_used_photo(request.image is not None)
+        if request.image is None:
+            state.drop_photo_preview()
+        else:
+            _keep_preview_of(request.image, request.request_id)
             state.release_photo()
     st.rerun()
+
+
+def _keep_preview_of(photo: bytes, request_id: str) -> None:
+    """Keep a small preview of the photo for the page, or none when one cannot be made. A photo
+    that cannot be drawn again must not leave the preview of an earlier photo next to these
+    results, so the earlier one goes either way."""
+    preview = make_photo_preview(photo, request_id=request_id)
+    if preview is None:
+        state.drop_photo_preview()
+    else:
+        state.keep_photo_preview(preview)

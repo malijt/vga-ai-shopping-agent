@@ -2,7 +2,8 @@
 
 Written 2026-10-08 for the owner of the demo. It describes the code as it was at commit `3e480f6`
 (the one before this note) and what the audit in `tests/guards/privacy/` checks. It is an
-engineering note, not legal advice.
+engineering note, not legal advice. Later the same day the owner asked for a small preview of the
+photo to stay on the page; "The preview that stays on the page" below says what that changes.
 
 Every statement is one of three kinds, and the text says which:
 
@@ -15,6 +16,13 @@ Every statement is one of three kinds, and the text says which:
 ## In short
 
 - The photo is never saved by the app: not as a file, not in a log, not in a cache. **Checked.**
+- **One exception, decided by the owner on 2026-10-08:** after a search that used a photo, the page
+  keeps a **small preview** of it in its memory, so the shopper can see what the results are for. It
+  is at most 512 pixels on the long side, a new JPEG with no camera details, GPS position, colour
+  profile or comment. It stays until the page is refreshed or a new search starts. It is never
+  written to disk, logged, cached, put in the answer, or sent to OpenAI, a store or any other
+  service; it is only shown to the shopper, in their own browser. **Checked by the page's tests.** The uploaded file itself is still dropped after its search. See "The preview that stays
+  on the page".
 - The photo and the words you type go to **OpenAI**, and nowhere else. The stores never get the
   photo. **Checked.**
 - Before the photo is sent, the app draws it again as a smaller JPEG, which drops the camera
@@ -82,9 +90,10 @@ OpenAI, so **whether this account has it is not verified**, and so is exactly wh
 request takes. The plan (assumption A10) records that the key's current retention setting is
 accepted for the demo.
 
-The page the shopper sees says: "Your photo is sent to OpenAI for analysis and is not stored by us."
-That is true of the app. It says nothing about OpenAI's side, so it should be reworded once the
-retention question above is decided.
+The page the shopper sees says: "Your photo is sent to OpenAI for analysis. A small copy stays on
+this page until you refresh the page or start a new search. We do not save your photo." That is true of the app.
+It says nothing about OpenAI's side, so it should be reworded once the retention question above is
+decided.
 
 ## What is removed from the photo, and what is not
 
@@ -116,7 +125,8 @@ Two things to know:
 | What | Where | How long | Status |
 |---|---|---|---|
 | The photo, during a search | The search program's memory | Until the search ends. Nothing in the search program refers to it afterwards | Checked |
-| The photo, in the upload box of the page | The page's server memory, kept by Streamlit (not on disk) | Until the search that used it ends: the page then resets the upload box, so its own state holds no photo (plan item 15.1.2, built 2026-10-08). Streamlit's own store drops a session's uploads when the session is removed | The page's state is checked by tests. When Streamlit's own store lets go of the file after the box is reset is read from Streamlit 1.65.0's source, not verified on a running page |
+| The photo, in the upload box of the page | The page's server memory, kept by Streamlit (not on disk) | Until the search that used it ends: the page then resets the upload box, so its own state holds no copy of the upload (plan item 15.1.2, built 2026-10-08). Streamlit's own store drops a session's uploads when the session is removed | The page's state is checked by tests. When Streamlit's own store lets go of the file after the box is reset is read from Streamlit 1.65.0's source, not verified on a running page |
+| The photo's **preview**: a small copy, at most 512 pixels, drawn again from the pixels (no metadata) | The page's session memory, and Streamlit's in-memory store for pictures while the page shows it | Until a new search brings another photo or none, the results are dropped (a page error), or the page is refreshed. It stays through a "search again". If it cannot be made, none is kept and the search still works | The page's state and the log are checked by tests (`tests/ui/test_photo_lifetime.py`, `tests/ui/test_photo_preview.py`). That Streamlit's media store lets go of it afterwards is read from Streamlit 1.65.0's source, not verified on a running page |
 | The photo's **embedding**: a list of numbers that describes how the photo looks | The search program's memory (the "search again" cache), and the page's session | The cache keeps the latest 32 searches until the program stops, or a newer search pushes the oldest out. The 10-minute limit only decides whether the stored store results can be re-used; it does not delete anything | Checked (it is numbers only); lifetime read in `src/vga/pipeline/rerun.py` |
 | What the AI read in the photo (colour, style, search words) | The same places, and in the answer shown on the page | The same | Checked that it holds no image |
 | The stores' answers | The search program's memory | 10 minutes for re-use | Read in the code |
@@ -130,6 +140,61 @@ Treat them as personal data that comes from the photo.
 What I could not look at: the real image model's memory. The audit uses a stand-in because the model
 needs the optional `ml` packages. The code of the real one (`SiglipEmbedder.embed`) keeps nothing
 after it returns. **Read, not run.**
+
+## The preview that stays on the page
+
+Added 2026-10-08 at the owner's request: the shopper wanted to see the reference photo with the
+results. This changes product rule 4 ("never keep an uploaded photo after the request") for one
+thing only, and the rule and ADR 0005 now say so.
+
+What did **not** change:
+
+- The uploaded file is let go of after its search (the upload box gets a new key). **Checked:** after
+  a photo search no part of the page's memory holds the uploaded bytes, nor any piece of them.
+- The search, the answer, the logs, the caches and the debug dump never hold the photo or the
+  preview. **Checked** for the page: the log calls of a search with a photo and a search again hold
+  no image bytes of either kind, and the answer and the calls to the search program hold no preview.
+- Nothing about the photo is written to disk. **Checked:** a search with a photo and a search again
+  write no file outside the log folder, and nothing in the files under it is a trace of the photo or
+  the preview. The pipeline audit (`tests/guards/privacy/`) is unchanged: it does not run the page.
+- A "search again" still works from the embedding, never from the photo or the preview.
+
+What changed:
+
+- **What is kept.** After a **new** search that used a photo, the page draws the photo again from its
+  pixels, with the same step that prepares it for OpenAI (`vga.understand.image.prepare_image`),
+  but at most 512 pixels on the long side, and keeps only that JPEG in the session
+  (`app/photo_preview.py`, `app/state.py`). Camera details, GPS position, colour profile, XMP and
+  comments are gone. **Checked** with a photo that hides a marker in each of those places. Faces
+  are **not** blurred: the preview shows whatever the photo shows.
+- **How long.** It stays while the results it belongs to are on the page, including through a
+  "search again" (chips, the answer to "Who is this for?", the price-range mix). It is replaced when
+  a new search with a photo finishes, removed when a new search without a photo finishes, removed
+  when the page drops the results after an error, and gone when the page is refreshed, because
+  that starts a new session. A search that fails leaves things as they were. **Checked.**
+- **Where it is drawn.** In the block "What the AI saw in your photo", at a fixed small width, with a
+  visible caption and a text alternative for screen readers. Streamlit holds the picture in its own in-memory store
+  for as long as the page shows it. Not on disk. Read from Streamlit 1.65.0's source
+  (`streamlit/runtime/memory_media_file_storage.py`); not verified on a running page.
+- **A failure never breaks a search.** If the photo cannot be drawn again, the search still shows
+  its results, no preview is kept (the one of an earlier photo is removed too) and one warning is
+  logged with the request number and the kind of error, never a part of the image. **Checked.**
+- **The wording.** The notice under the upload box now says: "Your photo is sent to OpenAI for
+  analysis. A small copy stays on this page until you refresh the page or start a new search. We do
+  not save your photo." After a photo search the note under the box repeats it for this search. The old
+  sentence ("is not stored by us") would no longer be the whole truth.
+
+What a reviewer must still look at before real shoppers use this:
+
+- **The preview may show a person**, a face or a child, and it sits in the server's memory and in
+  the shopper's browser while the page is open. That is personal data in the same way the uploaded
+  photo is. The wording above is plain but is not a consent flow.
+- **Hosting.** Today the page runs on one computer and the preview lives in that process. A hosted
+  version keeps it on a server, for every open session, and a session that is never refreshed keeps
+  it as long as the server keeps the session. The rules here would need to be checked again, and a
+  time limit may be wanted.
+- **The browser.** Whatever the shopper's browser keeps of a picture it was sent (its cache, a
+  screenshot, a shared screen) is outside the app.
 
 ## What is written to disk
 
@@ -219,8 +284,10 @@ What it **cannot** see:
   watches, and not if the file is deleted again.
 - The real image model's inner workings (read, not run), and a running Streamlit page: the audit
   covers the search pipeline and the command line (`python -m vga.search --image ...`). The page
-  has run the real search since 2026-10-08, and its own tests check that it holds no photo after a
-  search, but the audit's five-channel watch has not been run against a live page.
+  has run the real search since 2026-10-08, and its own tests check that it holds no copy of the
+  uploaded photo after a search, that the preview it keeps is small and carries no metadata, and
+  that neither is logged or written, but the audit's five-channel watch has not been run against a
+  live page.
 - What the browser keeps of an uploaded file, a terminal's scrollback if log lines are shown there,
   and OpenAI's side of the connection.
 - A search more than a few minutes after the first, or a program that has run for days.
@@ -240,8 +307,9 @@ None of this is decided here. A person who can give legal advice should look at:
 - **OpenAI**: the zero data retention decision above, and the contract terms for the API.
 - **Each store's terms of use**. The demo reads the stores' public search pages; product rule 6
   says to check their terms before real users. Not done.
-- **The wording on the page** about the photo (see above), and a way for a shopper to ask for their
-  data to be deleted: there is nothing to delete today except the log files, which the owner would
+- **The wording on the page** about the photo (see above), **the preview that stays on the page**
+  (see "The preview that stays on the page": it may show a person), and a way for a shopper to ask
+  for their data to be deleted: there is nothing to delete today except the log files, which the owner would
   have to clear by hand.
 - **Photos of other people**, children in particular, uploaded by someone who is not them.
 - **Hosting**: today everything runs on one computer. A hosted version keeps these logs, this
@@ -257,7 +325,7 @@ None of this is decided here. A person who can give legal advice should look at:
   (built and tested on the page's side).
 - Where OpenAI processes and stores the photo, and the legal position under the UAE law and GDPR.
 - That Streamlit really sends no usage statistics (the setting is in the file), and exactly when it
-  drops an uploaded file from memory.
+  drops an uploaded file, and the picture it was given to show the preview, from memory.
 - The store pages' own terms.
 
 ## Where each statement is checked
@@ -270,3 +338,4 @@ None of this is decided here. A person who can give legal advice should look at:
 | What the switches write; the libraries do not log the photo | `test_debug_switches.py` |
 | The "search again" cache; no thumbnail cache | `test_caches.py` |
 | The command line | `test_cli.py` |
+| The page keeps no copy of the upload; the preview is at most 512 pixels, has no metadata, survives a search again and is replaced or removed as described; it is in no log, file, answer or call to the search program | `tests/ui/test_photo_lifetime.py` (`TestThePhotoIsSentOnceAndThenLetGo`, `TestThePreview`, `TestThePreviewWithTheRealPipeline`) and `tests/ui/test_photo_preview.py` |
